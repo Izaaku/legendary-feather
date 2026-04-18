@@ -1,0 +1,1 @@
+"""Legendary Feather Universal Translator"""

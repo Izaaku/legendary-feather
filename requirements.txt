@@ -1,0 +1,41 @@
+Flask==3.0.0
+Flask-CORS==4.0.0
+Flask-SocketIO==5.3.6
+python-dotenv==1.0.0
+stripe==7.0.0
+requests==2.31.0
+pydub==0.25.1
+SQLAlchemy==2.0.23
+gunicorn==21.2.0
+eventlet==0.35.1
+python-jose==3.3.0
+bcrypt==4.1.2
+
+# GPU support
+torch>=2.1.0
+torchaudio>=2.1.0
+numpy>=1.24.0
+
+# Speech-to-Text — Faster Whisper (GPU-accelerated transcription)
+faster-whisper>=1.0.0
+
+# TTS Engines — Core
+TTS>=0.22.0
+
+# TTS Engines — Global Languages (install for 100+ language support)
+# pip install melotts
+# melotts>=0.1.0
+
+# Voice Conversion — RVC (for cross-language voice cloning)
+# pip install rvc-infer
+# rvc-infer>=0.1.0
+
+# Voice Style Transfer — OpenVoice V2
+# pip install openvoice
+# openvoice>=0.1.0
+
+# Face-to-face mode — GPT-SoVITS (optional, high VRAM)
+# pip install GPT-SoVITS>=0.5.0
+
+# Performance — RunPod GPU optimization
+# deepspeed>=0.12.0

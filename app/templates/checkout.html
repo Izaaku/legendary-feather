@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout - Legendary Feather</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://js.stripe.com/v3/"></script>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <style>
+    .checkout-container {
+      max-width: 1000px;
+      margin: 4rem auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      padding: 2rem;
+    }
+
+    .order-summary {
+      background: var(--dark-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 2rem;
+      height: fit-content;
+      position: sticky;
+      top: 100px;
+    }
+
+    .order-summary h2 {
+      color: var(--primary-gold);
+      text-align: left;
+      font-size: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .order-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .order-item:last-child {
+      border-bottom: none;
+    }
+
+    .item-name {
+      color: var(--text-light);
+    }
+
+    .item-price {
+      color: var(--primary-gold);
+      font-weight: 600;
+    }
+
+    .order-total {
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 2px solid var(--primary-gold);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
+
+    .total-amount {
+      color: var(--primary-gold);
+    }
+
+    .checkout-form {
+      background: var(--dark-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 2rem;
+    }
+
+    .checkout-form h2 {
+      color: var(--primary-gold);
+      text-align: left;
+      font-size: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .form-section {
+      margin-bottom: 2rem;
+    }
+
+    .form-section h3 {
+      color: var(--text-light);
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .form-row.full {
+      grid-template-columns: 1fr;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--text-light);
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 0.8rem;
+      background: var(--dark-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-light);
+      border-radius: 4px;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--primary-gold);
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+    }
+
+    .form-group input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .stripe-element-wrapper {
+      padding: 0.8rem;
+      background: var(--dark-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      margin-bottom: 1rem;
+    }
+
+    .StripeElement {
+      color: var(--text-light) !important;
+    }
+
+    .StripeElement--focus {
+      border-color: var(--primary-gold) !important;
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.3) !important;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+      cursor: pointer;
+    }
+
+    .checkbox-group label {
+      margin: 0;
+      font-weight: 400;
+      cursor: pointer;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 1rem;
+      background: var(--primary-gold);
+      color: var(--dark-bg);
+      border: none;
+      border-radius: 4px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 2rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      background: var(--accent-gold);
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+      transform: translateY(-2px);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .error-message {
+      color: #f44336;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    .success-message {
+      color: #4caf50;
+      background: rgba(76, 175, 80, 0.1);
+      border: 1px solid #4caf50;
+      padding: 1rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .success-message.show {
+      display: block;
+    }
+
+    .loading-spinner {
+      display: none;
+      color: var(--primary-gold);
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .loading-spinner.show {
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .checkout-container {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+
+      .order-summary {
+        position: static;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="stars-canvas"></canvas>
+
+  <nav>
+    <div class="container">
+      <a href="/" class="logo">LEGENDARY FEATHER</a>
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/products">Products</a></li>
+        <li><a href="/cart">Cart</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main>
+    <section>
+      <div class="container">
+        <h1 class="text-center mb-4">Checkout</h1>
+
+        <div class="checkout-container">
+          <!-- Order Summary -->
+          <div class="order-summary">
+            <h2>Order Summary</h2>
+
+            <div id="cart-items">
+              <!-- Items will be populated by JavaScript -->
+            </div>
+
+            <div class="order-total">
+              <span>Total:</span>
+              <span class="total-amount" id="total-amount">$0.00</span>
+            </div>
+          </div>
+
+          <!-- Checkout Form -->
+          <div class="checkout-form">
+            <h2>Billing & Payment</h2>
+
+            <div class="success-message" id="success-message">
+              Order placed successfully! Redirecting to confirmation...
+            </div>
+
+            <form id="checkout-form">
+              <!-- Email Section -->
+              <div class="form-section">
+                <h3>Email</h3>
+                <div class="form-group">
+                  <label for="email">Email Address *</label>
+                  <input type="email" id="email" name="email" required placeholder="your@email.com">
+                  <div class="error-message" id="email-error"></div>
+                </div>
+              </div>
+
+              <!-- Billing Address Section -->
+              <div class="form-section">
+                <h3>Billing Address</h3>
+
+                <div class="form-group full">
+                  <label for="fullname">Full Name *</label>
+                  <input type="text" id="fullname" name="fullname" required placeholder="John Doe">
+                  <div class="error-message" id="fullname-error"></div>
+                </div>
+
+                <div class="form-group full">
+                  <label for="address">Street Address *</label>
+                  <input type="text" id="address" name="address" required placeholder="123 Main St">
+                  <div class="error-message" id="address-error"></div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="city">City *</label>
+                    <input type="text" id="city" name="city" required placeholder="New York">
+                    <div class="error-message" id="city-error"></div>
+                  </div>
+                  <div class="form-group">
+                    <label for="state">State/Province *</label>
+                    <input type="text" id="state" name="state" required placeholder="NY">
+                    <div class="error-message" id="state-error"></div>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="zip">ZIP/Postal Code *</label>
+                    <input type="text" id="zip" name="zip" required placeholder="10001">
+                    <div class="error-message" id="zip-error"></div>
+                  </div>
+                  <div class="form-group">
+                    <label for="country">Country *</label>
+                    <select id="country" name="country" required>
+                      <option value="">Select Country</option>
+                      <option value="US">United States</option>
+                      <option value="CA">Canada</option>
+                      <option value="GB">United Kingdom</option>
+                      <option value="AU">Australia</option>
+                      <option value="DE">Germany</option>
+                      <option value="FR">France</option>
+                      <option value="JP">Japan</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                    <div class="error-message" id="country-error"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Payment Section -->
+              <div class="form-section">
+                <h3>Payment Information</h3>
+
+                <div class="form-group full">
+                  <label for="card-element">Card Details *</label>
+                  <div class="stripe-element-wrapper" id="card-element"></div>
+                  <div class="error-message" id="card-error"></div>
+                </div>
+              </div>
+
+              <!-- Terms Checkbox -->
+              <div class="form-section">
+                <div class="checkbox-group">
+                  <input type="checkbox" id="terms" name="terms" required>
+                  <label for="terms">I agree to the Terms of Service and Privacy Policy</label>
+                </div>
+                <div class="error-message" id="terms-error"></div>
+              </div>
+
+              <!-- Submit Button -->
+              <button type="submit" class="submit-btn" id="submit-btn">
+                Complete Purchase
+              </button>
+
+              <div class="loading-spinner" id="loading-spinner">
+                <div class="spinner"></div>
+                <p>Processing payment...</p>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <h3>Legendary Feather</h3>
+      <p>&copy; 2026 Legendary Feather. All rights reserved.</p>
+      <ul>
+        <li><a href="/about">About</a></li>
+        <li><a href="/contact">Contact</a></li>
+        <li><a href="/privacy">Privacy Policy</a></li>
+        <li><a href="/terms">Terms of Service</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script src="https://js.stripe.com/v3/"></script>
+  <script src="{{ url_for('static', filename='js/stars.js') }}"></script>
+  <script>
+    // Initialize Stripe
+    const stripe = Stripe('{{ stripe_public_key }}');
+    const elements = stripe.elements();
+    const cardElement = elements.create('card', {
+      style: {
+        base: {
+          color: '#e8e8e8',
+          fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+          fontSize: '16px',
+          '::placeholder': {
+            color: '#a0a0a0',
+          },
+        },
+        invalid: {
+          color: '#f44336',
+        },
+      },
+    });
+
+    cardElement.mount('#card-element');
+
+    // Handle card errors
+    cardElement.on('change', function(event) {
+      const displayError = document.getElementById('card-error');
+      if (event.error) {
+        displayError.textContent = event.error.message;
+        displayError.classList.add('show');
+      } else {
+        displayError.textContent = '';
+        displayError.classList.remove('show');
+      }
+    });
+
+    // Load cart items
+    function loadCartItems() {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const cartItems = document.getElementById('cart-items');
+      const totalAmount = document.getElementById('total-amount');
+
+      if (cart.length === 0) {
+        cartItems.innerHTML = '<p class="text-muted">Your cart is empty</p>';
+        totalAmount.textContent = '$0.00';
+        return;
+      }
+
+      let total = 0;
+      let html = '';
+
+      cart.forEach(item => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        html += `
+          <div class="order-item">
+            <div>
+              <div class="item-name">${item.name}</div>
+              <div class="text-muted" style="font-size: 0.9rem;">Qty: ${item.quantity}</div>
+            </div>
+            <div class="item-price">$${itemTotal.toFixed(2)}</div>
+          </div>
+        `;
+      });
+
+      cartItems.innerHTML = html;
+      totalAmount.textContent = '$' + total.toFixed(2);
+    }
+
+    // Form submission
+    document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const submitBtn = document.getElementById('submit-btn');
+      const spinner = document.getElementById('loading-spinner');
+
+      submitBtn.disabled = true;
+      spinner.classList.add('show');
+
+      try {
+        // Create payment intent
+        const response = await fetch('/api/create-payment-intent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: document.getElementById('email').value,
+            fullname: document.getElementById('fullname').value,
+            address: document.getElementById('address').value,
+            city: document.getElementById('city').value,
+            state: document.getElementById('state').value,
+            zip: document.getElementById('zip').value,
+            country: document.getElementById('country').value,
+            amount: parseFloat(document.getElementById('total-amount').textContent.substring(1)),
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create payment');
+        }
+
+        // Confirm payment with Stripe
+        const result = await stripe.confirmCardPayment(data.clientSecret, {
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              name: document.getElementById('fullname').value,
+              email: document.getElementById('email').value,
+              address: {
+                line1: document.getElementById('address').value,
+                city: document.getElementById('city').value,
+                state: document.getElementById('state').value,
+                postal_code: document.getElementById('zip').value,
+                country: document.getElementById('country').value,
+              },
+            },
+          },
+        });
+
+        if (result.error) {
+          throw new Error(result.error.message);
+        }
+
+        if (result.paymentIntent.status === 'succeeded') {
+          document.getElementById('success-message').classList.add('show');
+          document.getElementById('checkout-form').style.display = 'none';
+          localStorage.removeItem('cart');
+
+          setTimeout(() => {
+            window.location.href = '/confirmation?id=' + result.paymentIntent.id;
+          }, 2000);
+        }
+      } catch (error) {
+        document.getElementById('card-error').textContent = error.message;
+        document.getElementById('card-error').classList.add('show');
+      } finally {
+        submitBtn.disabled = false;
+        spinner.classList.remove('show');
+      }
+    });
+
+    // Load cart on page load
+    loadCartItems();
+  </script>
+</body>
+</html>

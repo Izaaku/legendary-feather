@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # Main Flask application with hybrid TTS
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - DATABASE_URL=sqlite:///legendary_feather.db
+      - OLLAMA_URL=http://ollama:11434
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_PRICE_BASIC=${STRIPE_PRICE_BASIC}
+      - STRIPE_PRICE_PREMIUM=${STRIPE_PRICE_PREMIUM}
+      - STRIPE_PRICE_BUSINESS=${STRIPE_PRICE_BUSINESS}
+      - ARCEE_API_KEY=${ARCEE_API_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      - APP_URL=${APP_URL:-http://localhost:5000}
+      # TTS Hybrid Pipeline
+      - TTS_DEFAULT_MODE=${TTS_DEFAULT_MODE:-conference}
+      - TTS_LOW_VRAM=${TTS_LOW_VRAM:-false}
+      - XTTS_MODEL_PATH=/app/models/xtts_v2
+      - GPTSOVITS_MODEL_PATH=/app/models/gptsovits
+      - MELOTTS_MODEL_PATH=/app/models/melotts
+      - RVC_MODEL_PATH=/app/models/rvc
+      - OPENVOICE_MODEL_PATH=/app/models/openvoice
+      - VOICE_PROFILES_PATH=/app/data/voice_profiles
+      - USE_DEEPSPEED=${USE_DEEPSPEED:-false}
+      - USE_TENSORRT=${USE_TENSORRT:-false}
+    volumes:
+      - ./data:/app/data
+      - model_cache:/app/models
+    depends_on:
+      - ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  # Ollama for Whisper speech-to-text
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+  model_cache:
