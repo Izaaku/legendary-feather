@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Legendary Feather — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #D4A843;
+  --gold-l: #EEC96A;
+  --gold-ll: #F7DFA0;
+  --gold-dim: rgba(212,168,67,0.15);
+  --gold-glow: rgba(212,168,67,0.35);
+  --bg: #060D16;
+  --bg2: #0B1929;
+  --bg3: #0F2035;
+  --text: #EAE4D8;
+  --text-sub: #7A9AB5;
+  --text-muted: #3A5A70;
+  --border: rgba(212,168,67,0.2);
+  --border-bright: rgba(212,168,67,0.5);
+  --green: #4ADE80;
+  --red: #F87171;
+  --blue: #60A5FA;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── TOP BAR ── */
+.top-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 20px;
+  background: rgba(6,13,22,0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.top-bar-logo {
+  display: flex; align-items: center; gap: 8px;
+  text-decoration: none;
+}
+.top-bar-logo svg { width: 22px; height: 22px; }
+.top-bar-logo span {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 14px; font-weight: 600; color: var(--gold);
+  letter-spacing: 1px;
+}
+.top-bar-right {
+  display: flex; align-items: center; gap: 12px;
+}
+.top-bar-user {
+  font-size: 12px; color: var(--text-sub);
+}
+.top-bar-user strong { color: var(--text); font-weight: 500; }
+.btn-logout {
+  padding: 6px 16px; border-radius: 20px;
+  font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 500;
+  background: transparent; color: var(--text-muted);
+  border: 1px solid var(--border); cursor: pointer;
+  transition: all 0.3s;
+}
+.btn-logout:hover {
+  border-color: var(--red); color: var(--red);
+  background: rgba(248,113,113,0.1);
+}
+
+/* ── PLAN SWITCHER (demo only, hidden when session active) ── */
+.plan-switcher {
+  position: fixed; top: 46px; left: 0; right: 0; z-index: 199;
+  display: none; justify-content: center; gap: 8px;
+  padding: 8px 20px;
+  background: rgba(11,25,41,0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.plan-switcher.visible { display: flex; }
+.plan-switcher button {
+  font-family: 'Outfit', sans-serif;
+  padding: 6px 18px; border-radius: 40px;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all 0.3s;
+  border: 1px solid var(--border);
+  background: transparent; color: var(--text-sub);
+}
+.plan-switcher button.active {
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  color: var(--bg); border-color: var(--gold);
+}
+.plan-switcher button:hover:not(.active) {
+  border-color: var(--border-bright); color: var(--gold);
+}
+
+/* ── SIDEBAR ── */
+.layout { display: flex; min-height: 100vh; padding-top: 46px; }
+.layout.with-switcher { padding-top: 82px; }
+
+.sidebar {
+  width: 260px; min-height: 100%;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  padding: 32px 20px;
+  display: flex; flex-direction: column; gap: 8px;
+  position: fixed; top: 46px; bottom: 0; left: 0;
+  overflow-y: auto;
+}
+
+.sidebar-logo {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 32px; text-decoration: none;
+}
+.sidebar-logo-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px; font-weight: 600; color: var(--gold);
+  letter-spacing: 0.5px;
+}
+.sidebar-logo img { width: 18px; height: auto; filter: drop-shadow(0 0 6px rgba(212,168,67,0.4)); }
+
+.sidebar-section {
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-muted); margin: 16px 0 8px; padding-left: 12px;
+}
+
+.sidebar-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 10px;
+  font-size: 13px; color: var(--text-sub);
+  cursor: pointer; transition: all 0.2s;
+  text-decoration: none;
+}
+.sidebar-item:hover { background: var(--gold-dim); color: var(--text); }
+.sidebar-item.active { background: var(--gold-dim); color: var(--gold); border: 1px solid var(--border); }
+.sidebar-item svg { width: 18px; height: 18px; opacity: 0.6; }
+.sidebar-item.active svg { opacity: 1; }
+
+.sidebar-badge {
+  margin-left: auto;
+  font-size: 10px; font-weight: 600;
+  background: var(--gold); color: var(--bg);
+  padding: 2px 8px; border-radius: 10px;
+}
+
+.sidebar-plan {
+  margin-top: auto;
+  padding: 16px;
+  background: linear-gradient(145deg, var(--bg3), var(--bg2));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.sidebar-plan-name {
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 6px;
+}
+.sidebar-plan-label {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px; font-weight: 400; color: var(--text);
+}
+.sidebar-plan-price {
+  font-size: 12px; color: var(--text-muted); margin-bottom: 12px;
+}
+.sidebar-upgrade {
+  display: block; width: 100%; text-align: center;
+  padding: 8px; border-radius: 8px;
+  font-size: 12px; font-weight: 500;
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  color: var(--bg); border: none; cursor: pointer;
+  transition: all 0.3s;
+}
+.sidebar-upgrade:hover { box-shadow: 0 0 20px var(--gold-glow); }
+
+/* ── MAIN ── */
+.main { flex: 1; margin-left: 260px; padding: 32px 40px; }
+
+.main-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 32px;
+}
+.main-greeting {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px; font-weight: 300;
+}
+.main-greeting em { font-style: italic; color: var(--gold); }
+
+.main-date { font-size: 13px; color: var(--text-muted); }
+
+.user-badge {
+  display: flex; align-items: center; gap: 10px;
+}
+.user-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--gold-dim); border: 1px solid var(--border-bright);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px; color: var(--gold);
+}
+.user-name { font-size: 13px; color: var(--text-sub); }
+.user-plan-tag {
+  font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 6px;
+  background: var(--gold-dim); color: var(--gold); border: 1px solid var(--border);
+}
+
+/* ── STATS CARDS ── */
+.stats-row {
+  display: grid; gap: 16px; margin-bottom: 32px;
+}
+.stats-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.stats-row.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.3s, transform 0.3s;
+}
+.stat-card:hover { border-color: var(--border-bright); transform: translateY(-2px); }
+.stat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0; transition: opacity 0.3s;
+}
+.stat-card:hover::before { opacity: 1; }
+
+.stat-label {
+  font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 12px;
+}
+.stat-value {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 36px; font-weight: 300; color: var(--text);
+  line-height: 1;
+}
+.stat-value span { font-size: 18px; color: var(--text-sub); }
+.stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+.stat-icon {
+  position: absolute; top: 20px; right: 20px;
+  width: 40px; height: 40px; border-radius: 12px;
+  background: var(--gold-dim); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── PROGRESS RING ── */
+.credit-ring {
+  width: 100%; display: flex; flex-direction: column; align-items: center;
+  padding: 20px 0;
+}
+.credit-ring svg { width: 140px; height: 140px; transform: rotate(-90deg); }
+.credit-ring circle {
+  fill: none; stroke-width: 8; stroke-linecap: round;
+}
+.credit-ring .ring-bg { stroke: var(--bg3); }
+.credit-ring .ring-fill { stroke: var(--gold); transition: stroke-dashoffset 1s ease; }
+.credit-ring .ring-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px; fill: var(--text); text-anchor: middle;
+  dominant-baseline: middle; transform: rotate(90deg); transform-origin: center;
+}
+.credit-ring .ring-label {
+  font-size: 10px; fill: var(--text-muted); text-anchor: middle;
+  dominant-baseline: middle; transform: rotate(90deg); transform-origin: center;
+}
+
+/* ── CARDS / SECTIONS ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 20px;
+}
+.card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px;
+}
+.card-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px; font-weight: 400;
+}
+.card-title em { font-style: italic; color: var(--gold); }
+.card-action {
+  font-size: 12px; color: var(--gold); cursor: pointer;
+  text-decoration: none; transition: color 0.2s;
+}
+.card-action:hover { color: var(--gold-l); }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+
+/* ── USAGE BAR ── */
+.usage-bar-container { margin-bottom: 20px; }
+.usage-bar-header {
+  display: flex; justify-content: space-between; margin-bottom: 8px;
+}
+.usage-bar-label { font-size: 12px; color: var(--text-sub); }
+.usage-bar-value { font-size: 12px; color: var(--gold); font-weight: 500; }
+.usage-bar {
+  height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden;
+}
+.usage-bar-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-l));
+  transition: width 1s ease;
+}
+
+/* ── ACTIVITY / LIST ── */
+.activity-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--gold); flex-shrink: 0;
+}
+.activity-dot.green { background: var(--green); }
+.activity-dot.blue { background: var(--blue); }
+.activity-text { font-size: 13px; color: var(--text-sub); flex: 1; }
+.activity-text strong { color: var(--text); font-weight: 500; }
+.activity-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+
+/* ── LANGUAGE CHIPS ── */
+.lang-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.lang-chip {
+  padding: 6px 14px; border-radius: 20px; font-size: 12px;
+  background: var(--gold-dim); border: 1px solid var(--border);
+  color: var(--text-sub); transition: all 0.2s;
+}
+.lang-chip:hover { border-color: var(--border-bright); color: var(--gold); }
+.lang-chip.active { background: var(--gold); color: var(--bg); border-color: var(--gold); font-weight: 500; }
+
+/* ── VOICE PROFILES ── */
+.voice-profile {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px; border-radius: 12px;
+  background: var(--bg3); border: 1px solid var(--border);
+  margin-bottom: 10px; transition: all 0.2s;
+}
+.voice-profile:hover { border-color: var(--border-bright); }
+.voice-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--gold-dim); border: 1px solid var(--border-bright);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: var(--gold);
+}
+.voice-info { flex: 1; }
+.voice-name { font-size: 13px; color: var(--text); font-weight: 500; }
+.voice-lang { font-size: 11px; color: var(--text-muted); }
+.voice-action {
+  padding: 5px 12px; border-radius: 6px; font-size: 11px;
+  background: var(--gold-dim); border: 1px solid var(--border);
+  color: var(--gold); cursor: pointer; transition: all 0.2s;
+}
+.voice-action:hover { background: var(--gold); color: var(--bg); }
+
+/* ── MEETING LOG (Business) ── */
+.meeting-item {
+  padding: 16px; border-radius: 12px;
+  background: var(--bg3); border: 1px solid var(--border);
+  margin-bottom: 10px; transition: all 0.2s; cursor: pointer;
+}
+.meeting-item:hover { border-color: var(--border-bright); }
+.meeting-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.meeting-title { font-size: 14px; color: var(--text); font-weight: 500; }
+.meeting-date { font-size: 11px; color: var(--text-muted); }
+.meeting-meta { display: flex; gap: 16px; }
+.meeting-meta-item { font-size: 11px; color: var(--text-sub); display: flex; align-items: center; gap: 4px; }
+.meeting-summary { font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.6; }
+
+/* ── TEAM MEMBER ── */
+.team-member {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 10px;
+  background: var(--bg3); border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.team-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--gold-dim); border: 1px solid var(--border-bright);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--gold); font-weight: 600;
+}
+.team-info { flex: 1; }
+.team-name { font-size: 13px; color: var(--text); }
+.team-role { font-size: 11px; color: var(--text-muted); }
+.team-minutes { font-size: 12px; color: var(--gold); font-weight: 500; }
+.team-status {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+}
+
+/* ── QUICK ACTION BUTTONS ── */
+.quick-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.quick-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 18px; border-radius: 10px;
+  font-size: 12px; font-weight: 500;
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text-sub); cursor: pointer; transition: all 0.2s;
+}
+.quick-btn:hover { border-color: var(--border-bright); color: var(--gold); }
+.quick-btn.primary {
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  color: var(--bg); border-color: var(--gold);
+}
+.quick-btn.primary:hover { box-shadow: 0 0 20px var(--gold-glow); }
+
+/* ── FEATURE LOCKED ── */
+.locked-overlay {
+  position: relative; opacity: 0.4; pointer-events: none;
+}
+.locked-badge {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  background: var(--bg2); border: 1px solid var(--border-bright);
+  padding: 8px 20px; border-radius: 10px; z-index: 10;
+  font-size: 12px; color: var(--gold); font-weight: 500;
+  pointer-events: all; cursor: pointer;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; padding: 20px; }
+  .stats-row.cols-3, .stats-row.cols-4 { grid-template-columns: 1fr 1fr; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in { animation: fadeIn 0.5s ease forwards; }
+.delay-1 { animation-delay: 0.1s; opacity: 0; }
+.delay-2 { animation-delay: 0.2s; opacity: 0; }
+.delay-3 { animation-delay: 0.3s; opacity: 0; }
+.delay-4 { animation-delay: 0.4s; opacity: 0; }
+
+/* ── MINI PLAYER (Spotify-style compact widget) ── */
+.mini-player {
+  position: fixed; bottom: 20px; right: 20px; z-index: 300;
+  width: 340px;
+  background: var(--bg2);
+  border: 1px solid var(--border-bright);
+  border-radius: 18px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 30px rgba(212,168,67,0.1);
+  backdrop-filter: blur(20px);
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(120%);
+  opacity: 0;
+}
+.mini-player.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+.mini-player.collapsed {
+  width: 64px; height: 64px; border-radius: 50%;
+  cursor: pointer;
+}
+.mini-player.collapsed .mp-body,
+.mini-player.collapsed .mp-header-actions,
+.mini-player.collapsed .mp-header-info { display: none; }
+.mini-player.collapsed .mp-header {
+  padding: 0; justify-content: center; height: 64px;
+}
+
+.mp-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(212,168,67,0.12), rgba(212,168,67,0.04));
+  border-bottom: 1px solid var(--border);
+}
+.mp-header-info {
+  display: flex; align-items: center; gap: 8px;
+}
+.mp-header-info img { width: 16px; height: auto; }
+.mp-status {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.5px;
+  color: var(--gold);
+}
+.mp-status .dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  margin-right: 6px; vertical-align: middle;
+}
+.mp-status .dot.live { background: var(--green); animation: pulse-dot 1.5s infinite; }
+.mp-status .dot.idle { background: var(--text-muted); }
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+
+.mp-header-actions {
+  display: flex; gap: 4px;
+}
+.mp-btn-icon {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: none; background: transparent;
+  color: var(--text-sub); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.mp-btn-icon:hover { background: var(--gold-dim); color: var(--gold); }
+.mp-btn-icon svg { width: 14px; height: 14px; }
+
+.mp-body { padding: 14px 16px; }
+
+/* Language pair display */
+.mp-langs {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; margin-bottom: 14px;
+}
+.mp-lang {
+  font-size: 13px; font-weight: 500; color: var(--text);
+  padding: 6px 14px; border-radius: 8px;
+  background: var(--bg3); border: 1px solid var(--border);
+  min-width: 70px; text-align: center;
+}
+.mp-lang-arrow {
+  color: var(--gold); font-size: 16px;
+  display: flex; align-items: center;
+}
+.mp-lang-arrow svg { width: 20px; height: 20px; }
+
+/* Main control button */
+.mp-controls {
+  display: flex; align-items: center; justify-content: center;
+  gap: 16px; margin-bottom: 14px;
+}
+.mp-rec-btn {
+  width: 52px; height: 52px; border-radius: 50%;
+  border: 2px solid var(--gold);
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  color: var(--bg); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px var(--gold-glow);
+}
+.mp-rec-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 25px var(--gold-glow);
+}
+.mp-rec-btn.recording {
+  background: var(--red);
+  border-color: var(--red);
+  animation: pulse-rec 1.2s infinite;
+}
+@keyframes pulse-rec {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(248,113,113,0); }
+}
+.mp-rec-btn svg { width: 22px; height: 22px; }
+
+.mp-side-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent; color: var(--text-sub);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.mp-side-btn:hover { border-color: var(--gold); color: var(--gold); }
+.mp-side-btn svg { width: 16px; height: 16px; }
+
+/* Credits bar */
+.mp-credits {
+  display: flex; align-items: center; gap: 10px;
+}
+.mp-credits-bar {
+  flex: 1; height: 4px; border-radius: 4px;
+  background: var(--bg3); overflow: hidden;
+}
+.mp-credits-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-l));
+  transition: width 0.5s ease;
+}
+.mp-credits-text {
+  font-size: 10px; color: var(--text-muted);
+  white-space: nowrap; min-width: 55px; text-align: right;
+}
+
+/* Toggle button to show mini player */
+.mp-toggle {
+  position: fixed; bottom: 20px; right: 20px; z-index: 299;
+  width: 50px; height: 50px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  border: none; color: var(--bg); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 20px var(--gold-glow);
+  transition: all 0.3s;
+}
+.mp-toggle:hover { transform: scale(1.1); }
+.mp-toggle.hidden { display: none; }
+.mp-toggle svg { width: 22px; height: 22px; }
+
+@media (max-width: 768px) {
+  .mini-player { width: calc(100% - 40px); left: 20px; right: 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <a class="top-bar-logo" href="/">
+    <img src="data:image/png;base64,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" alt="Legendary Feather" style="width:22px; height:auto; filter: drop-shadow(0 0 8px rgba(212,168,67,0.4));" />
+    <span>LEGENDARY FEATHER</span>
+  </a>
+  <div class="top-bar-right">
+    <div class="top-bar-user" id="topBarUser"></div>
+    <button class="btn-logout" onclick="logout()">Sign Out</button>
+  </div>
+</div>
+
+<!-- PLAN SWITCHER (owner/demo only) -->
+<div class="plan-switcher" id="planSwitcher">
+  <button class="active" onclick="switchPlanView('personal', this)">Personal &mdash; &euro;9.99</button>
+  <button onclick="switchPlanView('premium', this)">Premium &mdash; &euro;24.99</button>
+  <button onclick="switchPlanView('business', this)">Business &mdash; &euro;89.99</button>
+</div>
+
+<div class="layout" id="mainLayout">
+<!-- ════════════════════════════════════════════ -->
+<!-- SIDEBAR                                      -->
+<!-- ════════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <a href="#" class="sidebar-logo">
+    <img src="data:image/png;base64,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" alt="Legendary Feather" />
+    <span class="sidebar-logo-text">Legendary Feather</span>
+  </a>
+
+  <div class="sidebar-section">Main</div>
+  <a class="sidebar-item active" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    Dashboard
+  </a>
+  <a class="sidebar-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+    Start Translation
+  </a>
+  <a class="sidebar-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10A15 15 0 0 1 12 2z"/></svg>
+    Languages
+  </a>
+
+  <div class="sidebar-section">Account</div>
+  <a class="sidebar-item" href="#" id="nav-voice">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+    Voice Profiles
+  </a>
+  <a class="sidebar-item" href="#" id="nav-history">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    History
+    <span class="sidebar-badge" id="history-badge">3</span>
+  </a>
+  <a class="sidebar-item" href="#" id="nav-meetings" style="display:none;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Meetings
+    <span class="sidebar-badge">10</span>
+  </a>
+  <a class="sidebar-item" href="#" id="nav-team" style="display:none;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Team
+  </a>
+  <a class="sidebar-item" href="#">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </a>
+  <a class="sidebar-item" href="#" onclick="logout(); return false;" style="color:var(--red); opacity:0.7;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    Sign Out
+  </a>
+
+  <div class="sidebar-plan" id="sidebar-plan"></div>
+</aside>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- MAIN CONTENT                                 -->
+<!-- ════════════════════════════════════════════ -->
+<main class="main" id="main-content"></main>
+</div>
+
+<script>
+// ── AUTH CHECK ──
+const OWNER_EMAILS = ['uribeisaakgogo@gmail.com', 'izaaku16@gmail.com'];
+let currentSession = null;
+
+function getSession() {
+  try { return JSON.parse(sessionStorage.getItem('lf_session')); } catch { return null; }
+}
+
+function logout() {
+  sessionStorage.removeItem('lf_session');
+  window.location.href = '/auth';
+}
+
+currentSession = getSession();
+if (!currentSession) {
+  window.location.href = '/auth';
+}
+
+// Set up top bar
+if (currentSession) {
+  const isOwner = OWNER_EMAILS.includes(currentSession.email);
+  document.getElementById('topBarUser').innerHTML =
+    `<strong>${currentSession.name}</strong> &middot; ${currentSession.plan.charAt(0).toUpperCase() + currentSession.plan.slice(1)}`;
+
+  // Show plan switcher only for owners
+  if (isOwner) {
+    document.getElementById('planSwitcher').classList.add('visible');
+    document.getElementById('mainLayout').classList.add('with-switcher');
+    document.querySelector('.sidebar').style.top = '82px';
+  }
+}
+
+function switchPlanView(planKey, btn) {
+  document.querySelectorAll('.plan-switcher button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  showPlan(planKey);
+}
+
+// ── DATA ──
+const plans = {
+  personal: {
+    name: 'Personal',
+    price: '€9.99',
+    minutes: 60,
+    used: 23,
+    features: ['Face-to-face mode', '100+ languages', 'Standard voices', 'Android & iOS'],
+    locked: ['Voice cloning', 'Conference mode', 'Meeting history', 'Team management', 'API access'],
+    extraCost: '€0.15/min',
+    upgradeTo: 'Premium',
+    history: [
+      { text: '<strong>Spanish → English</strong> conversation at café', time: '2h ago', dot: '' },
+      { text: '<strong>French → English</strong> hotel check-in', time: 'Yesterday', dot: 'green' },
+      { text: '<strong>Italian → English</strong> restaurant order', time: '3 days ago', dot: 'blue' },
+    ],
+    topLangs: ['Spanish', 'French', 'Italian', 'Portuguese', 'German'],
+  },
+  premium: {
+    name: 'Premium',
+    price: '€24.99',
+    minutes: 200,
+    used: 87,
+    features: ['Face-to-face + Conference mode', '100+ languages', 'Voice cloning', 'Full history', 'Priority processing'],
+    locked: ['Meeting history', 'Team management', 'API access'],
+    extraCost: '€0.15/min',
+    upgradeTo: 'Business',
+    history: [
+      { text: '<strong>Japanese → English</strong> business call with voice clone', time: '1h ago', dot: '' },
+      { text: '<strong>Korean → Spanish</strong> conference session (4 participants)', time: '5h ago', dot: 'green' },
+      { text: '<strong>Arabic → English</strong> client meeting', time: 'Yesterday', dot: '' },
+      { text: '<strong>Mandarin → English</strong> webinar translation', time: '2 days ago', dot: 'blue' },
+      { text: '<strong>Hindi → English</strong> voice cloned call', time: '3 days ago', dot: 'green' },
+    ],
+    topLangs: ['Japanese', 'Korean', 'Arabic', 'Mandarin', 'Hindi', 'French'],
+    voiceProfiles: [
+      { name: 'My Voice (English)', lang: 'en-US · Neural Clone', initials: 'ME' },
+      { name: 'My Voice (Spanish)', lang: 'es-ES · Neural Clone', initials: 'ME' },
+    ],
+  },
+  business: {
+    name: 'Business',
+    price: '€89.99',
+    minutes: 1000,
+    used: 412,
+    features: ['All modes + API access', '1,100+ languages', 'Team voice profiles', 'Meeting AI summaries', 'Transcription export', 'SLA + Priority support', 'Shared team dashboard'],
+    locked: [],
+    extraCost: '€0.14/min · Fair use: 3,000 min',
+    upgradeTo: null,
+    history: [
+      { text: '<strong>EN→DE→FR</strong> Multi-language board meeting (6 participants)', time: '30min ago', dot: '' },
+      { text: '<strong>EN→JP</strong> Client pitch with voice clone — Sarah M.', time: '3h ago', dot: 'green' },
+      { text: '<strong>EN→PT</strong> Weekly LATAM sync — Team auto-transcribed', time: 'Yesterday', dot: 'blue' },
+      { text: '<strong>EN→ZH</strong> Supplier negotiation — AI summary generated', time: '2 days ago', dot: '' },
+    ],
+    topLangs: ['German', 'French', 'Japanese', 'Portuguese', 'Mandarin', 'Arabic', 'Korean', 'Hindi'],
+    voiceProfiles: [
+      { name: 'Sarah Mitchell', lang: 'en-US · Sales Lead', initials: 'SM' },
+      { name: 'Carlos Vega', lang: 'es-MX · LATAM Manager', initials: 'CV' },
+      { name: 'Yuki Tanaka', lang: 'ja-JP · Japan Ops', initials: 'YT' },
+      { name: 'Marc Dupont', lang: 'fr-FR · EU Director', initials: 'MD' },
+    ],
+    meetings: [
+      { title: 'Q2 Board Review — Multilingual', date: 'Apr 17, 2026', duration: '47 min', langs: 'EN, DE, FR', participants: 6, summary: 'Revenue targets exceeded by 12%. Expansion into DACH approved. Next steps: hire regional PM by May 15.' },
+      { title: 'Client Pitch — Nakamura Corp', date: 'Apr 16, 2026', duration: '32 min', langs: 'EN, JP', participants: 4, summary: 'Positive reception on enterprise tier. Follow-up demo scheduled for Apr 23. Key concern: data residency in Japan.' },
+      { title: 'LATAM Weekly Sync', date: 'Apr 15, 2026', duration: '28 min', langs: 'EN, ES, PT', participants: 5, summary: 'Brazil launch on track for May 1. Mexico partner agreement pending legal review. Colombia pilot at 800 users.' },
+      { title: 'Supplier Call — Shenzhen', date: 'Apr 14, 2026', duration: '19 min', langs: 'EN, ZH', participants: 3, summary: 'Component pricing locked at $0.42/unit for Q3. MOQ reduced to 5,000. Shipping lead time: 3 weeks.' },
+      { title: 'EU Compliance Review', date: 'Apr 12, 2026', duration: '38 min', langs: 'EN, DE, FR', participants: 4, summary: 'GDPR audit passed. New data retention policy approved. Voice data auto-deletes after 90 days.' },
+    ],
+    team: [
+      { name: 'Sarah Mitchell', role: 'Sales Lead', initials: 'SM', minutes: 156, online: true },
+      { name: 'Carlos Vega', role: 'LATAM Manager', initials: 'CV', minutes: 89, online: true },
+      { name: 'Yuki Tanaka', role: 'Japan Operations', initials: 'YT', minutes: 72, online: false },
+      { name: 'Marc Dupont', role: 'EU Director', initials: 'MD', minutes: 58, online: true },
+      { name: 'Priya Sharma', role: 'India Market', initials: 'PS', minutes: 37, online: false },
+    ],
+  }
+};
+
+function showPlan(planKey) {
+  const plan = plans[planKey];
+  const pct = Math.round((plan.used / plan.minutes) * 100);
+  const remaining = plan.minutes - plan.used;
+  const circumference = 2 * Math.PI * 58;
+  const offset = circumference - (pct / 100) * circumference;
+
+  // Get user info
+  const userName = currentSession ? currentSession.name.split(' ')[0] : 'User';
+  const userInitial = userName.charAt(0).toUpperCase();
+
+  // Show/hide sidebar items
+  document.getElementById('nav-meetings').style.display = planKey === 'business' ? '' : 'none';
+  document.getElementById('nav-team').style.display = planKey === 'business' ? '' : 'none';
+  document.getElementById('history-badge').textContent = plan.history.length;
+
+  // Sidebar plan card
+  document.getElementById('sidebar-plan').innerHTML = `
+    <div class="sidebar-plan-name">${plan.name} Plan</div>
+    <div class="sidebar-plan-label">${plan.price}<span style="font-size:12px;color:var(--text-muted)"> / month</span></div>
+    <div class="sidebar-plan-price">${remaining} min remaining</div>
+    ${plan.upgradeTo ? `<button class="sidebar-upgrade">Upgrade to ${plan.upgradeTo}</button>` : '<div style="font-size:11px;color:var(--green);text-align:center;">Your best plan</div>'}
+  `;
+
+  // Build main content
+  let html = '';
+
+  // Header
+  html += `
+  <div class="main-header animate-in">
+    <div>
+      <div class="main-greeting">Welcome back, <em>${userName}</em></div>
+      <div class="main-date">${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+    </div>
+    <div class="user-badge">
+      <span class="user-plan-tag">${plan.name}</span>
+      <div class="user-avatar">${userInitial}</div>
+    </div>
+  </div>`;
+
+  // ── STATS ROW ──
+  const statsCols = planKey === 'business' ? 'cols-4' : 'cols-3';
+  html += `<div class="stats-row ${statsCols} animate-in delay-1">`;
+
+  // Credit ring card
+  html += `
+    <div class="stat-card">
+      <div class="credit-ring">
+        <svg viewBox="0 0 140 140">
+          <circle class="ring-bg" cx="70" cy="70" r="58"/>
+          <circle class="ring-fill" cx="70" cy="70" r="58"
+            stroke-dasharray="${circumference}"
+            stroke-dashoffset="${offset}"/>
+          <text class="ring-text" x="70" y="65">${pct}%</text>
+          <text class="ring-label" x="70" y="85">used</text>
+        </svg>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:13px;color:var(--text-sub);">${plan.used} of ${plan.minutes} minutes</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${remaining} min remaining</div>
+      </div>
+    </div>`;
+
+  // Sessions today
+  html += `
+    <div class="stat-card">
+      <div class="stat-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/></svg>
+      </div>
+      <div class="stat-label">Sessions Today</div>
+      <div class="stat-value">${planKey === 'business' ? '12' : planKey === 'premium' ? '5' : '2'}</div>
+      <div class="stat-sub">${planKey === 'business' ? '47 min total' : planKey === 'premium' ? '23 min total' : '8 min total'}</div>
+    </div>`;
+
+  // Languages used
+  html += `
+    <div class="stat-card">
+      <div class="stat-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10"/></svg>
+      </div>
+      <div class="stat-label">Languages Used</div>
+      <div class="stat-value">${plan.topLangs.length}</div>
+      <div class="stat-sub">this month</div>
+    </div>`;
+
+  // Team members (Business only)
+  if (planKey === 'business') {
+    html += `
+    <div class="stat-card">
+      <div class="stat-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="stat-label">Team Members</div>
+      <div class="stat-value">${plan.team.length}</div>
+      <div class="stat-sub">${plan.team.filter(t => t.online).length} online now</div>
+    </div>`;
+  }
+
+  html += `</div>`;
+
+  // ── QUICK ACTIONS ──
+  html += `<div class="card animate-in delay-2">
+    <div class="card-header"><div class="card-title">Quick <em>Actions</em></div></div>
+    <div class="quick-actions">
+      <button class="quick-btn primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/></svg>
+        Start Translation
+      </button>
+      <button class="quick-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
+        Change Languages
+      </button>`;
+
+  if (planKey === 'premium' || planKey === 'business') {
+    html += `<button class="quick-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        Manage Voices
+      </button>`;
+  }
+  if (planKey === 'business') {
+    html += `<button class="quick-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        Invite Team Member
+      </button>
+      <button class="quick-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+        Schedule Meeting
+      </button>`;
+  }
+
+  html += `</div></div>`;
+
+  // ── GRID CONTENT ──
+  html += `<div class="grid-2 animate-in delay-3">`;
+
+  // Recent Activity
+  html += `<div class="card">
+    <div class="card-header">
+      <div class="card-title">Recent <em>Activity</em></div>
+      <a class="card-action" href="#">View All</a>
+    </div>`;
+  plan.history.forEach(h => {
+    html += `<div class="activity-item">
+      <div class="activity-dot ${h.dot}"></div>
+      <div class="activity-text">${h.text}</div>
+      <div class="activity-time">${h.time}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Top Languages
+  html += `<div class="card">
+    <div class="card-header">
+      <div class="card-title">Top <em>Languages</em></div>
+      <a class="card-action" href="#">See All ${planKey === 'business' ? '1,100+' : '100+'}</a>
+    </div>
+    <div class="lang-chips">`;
+  plan.topLangs.forEach((l, i) => {
+    html += `<div class="lang-chip ${i === 0 ? 'active' : ''}">${l}</div>`;
+  });
+  html += `</div>
+    <div style="margin-top:20px;">
+      <div class="usage-bar-container">
+        <div class="usage-bar-header">
+          <span class="usage-bar-label">${plan.topLangs[0]}</span>
+          <span class="usage-bar-value">42%</span>
+        </div>
+        <div class="usage-bar"><div class="usage-bar-fill" style="width:42%"></div></div>
+      </div>
+      <div class="usage-bar-container">
+        <div class="usage-bar-header">
+          <span class="usage-bar-label">${plan.topLangs[1]}</span>
+          <span class="usage-bar-value">28%</span>
+        </div>
+        <div class="usage-bar"><div class="usage-bar-fill" style="width:28%"></div></div>
+      </div>
+      <div class="usage-bar-container">
+        <div class="usage-bar-header">
+          <span class="usage-bar-label">${plan.topLangs[2]}</span>
+          <span class="usage-bar-value">18%</span>
+        </div>
+        <div class="usage-bar"><div class="usage-bar-fill" style="width:18%"></div></div>
+      </div>
+    </div>
+  </div>`;
+
+  html += `</div>`; // close grid-2
+
+  // ── VOICE PROFILES (Premium & Business) ──
+  if (planKey === 'premium' || planKey === 'business') {
+    html += `<div class="card animate-in delay-4">
+      <div class="card-header">
+        <div class="card-title">Voice <em>Profiles</em></div>
+        <a class="card-action" href="#">+ Add Voice</a>
+      </div>`;
+    plan.voiceProfiles.forEach(v => {
+      html += `<div class="voice-profile">
+        <div class="voice-avatar">${v.initials}</div>
+        <div class="voice-info">
+          <div class="voice-name">${v.name}</div>
+          <div class="voice-lang">${v.lang}</div>
+        </div>
+        <button class="voice-action">Edit</button>
+        <button class="voice-action">Test</button>
+      </div>`;
+    });
+    html += `</div>`;
+  } else {
+    // Locked voice cloning for Personal
+    html += `<div class="card animate-in delay-4" style="position:relative;">
+      <div class="locked-overlay">
+        <div class="card-header"><div class="card-title">Voice <em>Cloning</em></div></div>
+        <div class="voice-profile"><div class="voice-avatar">?</div><div class="voice-info"><div class="voice-name">Your cloned voice</div><div class="voice-lang">Translate in your own voice</div></div></div>
+      </div>
+      <div class="locked-badge">Upgrade to Premium</div>
+    </div>`;
+  }
+
+  // ── MEETINGS (Business only) ──
+  if (planKey === 'business') {
+    html += `<div class="grid-2 animate-in delay-4">`;
+
+    // Meeting Log
+    html += `<div class="card">
+      <div class="card-header">
+        <div class="card-title">Meeting <em>History</em></div>
+        <a class="card-action" href="#">${plan.meetings.length} / 10 slots</a>
+      </div>`;
+    plan.meetings.forEach(m => {
+      html += `<div class="meeting-item">
+        <div class="meeting-header">
+          <div class="meeting-title">${m.title}</div>
+          <div class="meeting-date">${m.date}</div>
+        </div>
+        <div class="meeting-meta">
+          <div class="meeting-meta-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            ${m.duration}
+          </div>
+          <div class="meeting-meta-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
+            ${m.langs}
+          </div>
+          <div class="meeting-meta-item">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            ${m.participants}
+          </div>
+        </div>
+        <div class="meeting-summary">${m.summary}</div>
+      </div>`;
+    });
+    html += `</div>`;
+
+    // Team Management
+    html += `<div class="card">
+      <div class="card-header">
+        <div class="card-title">Team <em>Members</em></div>
+        <a class="card-action" href="#">+ Invite</a>
+      </div>`;
+    plan.team.forEach(t => {
+      html += `<div class="team-member">
+        <div class="team-avatar">${t.initials}</div>
+        <div class="team-info">
+          <div class="team-name">${t.name}</div>
+          <div class="team-role">${t.role}</div>
+        </div>
+        <div class="team-minutes">${t.minutes} min</div>
+        <div class="team-status" style="background:${t.online ? 'var(--green)' : 'var(--text-muted)'}"></div>
+      </div>`;
+    });
+
+    // Real-time Collaboration Feature
+    html += `
+      <div style="margin-top:20px; padding:16px; background:var(--gold-dim); border:1px solid var(--border); border-radius:12px;">
+        <div style="font-size:13px; color:var(--gold); font-weight:500; margin-bottom:6px;">
+          Live Translation Rooms
+        </div>
+        <div style="font-size:12px; color:var(--text-sub); line-height:1.6;">
+          Create shared rooms where each participant hears the conversation in their own language — in real time. Perfect for multilingual meetings.
+        </div>
+        <button class="quick-btn primary" style="margin-top:12px; font-size:11px; padding:8px 16px;">
+          Create Room
+        </button>
+      </div>`;
+
+    html += `</div>`;
+    html += `</div>`; // close grid-2
+  }
+
+  // ── PLAN FEATURES ──
+  html += `<div class="card animate-in delay-4">
+    <div class="card-header">
+      <div class="card-title">Your <em>${plan.name}</em> Plan</div>
+      <div style="font-size:13px;color:var(--text-sub);">${plan.price}/month</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;">`;
+  plan.features.forEach(f => {
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;background:var(--gold-dim);border:1px solid var(--border);font-size:12px;color:var(--gold);">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      ${f}
+    </div>`;
+  });
+  html += `</div>`;
+
+  if (plan.locked.length > 0) {
+    html += `<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase;">Available in higher plans</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">`;
+    plan.locked.forEach(f => {
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);font-size:12px;color:var(--text-muted);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        ${f}
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `<div style="margin-top:20px;font-size:11px;color:var(--text-muted);">Extra minutes: ${plan.extraCost}</div>`;
+
+  if (plan.upgradeTo) {
+    html += `<button class="quick-btn primary" style="margin-top:16px;">Upgrade to ${plan.upgradeTo}</button>`;
+  }
+
+  html += `</div>`;
+
+  document.getElementById('main-content').innerHTML = html;
+}
+
+// Init — load user's actual plan from session
+const userPlan = currentSession ? currentSession.plan : 'personal';
+showPlan(userPlan);
+
+// Highlight the correct switcher button for owners
+if (OWNER_EMAILS.includes(currentSession?.email)) {
+  const planBtns = document.querySelectorAll('.plan-switcher button');
+  planBtns.forEach(b => b.classList.remove('active'));
+  const planIndex = { personal: 0, premium: 1, business: 2 };
+  if (planBtns[planIndex[userPlan]]) planBtns[planIndex[userPlan]].classList.add('active');
+}
+
+// ── MINI PLAYER LOGIC ──
+const miniPlayer = document.getElementById('miniPlayer');
+const mpToggle = document.getElementById('mpToggle');
+let mpVisible = false;
+let mpRecording = false;
+let mpLang1 = 'English';
+let mpLang2 = 'Spanish';
+
+function toggleMiniPlayer() {
+  mpVisible = !mpVisible;
+  miniPlayer.classList.toggle('visible', mpVisible);
+  mpToggle.classList.toggle('hidden', mpVisible);
+}
+
+function closeMiniPlayer() {
+  mpVisible = false;
+  miniPlayer.classList.remove('visible');
+  mpToggle.classList.remove('hidden');
+}
+
+function collapseMiniPlayer() {
+  miniPlayer.classList.toggle('collapsed');
+}
+
+function toggleRecording() {
+  mpRecording = !mpRecording;
+  const btn = document.getElementById('mpRecBtn');
+  btn.classList.toggle('recording', mpRecording);
+  const statusDot = document.querySelector('.mp-status .dot');
+  const statusText = document.getElementById('mpStatusText');
+
+  if (mpRecording) {
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+    statusDot.classList.remove('idle');
+    statusDot.classList.add('live');
+    statusText.textContent = 'Translating...';
+  } else {
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/></svg>';
+    statusDot.classList.remove('live');
+    statusDot.classList.add('idle');
+    statusText.textContent = 'Ready';
+  }
+}
+
+function swapLangs() {
+  const temp = mpLang1;
+  mpLang1 = mpLang2;
+  mpLang2 = temp;
+  document.getElementById('mpLang1').textContent = mpLang1;
+  document.getElementById('mpLang2').textContent = mpLang2;
+}
+
+// Update credits in mini player
+const plan = plans[userPlan];
+const mpPct = Math.round(((plan.minutes - plan.used) / plan.minutes) * 100);
+document.getElementById('mpCreditsFill').style.width = mpPct + '%';
+document.getElementById('mpCreditsText').textContent = (plan.minutes - plan.used) + ' min left';
+</script>
+
+<!-- ═══════ MINI PLAYER TOGGLE BUTTON ═══════ -->
+<button class="mp-toggle" id="mpToggle" onclick="toggleMiniPlayer()" title="Open Mini Translator">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+    <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+    <line x1="12" y1="19" x2="12" y2="22"/>
+  </svg>
+</button>
+
+<!-- ═══════ MINI PLAYER WIDGET ═══════ -->
+<div class="mini-player" id="miniPlayer">
+  <div class="mp-header">
+    <div class="mp-header-info">
+      <img src="data:image/png;base64,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" alt="" style="width:14px;height:auto;" />
+      <span class="mp-status"><span class="dot idle"></span><span id="mpStatusText">Ready</span></span>
+    </div>
+    <div class="mp-header-actions">
+      <button class="mp-btn-icon" onclick="collapseMiniPlayer()" title="Minimize">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <button class="mp-btn-icon" onclick="closeMiniPlayer()" title="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="mp-body">
+    <!-- Language Pair -->
+    <div class="mp-langs">
+      <div class="mp-lang" id="mpLang1">English</div>
+      <button class="mp-side-btn" onclick="swapLangs()" title="Swap languages" style="width:32px;height:32px;border-radius:50%;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      </button>
+      <div class="mp-lang" id="mpLang2">Spanish</div>
+    </div>
+
+    <!-- Controls -->
+    <div class="mp-controls">
+      <button class="mp-side-btn" title="Change mode">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </button>
+      <button class="mp-rec-btn" id="mpRecBtn" onclick="toggleRecording()" title="Start/Stop translation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+        </svg>
+      </button>
+      <button class="mp-side-btn" title="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+
+    <!-- Credits remaining -->
+    <div class="mp-credits">
+      <div class="mp-credits-bar">
+        <div class="mp-credits-fill" id="mpCreditsFill" style="width:60%"></div>
+      </div>
+      <div class="mp-credits-text" id="mpCreditsText">37 min left</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

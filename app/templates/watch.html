@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>LF Watch</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #D4A843;
+  --gold-l: #EEC96A;
+  --gold-dim: rgba(212,168,67,0.15);
+  --gold-glow: rgba(212,168,67,0.35);
+  --bg: #060D16;
+  --bg2: #0B1929;
+  --bg3: #0F2035;
+  --text: #EAE4D8;
+  --text-sub: #7A9AB5;
+  --text-muted: #3A5A70;
+  --border: rgba(212,168,67,0.2);
+  --green: #4ADE80;
+  --red: #F87171;
+  --blue: #60A5FA;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ── WATCH FRAME (for desktop preview) ── */
+.watch-frame {
+  width: 390px; height: 390px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 3px solid #1A2A3A;
+  box-shadow: 0 0 0 6px #0A1520, 0 20px 60px rgba(0,0,0,0.8), inset 0 0 40px rgba(0,0,0,0.3);
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* On actual watch screens, use full viewport */
+@media (max-width: 400px) and (max-height: 400px) {
+  .watch-frame {
+    width: 100vw; height: 100vh;
+    border-radius: 0; border: none;
+    box-shadow: none;
+    position: static; transform: none;
+  }
+}
+
+/* ── PAGES (swipe between them) ── */
+.watch-pages {
+  flex: 1;
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.watch-pages::-webkit-scrollbar { display: none; }
+
+.watch-page {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 50px 30px 30px;
+  position: relative;
+}
+
+/* ── PAGE INDICATOR ── */
+.page-dots {
+  position: absolute;
+  top: 14px; left: 0; right: 0;
+  display: flex; justify-content: center; gap: 6px;
+  z-index: 10;
+}
+.page-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--text-muted); transition: all 0.3s;
+}
+.page-dot.active {
+  background: var(--gold);
+  width: 16px; border-radius: 3px;
+}
+
+/* ── PAGE 1: TRANSLATOR ── */
+.w-status {
+  font-size: 10px; font-weight: 500;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.w-status-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+}
+.w-status-dot.idle { background: var(--text-muted); }
+.w-status-dot.live { background: var(--green); animation: pulse-w 1.5s infinite; }
+@keyframes pulse-w {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.w-lang-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 20px;
+}
+.w-lang {
+  font-size: 14px; font-weight: 500;
+  padding: 8px 16px; border-radius: 10px;
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--text); min-width: 64px; text-align: center;
+  cursor: pointer; transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.w-lang:active { background: var(--gold-dim); border-color: var(--gold); }
+
+.w-swap {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent; color: var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: transform 0.3s;
+}
+.w-swap:active { transform: rotate(180deg); }
+.w-swap svg { width: 14px; height: 14px; }
+
+/* Big mic button */
+.w-mic-btn {
+  width: 90px; height: 90px; border-radius: 50%;
+  border: 3px solid var(--gold);
+  background: radial-gradient(circle at 35% 35%, var(--gold-l), var(--gold));
+  color: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s;
+  box-shadow: 0 6px 30px var(--gold-glow);
+  margin-bottom: 16px;
+  -webkit-tap-highlight-color: transparent;
+}
+.w-mic-btn:active {
+  transform: scale(0.95);
+}
+.w-mic-btn.recording {
+  background: radial-gradient(circle at 35% 35%, #FF8A8A, var(--red));
+  border-color: var(--red);
+  animation: pulse-mic 1.2s infinite;
+}
+@keyframes pulse-mic {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.4); }
+  50% { box-shadow: 0 0 0 16px rgba(248,113,113,0); }
+}
+.w-mic-btn svg { width: 34px; height: 34px; }
+
+/* Audio level ring */
+.w-audio-ring {
+  position: absolute;
+  width: 110px; height: 110px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  pointer-events: none;
+  transition: border-color 0.1s;
+}
+.w-audio-ring.active {
+  border-color: rgba(212,168,67,0.3);
+  animation: ring-pulse 0.8s ease-in-out infinite;
+}
+@keyframes ring-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+/* Credits mini bar */
+.w-credits {
+  display: flex; align-items: center; gap: 8px;
+  width: 80%;
+}
+.w-credits-bar {
+  flex: 1; height: 3px; border-radius: 3px;
+  background: var(--bg3); overflow: hidden;
+}
+.w-credits-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-l));
+}
+.w-credits-text {
+  font-size: 9px; color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── PAGE 2: TRANSCRIPT ── */
+.w-transcript-title {
+  font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 12px; font-weight: 500;
+}
+.w-transcript-area {
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 0 10px;
+  mask-image: linear-gradient(transparent 0%, black 10%, black 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(transparent 0%, black 10%, black 90%, transparent 100%);
+}
+.w-transcript-area::-webkit-scrollbar { display: none; }
+
+.w-msg {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  max-width: 90%;
+}
+.w-msg.original {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text-sub);
+  margin-right: auto;
+}
+.w-msg.translated {
+  background: var(--gold-dim);
+  border: 1px solid rgba(212,168,67,0.3);
+  color: var(--gold-l);
+  margin-left: auto;
+  text-align: right;
+}
+.w-msg-lang {
+  font-size: 9px; color: var(--text-muted);
+  margin-bottom: 2px; letter-spacing: 0.5px;
+}
+
+/* ── PAGE 3: SETTINGS ── */
+.w-settings-title {
+  font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 16px; font-weight: 500;
+}
+.w-setting-item {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.w-setting-label {
+  font-size: 12px; color: var(--text-sub);
+}
+.w-setting-value {
+  font-size: 11px; color: var(--gold); font-weight: 500;
+}
+
+/* Toggle switch */
+.w-toggle {
+  width: 36px; height: 20px;
+  border-radius: 10px;
+  background: var(--bg3);
+  position: relative; cursor: pointer;
+  transition: background 0.3s;
+  border: 1px solid var(--border);
+}
+.w-toggle.on { background: var(--gold); border-color: var(--gold); }
+.w-toggle::after {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--text);
+  top: 1px; left: 1px;
+  transition: transform 0.3s;
+}
+.w-toggle.on::after { transform: translateX(16px); background: var(--bg); }
+
+/* Connection indicator */
+.w-connection {
+  position: absolute;
+  bottom: 10px; left: 0; right: 0;
+  text-align: center;
+  font-size: 8px; letter-spacing: 1px;
+  color: var(--text-muted);
+}
+.w-connection.connected { color: var(--green); }
+.w-connection.disconnected { color: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="watch-frame">
+  <!-- Page indicator dots -->
+  <div class="page-dots">
+    <div class="page-dot active" id="dot0"></div>
+    <div class="page-dot" id="dot1"></div>
+    <div class="page-dot" id="dot2"></div>
+  </div>
+
+  <div class="watch-pages" id="watchPages">
+
+    <!-- ═══ PAGE 1: TRANSLATOR ═══ -->
+    <div class="watch-page" id="page0">
+      <div class="w-status">
+        <div class="w-status-dot idle" id="wStatusDot"></div>
+        <span id="wStatusText">READY</span>
+      </div>
+
+      <div class="w-lang-row">
+        <div class="w-lang" id="wLang1" onclick="cycleLang(1)">EN</div>
+        <button class="w-swap" onclick="swapWatchLangs()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        </button>
+        <div class="w-lang" id="wLang2" onclick="cycleLang(2)">ES</div>
+      </div>
+
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;">
+        <div class="w-audio-ring" id="wAudioRing"></div>
+        <button class="w-mic-btn" id="wMicBtn" onclick="toggleWatchRec()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+            <line x1="12" y1="19" x2="12" y2="22"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="w-credits">
+        <div class="w-credits-bar">
+          <div class="w-credits-fill" id="wCreditsFill" style="width:62%"></div>
+        </div>
+        <div class="w-credits-text" id="wCreditsText">37 min</div>
+      </div>
+
+      <div class="w-connection connected" id="wConnection">CONNECTED</div>
+    </div>
+
+    <!-- ═══ PAGE 2: LIVE TRANSCRIPT ═══ -->
+    <div class="watch-page" id="page1" style="justify-content:flex-start; padding-top:34px;">
+      <div class="w-transcript-title">Live Transcript</div>
+      <div class="w-transcript-area" id="wTranscript">
+        <div class="w-msg original">
+          <div class="w-msg-lang">EN</div>
+          Can you tell me where the train station is?
+        </div>
+        <div class="w-msg translated">
+          <div class="w-msg-lang">ES</div>
+          ¿Puedes decirme dónde está la estación de tren?
+        </div>
+        <div class="w-msg original">
+          <div class="w-msg-lang">ES</div>
+          Sí, está a dos calles a la derecha
+        </div>
+        <div class="w-msg translated">
+          <div class="w-msg-lang">EN</div>
+          Yes, it's two blocks to the right
+        </div>
+        <div class="w-msg original">
+          <div class="w-msg-lang">EN</div>
+          Thank you very much!
+        </div>
+        <div class="w-msg translated">
+          <div class="w-msg-lang">ES</div>
+          ¡Muchas gracias!
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PAGE 3: QUICK SETTINGS ═══ -->
+    <div class="watch-page" id="page2" style="justify-content:flex-start; padding-top:34px;">
+      <div class="w-settings-title">Settings</div>
+
+      <div class="w-setting-item">
+        <span class="w-setting-label">Auto-detect</span>
+        <div class="w-toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="w-setting-item">
+        <span class="w-setting-label">Voice Output</span>
+        <div class="w-toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="w-setting-item">
+        <span class="w-setting-label">Haptic Feedback</span>
+        <div class="w-toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="w-setting-item">
+        <span class="w-setting-label">Voice Clone</span>
+        <div class="w-toggle" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="w-setting-item">
+        <span class="w-setting-label">Mode</span>
+        <span class="w-setting-value" id="wMode" onclick="cycleMode()">Face-to-Face</span>
+      </div>
+      <div class="w-setting-item">
+        <span class="w-setting-label">Plan</span>
+        <span class="w-setting-value">Premium</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Page tracking ──
+const pages = document.getElementById('watchPages');
+const dots = [document.getElementById('dot0'), document.getElementById('dot1'), document.getElementById('dot2')];
+let currentPage = 0;
+
+pages.addEventListener('scroll', () => {
+  const idx = Math.round(pages.scrollLeft / pages.clientWidth);
+  if (idx !== currentPage) {
+    currentPage = idx;
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+  }
+});
+
+// ── Language cycling ──
+const langs = ['EN', 'ES', 'FR', 'DE', 'IT', 'PT', 'JA', 'KO', 'ZH', 'AR', 'HI', 'RU'];
+let lang1Idx = 0, lang2Idx = 1;
+
+function cycleLang(which) {
+  if (which === 1) {
+    lang1Idx = (lang1Idx + 1) % langs.length;
+    if (lang1Idx === lang2Idx) lang1Idx = (lang1Idx + 1) % langs.length;
+    document.getElementById('wLang1').textContent = langs[lang1Idx];
+  } else {
+    lang2Idx = (lang2Idx + 1) % langs.length;
+    if (lang2Idx === lang1Idx) lang2Idx = (lang2Idx + 1) % langs.length;
+    document.getElementById('wLang2').textContent = langs[lang2Idx];
+  }
+  // Haptic feedback if available
+  if (navigator.vibrate) navigator.vibrate(20);
+}
+
+function swapWatchLangs() {
+  const temp = lang1Idx;
+  lang1Idx = lang2Idx;
+  lang2Idx = temp;
+  document.getElementById('wLang1').textContent = langs[lang1Idx];
+  document.getElementById('wLang2').textContent = langs[lang2Idx];
+  if (navigator.vibrate) navigator.vibrate([20, 50, 20]);
+}
+
+// ── Recording toggle ──
+let wRecording = false;
+
+function toggleWatchRec() {
+  wRecording = !wRecording;
+  const btn = document.getElementById('wMicBtn');
+  const ring = document.getElementById('wAudioRing');
+  const statusDot = document.getElementById('wStatusDot');
+  const statusText = document.getElementById('wStatusText');
+
+  btn.classList.toggle('recording', wRecording);
+  ring.classList.toggle('active', wRecording);
+
+  if (wRecording) {
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>';
+    statusDot.classList.replace('idle', 'live');
+    statusText.textContent = 'TRANSLATING';
+    if (navigator.vibrate) navigator.vibrate(50);
+  } else {
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>';
+    statusDot.classList.replace('live', 'idle');
+    statusText.textContent = 'READY';
+    if (navigator.vibrate) navigator.vibrate(30);
+  }
+}
+
+// ── Mode cycling ──
+const modes = ['Face-to-Face', 'Conference', 'Listening'];
+let modeIdx = 0;
+
+function cycleMode() {
+  modeIdx = (modeIdx + 1) % modes.length;
+  document.getElementById('wMode').textContent = modes[modeIdx];
+  if (navigator.vibrate) navigator.vibrate(20);
+}
+
+// ── Session sync ──
+// Read session from main app if available
+try {
+  const session = JSON.parse(sessionStorage.getItem('lf_session'));
+  if (session) {
+    const planMinutes = { personal: 60, premium: 200, business: 1000 };
+    const mins = planMinutes[session.plan] || 60;
+    const used = Math.round(mins * 0.38);
+    const remaining = mins - used;
+    const pct = Math.round((remaining / mins) * 100);
+    document.getElementById('wCreditsFill').style.width = pct + '%';
+    document.getElementById('wCreditsText').textContent = remaining + ' min';
+
+    // Update plan in settings
+    const planLabel = session.plan.charAt(0).toUpperCase() + session.plan.slice(1);
+    document.querySelectorAll('.w-setting-value').forEach(el => {
+      if (el.textContent === 'Premium') el.textContent = planLabel;
+    });
+  }
+} catch(e) {}
+
+// ── WebSocket connection (ready for RunPod backend) ──
+// When deployed, this will connect to the same SocketIO backend:
+// const socket = io(window.location.origin);
+// socket.on('connect', () => { ... });
+// socket.on('translation', (data) => { addTranscriptMsg(data); });
+// socket.on('transcription', (data) => { ... });
+
+function addTranscriptMsg(original, translated, srcLang, tgtLang) {
+  const area = document.getElementById('wTranscript');
+  area.innerHTML += `
+    <div class="w-msg original"><div class="w-msg-lang">${srcLang}</div>${original}</div>
+    <div class="w-msg translated"><div class="w-msg-lang">${tgtLang}</div>${translated}</div>
+  `;
+  area.scrollTop = area.scrollHeight;
+}
+</script>
+</body>
+</html>

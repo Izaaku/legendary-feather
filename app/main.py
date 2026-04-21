@@ -5,7 +5,7 @@ import os
 # Ensure parent directory is in path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
-from flask import Flask, render_template
+from flask import Flask, render_template, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from dotenv import load_dotenv
@@ -61,6 +61,30 @@ def success():
                            stripe_key=Config.STRIPE_PUBLISHABLE_KEY,
                            languages=LANGUAGES,
                            show_success=True)
+
+
+@app.route('/auth')
+def auth():
+    """Authentication page — login / signup."""
+    return render_template('auth.html')
+
+
+@app.route('/dashboard')
+def dashboard():
+    """User dashboard — adapts to membership plan."""
+    return render_template('dashboard.html')
+
+
+@app.route('/landing')
+def landing():
+    """Public landing page."""
+    return render_template('landing.html')
+
+
+@app.route('/watch')
+def watch():
+    """Smartwatch web interface — compact translator control."""
+    return render_template('watch.html')
 
 
 # ── WebSocket Events (real-time audio streaming) ────
