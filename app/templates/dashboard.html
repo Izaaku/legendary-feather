@@ -690,26 +690,37 @@ body {
 
 <script>
 // ── AUTH CHECK ──
-const OWNER_EMAILS = ['uribeisaakgogo@gmail.com', 'izaaku16@gmail.com'];
 let currentSession = null;
 
 function getSession() {
   try { return JSON.parse(sessionStorage.getItem('lf_session')); } catch { return null; }
 }
+function getToken() {
+  return sessionStorage.getItem('lf_token');
+}
 
 function logout() {
   sessionStorage.removeItem('lf_session');
+  sessionStorage.removeItem('lf_token');
   window.location.href = '/auth';
 }
 
+// Helper for authenticated API calls
+function authFetch(url, options = {}) {
+  const token = getToken();
+  if (!token) { logout(); return; }
+  options.headers = { ...options.headers, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  return fetch(url, options);
+}
+
 currentSession = getSession();
-if (!currentSession) {
+if (!currentSession || !getToken()) {
   window.location.href = '/auth';
 }
 
 // Set up top bar
 if (currentSession) {
-  const isOwner = OWNER_EMAILS.includes(currentSession.email);
+  const isOwner = currentSession.is_owner;
   document.getElementById('topBarUser').innerHTML =
     `<strong>${currentSession.name}</strong> &middot; ${currentSession.plan.charAt(0).toUpperCase() + currentSession.plan.slice(1)}`;
 

@@ -1,6 +1,7 @@
 """Admin dashboard endpoints."""
 from flask import Blueprint, request, jsonify, render_template
 from app.utils.database import db_session
+from app.utils.auth import owner_required
 from app.models.user import User
 from app.models.subscription import Subscription
 from app.models.conversation import Conversation
@@ -16,6 +17,7 @@ def dashboard():
 
 
 @admin_bp.route('/api/stats')
+@owner_required
 def get_stats():
     """Get platform statistics."""
     db = db_session()
@@ -43,6 +45,7 @@ def get_stats():
 
 
 @admin_bp.route('/api/users')
+@owner_required
 def get_users():
     """Get all users with pagination."""
     page = request.args.get('page', 1, type=int)
@@ -67,6 +70,7 @@ def get_users():
 
 
 @admin_bp.route('/api/conversations')
+@owner_required
 def get_conversations():
     """Get recent conversations."""
     limit = request.args.get('limit', 50, type=int)

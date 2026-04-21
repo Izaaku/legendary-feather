@@ -35,7 +35,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 /* ── STARS BACKGROUND ── */
@@ -523,29 +523,37 @@ function setLoading(btn, loading) {
   btn.disabled = loading;
 }
 
-// Simple client-side user storage (demo — replace with real backend)
-function getUsers() {
-  try { return JSON.parse(localStorage.getItem('lf_users') || '{}'); } catch { return {}; }
-}
-function saveUsers(users) {
-  localStorage.setItem('lf_users', JSON.stringify(users));
-}
-function setSession(user) {
-  sessionStorage.setItem('lf_session', JSON.stringify(user));
+// ── Session management (token-based) ──
+function setSession(data) {
+  sessionStorage.setItem('lf_session', JSON.stringify(data.user));
+  sessionStorage.setItem('lf_token', data.token);
 }
 function getSession() {
   try { return JSON.parse(sessionStorage.getItem('lf_session')); } catch { return null; }
 }
+function getToken() {
+  return sessionStorage.getItem('lf_token');
+}
 
 // Redirect if already logged in
-if (getSession()) {
+if (getSession() && getToken()) {
   window.location.href = '/dashboard';
 }
 
-// Owner accounts — unlimited access
-const OWNER_EMAILS = ['uribeisaakgogo@gmail.com', 'izaaku16@gmail.com'];
+// ── API helper ──
+async function apiCall(endpoint, body) {
+  const res = await fetch(`/api/auth/${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
 
-loginForm.addEventListener('submit', function(e){
+// ── Login ──
+loginForm.addEventListener('submit', async function(e){
   e.preventDefault();
   const btn = this.querySelector('.btn-auth');
   const email = this.querySelector('[type="email"]').value.trim().toLowerCase();
@@ -554,26 +562,19 @@ loginForm.addEventListener('submit', function(e){
   setLoading(btn, true);
   authMsg.className = 'msg';
 
-  setTimeout(() => {
-    const users = getUsers();
-    const user = users[email];
-
-    if (!user || user.password !== password) {
-      showMsg('Invalid email or password. Please try again.', 'error');
-      setLoading(btn, false);
-      return;
-    }
-
-    setSession({ name: user.name, email, plan: user.plan });
+  try {
+    const data = await apiCall('login', { email, password });
+    setSession(data);
     showMsg('Welcome back! Redirecting...', 'success');
-
-    setTimeout(() => {
-      window.location.href = '/dashboard';
-    }, 800);
-  }, 600);
+    setTimeout(() => { window.location.href = '/dashboard'; }, 800);
+  } catch (err) {
+    showMsg(err.message, 'error');
+    setLoading(btn, false);
+  }
 });
 
-signupForm.addEventListener('submit', function(e){
+// ── Signup ──
+signupForm.addEventListener('submit', async function(e){
   e.preventDefault();
   const btn = this.querySelector('.btn-auth');
   const name = document.getElementById('signupName').value.trim();
@@ -584,33 +585,23 @@ signupForm.addEventListener('submit', function(e){
     showMsg('Password must be at least 8 characters.', 'error');
     return;
   }
+  if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+    showMsg('Password needs uppercase, lowercase, and a number.', 'error');
+    return;
+  }
 
   setLoading(btn, true);
   authMsg.className = 'msg';
 
-  setTimeout(() => {
-    const users = getUsers();
-
-    if (users[email]) {
-      showMsg('An account with this email already exists.', 'error');
-      setLoading(btn, false);
-      return;
-    }
-
-    // Determine plan — owners get business
-    let plan = selectedPlan;
-    if (OWNER_EMAILS.includes(email)) plan = 'business';
-
-    users[email] = { name, password, plan, createdAt: new Date().toISOString() };
-    saveUsers(users);
-    setSession({ name, email, plan });
-
+  try {
+    const data = await apiCall('signup', { name, email, password, plan: selectedPlan });
+    setSession(data);
     showMsg('Account created! Redirecting to your dashboard...', 'success');
-
-    setTimeout(() => {
-      window.location.href = '/dashboard';
-    }, 1000);
-  }, 800);
+    setTimeout(() => { window.location.href = '/dashboard'; }, 1000);
+  } catch (err) {
+    showMsg(err.message, 'error');
+    setLoading(btn, false);
+  }
 });
 </script>
 </body>

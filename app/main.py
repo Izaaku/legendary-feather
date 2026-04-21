@@ -5,7 +5,7 @@ import os
 # Ensure parent directory is in path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, render_template, send_from_directory, jsonify, request
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from dotenv import load_dotenv
@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from app.config import Config, LANGUAGES
-from app.routes import api_bp, payments_bp, admin_bp
+from app.routes import api_bp, auth_bp, payments_bp, admin_bp
 from app.utils.database import init_db
 
 # ── App Factory ──────────────────────────────────────
@@ -25,14 +25,65 @@ app = Flask(
 )
 app.config.from_object(Config)
 
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+# Max request size: 16 MB (for audio uploads)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+# ── CORS — restrict to allowed origins ──────────────
+ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', '*').split(',')
+CORS(app, resources={r"/api/*": {"origins": ALLOWED_ORIGINS}})
 async_mode = 'eventlet' if os.name != 'nt' else 'threading'
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode=async_mode)
+socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS, async_mode=async_mode)
 
 # Register route blueprints
+app.register_blueprint(auth_bp)
 app.register_blueprint(api_bp)
 app.register_blueprint(payments_bp)
 app.register_blueprint(admin_bp)
+
+
+# ── Security Headers ────────────────────────────────
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'camera=(), microphone=(self), geolocation=()'
+    if request.is_secure:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
+
+
+# ── Error Handlers (no stack traces to users) ───────
+@app.errorhandler(400)
+def bad_request(e):
+    return jsonify({'error': 'Bad request'}), 400
+
+@app.errorhandler(401)
+def unauthorized(e):
+    return jsonify({'error': 'Unauthorized'}), 401
+
+@app.errorhandler(403)
+def forbidden(e):
+    return jsonify({'error': 'Forbidden'}), 403
+
+@app.errorhandler(404)
+def not_found(e):
+    if request.path.startswith('/api/'):
+        return jsonify({'error': 'Not found'}), 404
+    return render_template('auth.html'), 404
+
+@app.errorhandler(413)
+def request_too_large(e):
+    return jsonify({'error': 'Request too large (max 16 MB)'}), 413
+
+@app.errorhandler(429)
+def rate_limited(e):
+    return jsonify({'error': 'Too many requests. Please slow down.'}), 429
+
+@app.errorhandler(500)
+def internal_error(e):
+    return jsonify({'error': 'Internal server error'}), 500
 
 
 # ── Page Routes ──────────────────────────────────────
@@ -106,9 +157,9 @@ def handle_translate(data):
     from app.services.arcee_trinity import ArceeTrinity
     from app.services.translation import TranslationService
 
-    text = data.get('text', '')
-    source_lang = data.get('source_language', '') or ''
-    target_lang = data.get('target_language', 'es')
+    text = (data.get('text', '') or '')[:5000]  # Limit input length
+    source_lang = (data.get('source_language', '') or '')[:10]
+    target_lang = (data.get('target_language', 'es') or 'es')[:10]
 
     if not text.strip():
         emit('error', {'message': 'No text provided'})

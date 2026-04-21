@@ -2,7 +2,7 @@
 import uuid
 import base64
 from datetime import datetime, timezone
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from app.services.whisper_ollama import WhisperOllama
 from app.services.tts_engine import TTSEngine
 from app.services.arcee_trinity import ArceeTrinity
@@ -11,6 +11,7 @@ from app.services.voice_cloner import VoiceCloner
 from app.utils.database import db_session
 from app.utils.audio_processor import decode_audio_base64
 from app.utils.pricing import has_minutes_available, is_unlimited_user, get_remaining_minutes
+from app.utils.auth import token_required
 from app.models.user import User
 from app.models.conversation import Conversation
 from app.models.voice_profile import VoiceProfile
@@ -33,17 +34,15 @@ def get_languages():
 
 
 @api_bp.route('/start-session', methods=['POST'])
+@token_required
 def start_session():
     """Start a new translation session."""
     data = request.get_json()
-    user_id = data.get('user_id')
+    user_id = g.current_user['user_id']  # Use authenticated user, not client-supplied
     source_lang = data.get('source_lang', 'en')
     target_lang = data.get('target_lang', 'es')
     mode = data.get('mode', 'face_to_face')
     tts_mode = data.get('tts_mode', 'conference')
-
-    if not user_id:
-        return jsonify({'error': 'user_id is required'}), 400
 
     db = db_session()
     try:
@@ -82,6 +81,7 @@ def start_session():
 
 
 @api_bp.route('/stop-session', methods=['POST'])
+@token_required
 def stop_session():
     """Stop an active translation session."""
     data = request.get_json()
@@ -125,6 +125,7 @@ def stop_session():
 
 
 @api_bp.route('/transcribe', methods=['POST'])
+@token_required
 def transcribe_audio():
     """Transcribe audio chunk and return text."""
     data = request.get_json()
@@ -156,6 +157,7 @@ def transcribe_audio():
 
 
 @api_bp.route('/translate', methods=['POST'])
+@token_required
 def translate_text():
     """Translate text from source to target language."""
     data = request.get_json()
@@ -199,6 +201,7 @@ def translate_text():
 
 
 @api_bp.route('/synthesize', methods=['POST'])
+@token_required
 def synthesize_speech():
     """Convert translated text to speech audio using dual TTS engine."""
     data = request.get_json()
@@ -243,6 +246,7 @@ def get_tts_modes():
 # ── Voice Profile Routes ────────────────────────────────
 
 @api_bp.route('/voice/register', methods=['POST'])
+@token_required
 def register_voice():
     """Register a voice profile from audio recording."""
     data = request.get_json()
@@ -310,6 +314,7 @@ def register_voice():
 
 
 @api_bp.route('/voice/profiles', methods=['GET'])
+@token_required
 def list_voice_profiles():
     """List all voice profiles for a user."""
     user_id = request.args.get('user_id')
@@ -351,6 +356,7 @@ def list_voice_profiles():
 
 
 @api_bp.route('/voice/profiles/<profile_id>', methods=['DELETE'])
+@token_required
 def delete_voice_profile(profile_id):
     """Delete a voice profile."""
     user_id = request.args.get('user_id')
