@@ -1,6 +1,8 @@
 """Authentication routes — signup, login, token refresh, profile."""
 import uuid
 import re
+import time
+from collections import defaultdict
 from flask import Blueprint, request, jsonify, g
 from app.utils.database import db_session
 from app.utils.auth import (
@@ -9,6 +11,46 @@ from app.utils.auth import (
 from app.models.user import User
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+# ── Account Lockout (Mejora #3) ────────────────────────────────────
+# Locks account for 15 minutes after 5 failed login attempts
+
+_login_attempts = defaultdict(list)   # email -> [timestamps]
+_account_locks = {}                    # email -> unlock_time
+_MAX_LOGIN_ATTEMPTS = 5
+_LOCKOUT_WINDOW = 300                  # 5 minutes
+_LOCKOUT_DURATION = 900                # 15 minutes
+
+
+def _check_account_locked(email):
+    """Return (is_locked, seconds_remaining)."""
+    if email in _account_locks:
+        remaining = _account_locks[email] - time.time()
+        if remaining > 0:
+            return True, int(remaining)
+        else:
+            del _account_locks[email]
+    return False, 0
+
+
+def _record_failed_login(email):
+    """Record a failed login and lock if threshold exceeded."""
+    now = time.time()
+    _login_attempts[email] = [t for t in _login_attempts[email] if now - t < _LOCKOUT_WINDOW]
+    _login_attempts[email].append(now)
+    if len(_login_attempts[email]) >= _MAX_LOGIN_ATTEMPTS:
+        _account_locks[email] = now + _LOCKOUT_DURATION
+        _login_attempts[email] = []
+        print(f'[SECURITY] Account {email} locked for {_LOCKOUT_DURATION}s (too many failed attempts)')
+        return True
+    return False
+
+
+def _clear_login_attempts(email):
+    """Clear failed attempts on successful login."""
+    _login_attempts.pop(email, None)
+    _account_locks.pop(email, None)
+
 
 # ── Validation helpers ──────────────────────────────────────────────
 
@@ -106,19 +148,42 @@ def login():
     if not email or not password:
         return jsonify({'error': 'Email and password are required'}), 400
 
+    # ── Account lockout check ──
+    locked, remaining = _check_account_locked(email)
+    if locked:
+        minutes = remaining // 60 + 1
+        return jsonify({
+            'error': f'Account temporarily locked. Try again in {minutes} minute(s).',
+            'locked': True,
+            'retry_after': remaining
+        }), 429
+
     db = db_session()
     try:
         user = db.query(User).filter_by(email=email).first()
 
         if not user or not user.password_hash:
+            _record_failed_login(email)
             return jsonify({'error': 'Invalid email or password'}), 401
 
         if not verify_password(password, user.password_hash):
-            return jsonify({'error': 'Invalid email or password'}), 401
+            was_locked = _record_failed_login(email)
+            if was_locked:
+                return jsonify({
+                    'error': 'Too many failed attempts. Account locked for 15 minutes.',
+                    'locked': True,
+                    'retry_after': _LOCKOUT_DURATION
+                }), 429
+            attempts_left = _MAX_LOGIN_ATTEMPTS - len(_login_attempts.get(email, []))
+            return jsonify({
+                'error': f'Invalid email or password. {attempts_left} attempt(s) remaining.'
+            }), 401
 
         if not user.is_active:
             return jsonify({'error': 'Account is deactivated'}), 403
 
+        # Success — clear any failed attempts
+        _clear_login_attempts(email)
         token = create_token(user.user_id, user.email, user.is_owner)
 
         return jsonify({

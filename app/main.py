@@ -1,6 +1,7 @@
 """Legendary Feather Universal Translator - Main Entry Point."""
 import sys
 import os
+import re
 import time
 from collections import defaultdict
 
@@ -43,6 +44,65 @@ app.register_blueprint(payments_bp)
 app.register_blueprint(admin_bp)
 
 
+# ── WAF — Web Application Firewall (Mejora #2) ─────
+# Blocks SQL injection, XSS, path traversal attacks
+
+_WAF_PATTERNS = [
+    # SQL Injection
+    re.compile(r"(\b(union|select|insert|update|delete|drop|alter|create|exec|execute)\b.*\b(from|into|table|where|set|values)\b)", re.IGNORECASE),
+    re.compile(r"('|\")(\s*)(or|and)(\s+)('|\"|\d+)(\s*)(=|>|<)", re.IGNORECASE),
+    re.compile(r"(--|#|/\*|\*/|;)\s*(drop|alter|delete|update|insert|select)", re.IGNORECASE),
+    re.compile(r"(\b(union)\b\s+(all\s+)?select)", re.IGNORECASE),
+    re.compile(r"(0x[0-9a-fA-F]+|char\s*\(|concat\s*\(|benchmark\s*\(|sleep\s*\()", re.IGNORECASE),
+    # XSS
+    re.compile(r"<\s*script[^>]*>", re.IGNORECASE),
+    re.compile(r"(javascript|vbscript|data)\s*:", re.IGNORECASE),
+    re.compile(r"on(load|error|click|mouseover|focus|blur|submit|change)\s*=", re.IGNORECASE),
+    re.compile(r"<\s*(iframe|object|embed|form|input|img\s+[^>]*onerror)[^>]*>", re.IGNORECASE),
+    re.compile(r"document\.(cookie|location|write)|window\.(location|open)", re.IGNORECASE),
+    # Path Traversal
+    re.compile(r"\.\./|\.\.\\", re.IGNORECASE),
+    re.compile(r"(/etc/(passwd|shadow|hosts)|/proc/|/var/log/)", re.IGNORECASE),
+    re.compile(r"(cmd\.exe|powershell|/bin/(bash|sh|zsh))", re.IGNORECASE),
+    # Command Injection
+    re.compile(r"[;&|`]\s*(cat|ls|rm|mv|cp|wget|curl|nc|ncat|python|perl|ruby|php)\b", re.IGNORECASE),
+    re.compile(r"\$\(|`[^`]+`", re.IGNORECASE),
+]
+
+# Paths exempt from WAF (audio uploads, etc.)
+_WAF_EXEMPT_PATHS = {'/api/transcribe', '/api/synthesize', '/api/voice/register'}
+
+def _waf_check(value):
+    """Return True if value contains a malicious pattern."""
+    if not value or not isinstance(value, str):
+        return False
+    for pattern in _WAF_PATTERNS:
+        if pattern.search(value):
+            return True
+    return False
+
+
+# ── Suspicious IP Auto-Blacklist (Mejora #4) ────────
+# Blocks IPs generating 20+ errors in 5 minutes for 1 hour
+
+_ip_error_store = defaultdict(list)   # ip -> [timestamps of 4xx/5xx]
+_ip_blacklist = {}                     # ip -> unblock_time
+_IP_ERROR_THRESHOLD = 20               # errors in window
+_IP_ERROR_WINDOW = 300                 # 5 minutes
+_IP_BLOCK_DURATION = 3600              # 1 hour
+
+
+def _record_ip_error(ip):
+    """Record a 4xx/5xx error for an IP and auto-block if threshold exceeded."""
+    now = time.time()
+    _ip_error_store[ip] = [t for t in _ip_error_store[ip] if now - t < _IP_ERROR_WINDOW]
+    _ip_error_store[ip].append(now)
+    if len(_ip_error_store[ip]) >= _IP_ERROR_THRESHOLD:
+        _ip_blacklist[ip] = now + _IP_BLOCK_DURATION
+        _ip_error_store[ip] = []  # Reset counter
+        print(f'[SECURITY] IP {ip} auto-blocked for {_IP_BLOCK_DURATION}s ({_IP_ERROR_THRESHOLD}+ errors)')
+
+
 # ── Rate Limiting (in-memory, no external package) ──
 _rate_store = defaultdict(list)
 RATE_LIMITS = {
@@ -53,25 +113,65 @@ RATE_LIMITS = {
     '/api/synthesize': (20, 60),     # 20 per 60s
 }
 
+
 @app.before_request
-def check_rate_limit():
-    path = request.path
-    limit_config = RATE_LIMITS.get(path)
-    if not limit_config:
-        return None
-    max_requests, window = limit_config
+def security_gate():
+    """Combined security check: IP blacklist → WAF → Rate limit."""
     ip = request.remote_addr or 'unknown'
-    key = f"{ip}:{path}"
     now = time.time()
-    # Clean old entries
-    _rate_store[key] = [t for t in _rate_store[key] if now - t < window]
-    if len(_rate_store[key]) >= max_requests:
-        return jsonify({'error': 'Too many requests. Please slow down.'}), 429
-    _rate_store[key].append(now)
+
+    # ── 1. IP Blacklist check ──
+    if ip in _ip_blacklist:
+        if now < _ip_blacklist[ip]:
+            return jsonify({'error': 'Access temporarily blocked'}), 403
+        else:
+            del _ip_blacklist[ip]  # Unblock expired
+
+    # ── 2. WAF check ──
+    path = request.path
+    if path not in _WAF_EXEMPT_PATHS:
+        # Check URL path
+        if _waf_check(path):
+            _record_ip_error(ip)
+            print(f'[WAF] Blocked path attack from {ip}: {path[:100]}')
+            return jsonify({'error': 'Forbidden'}), 403
+
+        # Check query parameters
+        for key, val in request.args.items():
+            if _waf_check(key) or _waf_check(val):
+                _record_ip_error(ip)
+                print(f'[WAF] Blocked query attack from {ip}: {key}={val[:100]}')
+                return jsonify({'error': 'Forbidden'}), 403
+
+        # Check POST body (JSON only, skip file uploads)
+        if request.method == 'POST' and request.content_type and 'json' in request.content_type:
+            try:
+                body = request.get_json(silent=True) or {}
+                for key, val in body.items():
+                    if key in ('audio', 'audio_data'):  # Skip base64 audio
+                        continue
+                    if isinstance(val, str) and _waf_check(val):
+                        _record_ip_error(ip)
+                        print(f'[WAF] Blocked body attack from {ip}: {key}')
+                        return jsonify({'error': 'Forbidden'}), 403
+            except Exception:
+                pass
+
+    # ── 3. Rate limiting ──
+    limit_config = RATE_LIMITS.get(path)
+    if limit_config:
+        max_requests, window = limit_config
+        key = f"{ip}:{path}"
+        _rate_store[key] = [t for t in _rate_store[key] if now - t < window]
+        if len(_rate_store[key]) >= max_requests:
+            _record_ip_error(ip)
+            return jsonify({'error': 'Too many requests. Please slow down.'}), 429
+        _rate_store[key].append(now)
+
     return None
 
 
-# ── Security Headers ────────────────────────────────
+# ── Security Headers + CSP (Mejora #1) ─────────────
 @app.after_request
 def add_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
@@ -79,8 +179,33 @@ def add_security_headers(response):
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['Permissions-Policy'] = 'camera=(), microphone=(self), geolocation=()'
+
+    # Content Security Policy — blocks unauthorized scripts, styles, connections
+    csp_parts = [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://cdnjs.cloudflare.com",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:",
+        "img-src 'self' data: blob: https:",
+        "connect-src 'self' https://api.stripe.com wss: ws:",
+        "frame-src https://js.stripe.com",
+        "media-src 'self' blob:",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "upgrade-insecure-requests",
+    ]
+    response.headers['Content-Security-Policy'] = '; '.join(csp_parts)
+
     if request.is_secure:
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+
+    # Track IP errors for auto-blacklist
+    status = response.status_code
+    if status >= 400:
+        ip = request.remote_addr or 'unknown'
+        _record_ip_error(ip)
+
     return response
 
 
