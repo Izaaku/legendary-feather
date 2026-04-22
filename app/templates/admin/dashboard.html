@@ -3,632 +3,652 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard - Legendary Feather</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <title>Owner Dashboard - Legendary Feather</title>
   <style>
-    .admin-header {
-      background: var(--dark-secondary);
-      border-bottom: 2px solid var(--primary-gold);
-      padding: 2rem;
-      margin-bottom: 3rem;
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a25;
+      --border: #2a2a3a;
+      --gold: #d4af37;
+      --gold-dim: rgba(212,175,55,0.15);
+      --text: #e8e8f0;
+      --text-sub: #8888a0;
+      --green: #4caf50;
+      --red: #f44336;
+      --blue: #2196f3;
+      --orange: #ff9800;
     }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; overflow-x:hidden; }
 
-    .admin-header h1 {
-      color: var(--primary-gold);
-      margin-bottom: 0.5rem;
+    /* ── Layout ── */
+    .topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 24px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; }
+    .topbar-left { display:flex; align-items:center; gap:16px; }
+    .topbar-logo { color:var(--gold); font-weight:700; font-size:14px; letter-spacing:2px; }
+    .topbar-title { color:var(--text-sub); font-size:13px; }
+    .topbar-right { display:flex; align-items:center; gap:12px; }
+    .topbar-status { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--green); }
+    .topbar-status .dot { width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .btn-logout { background:none; border:1px solid var(--border); color:var(--text-sub); padding:6px 14px; border-radius:6px; cursor:pointer; font-size:12px; }
+    .btn-logout:hover { border-color:var(--red); color:var(--red); }
+
+    .container { max-width:1400px; margin:0 auto; padding:20px 24px; }
+
+    /* ── Tabs ── */
+    .tabs { display:flex; gap:4px; margin-bottom:24px; background:var(--surface); border-radius:10px; padding:4px; border:1px solid var(--border); overflow-x:auto; }
+    .tab { padding:10px 18px; border-radius:8px; cursor:pointer; font-size:13px; color:var(--text-sub); background:none; border:none; white-space:nowrap; transition:all 0.2s; }
+    .tab:hover { color:var(--text); }
+    .tab.active { background:var(--gold-dim); color:var(--gold); font-weight:600; }
+
+    /* ── Cards ── */
+    .grid { display:grid; gap:16px; margin-bottom:24px; }
+    .grid-4 { grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+    .grid-3 { grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+    .grid-2 { grid-template-columns:repeat(auto-fit,minmax(400px,1fr)); }
+
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; }
+    .card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+    .card-title { font-size:13px; color:var(--text-sub); text-transform:uppercase; letter-spacing:1px; }
+    .card-value { font-size:32px; font-weight:700; color:var(--gold); margin:8px 0 4px; }
+    .card-sub { font-size:12px; color:var(--text-sub); }
+    .card-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+
+    .metric-card .card-value { font-size:28px; }
+    .change-up { color:var(--green); font-size:12px; }
+    .change-down { color:var(--red); font-size:12px; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { text-align:left; padding:10px 14px; color:var(--text-sub); font-weight:600; border-bottom:2px solid var(--border); font-size:11px; text-transform:uppercase; letter-spacing:0.5px; }
+    td { padding:10px 14px; border-bottom:1px solid var(--border); }
+    tr:hover td { background:rgba(212,175,55,0.03); }
+
+    .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+    .badge-green { background:rgba(76,175,80,0.15); color:var(--green); }
+    .badge-red { background:rgba(244,67,54,0.15); color:var(--red); }
+    .badge-blue { background:rgba(33,150,243,0.15); color:var(--blue); }
+    .badge-orange { background:rgba(255,152,0,0.15); color:var(--orange); }
+    .badge-gold { background:var(--gold-dim); color:var(--gold); }
+
+    .btn-sm { padding:4px 10px; border-radius:6px; font-size:11px; cursor:pointer; border:1px solid var(--border); background:none; color:var(--text-sub); transition:all 0.2s; }
+    .btn-sm:hover { border-color:var(--gold); color:var(--gold); }
+    .btn-danger:hover { border-color:var(--red); color:var(--red); }
+
+    /* ── Progress bar ── */
+    .progress { height:8px; background:var(--surface2); border-radius:4px; overflow:hidden; margin-top:8px; }
+    .progress-bar { height:100%; border-radius:4px; transition:width 0.5s; }
+    .progress-green { background:var(--green); }
+    .progress-gold { background:var(--gold); }
+    .progress-red { background:var(--red); }
+    .progress-blue { background:var(--blue); }
+
+    /* ── Bar chart ── */
+    .bar-chart { display:flex; align-items:flex-end; gap:6px; height:120px; padding-top:10px; }
+    .bar-col { display:flex; flex-direction:column; align-items:center; flex:1; gap:4px; }
+    .bar { width:100%; min-width:20px; background:var(--gold-dim); border-radius:4px 4px 0 0; transition:height 0.5s; position:relative; }
+    .bar:hover { background:var(--gold); }
+    .bar-label { font-size:10px; color:var(--text-sub); }
+    .bar-value { font-size:10px; color:var(--gold); }
+
+    /* ── Sections ── */
+    .section-title { font-size:16px; font-weight:600; color:var(--text); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+    .section-title span { font-size:18px; }
+
+    .view { display:none; }
+    .view.active { display:block; }
+
+    /* ── Loading ── */
+    .loading { text-align:center; padding:40px; color:var(--text-sub); }
+    .spinner { display:inline-block; width:24px; height:24px; border:2px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:8px; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+
+    /* ── Security items ── */
+    .sec-item { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+    .sec-item:last-child { border:none; }
+    .sec-label { font-size:13px; color:var(--text); }
+    .sec-value { font-size:13px; font-weight:600; }
+
+    /* ── Responsive ── */
+    @media(max-width:768px) {
+      .grid-4 { grid-template-columns:1fr 1fr; }
+      .grid-2 { grid-template-columns:1fr; }
+      .tabs { flex-wrap:nowrap; overflow-x:auto; }
+      .container { padding:16px; }
     }
-
-    .admin-header p {
-      color: var(--text-muted);
-      margin: 0;
-    }
-
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 2rem;
-      margin-bottom: 3rem;
-    }
-
-    .stat-card {
-      background: var(--dark-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 2rem;
-      text-align: center;
-      transition: all 0.3s ease;
-    }
-
-    .stat-card:hover {
-      border-color: var(--primary-gold);
-      box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
-    }
-
-    .stat-label {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 0.5rem;
-    }
-
-    .stat-value {
-      color: var(--primary-gold);
-      font-size: 2.5rem;
-      font-weight: bold;
-      margin-bottom: 0.5rem;
-    }
-
-    .stat-change {
-      font-size: 0.85rem;
-      color: #4caf50;
-    }
-
-    .stat-change.negative {
-      color: #f44336;
-    }
-
-    .admin-section {
-      background: var(--dark-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 2rem;
-      margin-bottom: 2rem;
-    }
-
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-      padding-bottom: 1rem;
-      border-bottom: 2px solid var(--border-color);
-    }
-
-    .section-header h2 {
-      color: var(--primary-gold);
-      font-size: 1.5rem;
-      margin: 0;
-      text-align: left;
-    }
-
-    .section-actions {
-      display: flex;
-      gap: 1rem;
-    }
-
-    .btn-small {
-      padding: 0.5rem 1rem;
-      font-size: 0.85rem;
-    }
-
-    .admin-table {
-      width: 100%;
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    th {
-      background: var(--dark-tertiary);
-      color: var(--primary-gold);
-      padding: 1rem;
-      text-align: left;
-      font-weight: 600;
-      border-bottom: 2px solid var(--border-color);
-    }
-
-    td {
-      padding: 1rem;
-      border-bottom: 1px solid var(--border-color);
-      color: var(--text-light);
-    }
-
-    tr:hover {
-      background: rgba(212, 175, 55, 0.05);
-    }
-
-    .status-badge {
-      display: inline-block;
-      padding: 0.4rem 0.8rem;
-      border-radius: 20px;
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-
-    .status-active {
-      background: rgba(76, 175, 80, 0.2);
-      color: #4caf50;
-      border: 1px solid #4caf50;
-    }
-
-    .status-pending {
-      background: rgba(255, 152, 0, 0.2);
-      color: #ff9800;
-      border: 1px solid #ff9800;
-    }
-
-    .status-completed {
-      background: rgba(76, 175, 80, 0.2);
-      color: #4caf50;
-      border: 1px solid #4caf50;
-    }
-
-    .status-shipped {
-      background: rgba(33, 150, 243, 0.2);
-      color: #2196f3;
-      border: 1px solid #2196f3;
-    }
-
-    .status-cancelled {
-      background: rgba(244, 67, 54, 0.2);
-      color: #f44336;
-      border: 1px solid #f44336;
-    }
-
-    .action-buttons {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .btn-icon {
-      padding: 0.4rem 0.8rem;
-      font-size: 0.8rem;
-      background: transparent;
-      border: 1px solid var(--border-color);
-      color: var(--text-light);
-      cursor: pointer;
-      border-radius: 4px;
-      transition: all 0.3s ease;
-    }
-
-    .btn-icon:hover {
-      border-color: var(--primary-gold);
-      color: var(--primary-gold);
-    }
-
-    .btn-delete {
-      border-color: #f44336;
-      color: #f44336;
-    }
-
-    .btn-delete:hover {
-      background: rgba(244, 67, 54, 0.1);
-    }
-
-    .filter-bar {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 2rem;
-      flex-wrap: wrap;
-    }
-
-    .filter-bar select,
-    .filter-bar input {
-      padding: 0.6rem;
-      background: var(--dark-tertiary);
-      border: 1px solid var(--border-color);
-      color: var(--text-light);
-      border-radius: 4px;
-      font-size: 0.9rem;
-    }
-
-    .filter-bar select:focus,
-    .filter-bar input:focus {
-      outline: none;
-      border-color: var(--primary-gold);
-    }
-
-    .sidebar {
-      background: var(--dark-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 2rem;
-      position: sticky;
-      top: 100px;
-      height: fit-content;
-    }
-
-    .sidebar h3 {
-      color: var(--primary-gold);
-      margin-bottom: 1.5rem;
-    }
-
-    .sidebar-item {
-      padding: 0.8rem;
-      margin-bottom: 0.5rem;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      color: var(--text-light);
-      text-decoration: none;
-      display: block;
-    }
-
-    .sidebar-item:hover,
-    .sidebar-item.active {
-      background: rgba(212, 175, 55, 0.2);
-      color: var(--primary-gold);
-    }
-
-    .dashboard-container {
-      display: grid;
-      grid-template-columns: 1fr 250px;
-      gap: 2rem;
-    }
-
-    .pagination {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 0.5rem;
-      margin-top: 2rem;
-    }
-
-    .pagination a,
-    .pagination span {
-      padding: 0.5rem 0.8rem;
-      border: 1px solid var(--border-color);
-      border-radius: 4px;
-      color: var(--text-light);
-      text-decoration: none;
-      transition: all 0.3s ease;
-    }
-
-    .pagination a:hover {
-      border-color: var(--primary-gold);
-      color: var(--primary-gold);
-    }
-
-    .pagination .active {
-      background: var(--primary-gold);
-      color: var(--dark-bg);
-      border-color: var(--primary-gold);
-    }
-
-    .chart-placeholder {
-      width: 100%;
-      height: 300px;
-      background: var(--dark-tertiary);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-muted);
-      margin-bottom: 2rem;
-    }
-
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(5px);
-    }
-
-    .modal.active {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-content {
-      background: var(--dark-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 2rem;
-      max-width: 500px;
-      width: 90%;
-      position: relative;
-    }
-
-    .modal-header {
-      color: var(--primary-gold);
-      font-size: 1.5rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .modal-close {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      background: none;
-      border: none;
-      color: var(--text-light);
-      font-size: 2rem;
-      cursor: pointer;
-    }
-
-    .modal-close:hover {
-      color: var(--primary-gold);
-    }
-
-    @media (max-width: 768px) {
-      .dashboard-container {
-        grid-template-columns: 1fr;
-      }
-
-      .sidebar {
-        position: static;
-      }
-
-      .section-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-      }
-
-      .filter-bar {
-        flex-direction: column;
-      }
-
-      .admin-table {
-        font-size: 0.85rem;
-      }
-
-      th, td {
-        padding: 0.5rem;
-      }
+    @media(max-width:480px) {
+      .grid-4 { grid-template-columns:1fr; }
     }
   </style>
 </head>
 <body>
-  <canvas id="stars-canvas"></canvas>
 
-  <nav>
-    <div class="container">
-      <a href="/" class="logo">LEGENDARY FEATHER</a>
-      <ul>
-        <li><a href="/admin/dashboard">Dashboard</a></li>
-        <li><a href="/admin/orders">Orders</a></li>
-        <li><a href="/admin/products">Products</a></li>
-        <li><a href="/admin/customers">Customers</a></li>
-        <li><a href="/logout">Logout</a></li>
-      </ul>
-    </div>
-  </nav>
+<!-- ── Top Bar ── -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">LEGENDARY FEATHER</div>
+    <div class="topbar-title">Owner Dashboard</div>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-status"><div class="dot"></div> Server Online</div>
+    <span id="uptime" style="font-size:12px;color:var(--text-sub);">--</span>
+    <button class="btn-logout" onclick="window.location.href='/dashboard'">← App</button>
+  </div>
+</div>
 
-  <div class="admin-header">
-    <h1>Admin Dashboard</h1>
-    <p>Welcome back! Here's your business overview.</p>
+<div class="container">
+
+  <!-- ── Tabs ── -->
+  <div class="tabs">
+    <button class="tab active" data-view="overview">Overview</button>
+    <button class="tab" data-view="users">Users</button>
+    <button class="tab" data-view="sessions">Sessions</button>
+    <button class="tab" data-view="security">Security</button>
+    <button class="tab" data-view="server">Server Health</button>
+    <button class="tab" data-view="api">API Metrics</button>
   </div>
 
-  <main>
-    <div class="container">
-      <div class="dashboard-container">
-        <!-- Main Content -->
-        <div class="main-content">
-          <!-- Statistics -->
-          <div class="dashboard-grid">
-            <div class="stat-card">
-              <div class="stat-label">Total Revenue</div>
-              <div class="stat-value">$45,230</div>
-              <div class="stat-change">+12% from last month</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Total Orders</div>
-              <div class="stat-value">382</div>
-              <div class="stat-change">+8% from last month</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Active Customers</div>
-              <div class="stat-value">156</div>
-              <div class="stat-change">+5% from last month</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Conversion Rate</div>
-              <div class="stat-value">3.2%</div>
-              <div class="stat-change negative">-0.5% from last month</div>
-            </div>
-          </div>
+  <!-- ═══════════ OVERVIEW ═══════════ -->
+  <div class="view active" id="view-overview">
+    <div class="grid grid-4" id="kpi-cards">
+      <div class="card"><div class="loading"><div class="spinner"></div><br>Loading...</div></div>
+    </div>
 
-          <!-- Recent Orders -->
-          <div class="admin-section">
-            <div class="section-header">
-              <h2>Recent Orders</h2>
-              <div class="section-actions">
-                <a href="/admin/orders" class="btn btn-primary btn-small">View All</a>
-              </div>
-            </div>
-
-            <div class="admin-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Order ID</th>
-                    <th>Customer</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>#ORD-001245</td>
-                    <td>John Doe</td>
-                    <td>$245.99</td>
-                    <td><span class="status-badge status-completed">Completed</span></td>
-                    <td>2026-04-05</td>
-                    <td>
-                      <div class="action-buttons">
-                        <button class="btn-icon">View</button>
-                        <button class="btn-icon">Edit</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>#ORD-001244</td>
-                    <td>Jane Smith</td>
-                    <td>$189.50</td>
-                    <td><span class="status-badge status-shipped">Shipped</span></td>
-                    <td>2026-04-04</td>
-                    <td>
-                      <div class="action-buttons">
-                        <button class="btn-icon">View</button>
-                        <button class="btn-icon">Edit</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>#ORD-001243</td>
-                    <td>Mike Johnson</td>
-                    <td>$512.00</td>
-                    <td><span class="status-badge status-pending">Pending</span></td>
-                    <td>2026-04-03</td>
-                    <td>
-                      <div class="action-buttons">
-                        <button class="btn-icon">View</button>
-                        <button class="btn-icon">Edit</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>#ORD-001242</td>
-                    <td>Sarah Williams</td>
-                    <td>$325.75</td>
-                    <td><span class="status-badge status-completed">Completed</span></td>
-                    <td>2026-04-02</td>
-                    <td>
-                      <div class="action-buttons">
-                        <button class="btn-icon">View</button>
-                        <button class="btn-icon">Edit</button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Top Products -->
-          <div class="admin-section">
-            <div class="section-header">
-              <h2>Top Products</h2>
-              <div class="section-actions">
-                <a href="/admin/products" class="btn btn-primary btn-small">View All</a>
-              </div>
-            </div>
-
-            <div class="admin-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Product Name</th>
-                    <th>SKU</th>
-                    <th>Stock</th>
-                    <th>Sales</th>
-                    <th>Revenue</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Golden Feather Pendant</td>
-                    <td>GFP-001</td>
-                    <td>45</td>
-                    <td>156</td>
-                    <td>$12,480</td>
-                    <td><span class="status-badge status-active">Active</span></td>
-                  </tr>
-                  <tr>
-                    <td>Diamond Feather Ring</td>
-                    <td>DFR-002</td>
-                    <td>23</td>
-                    <td>89</td>
-                    <td>$8,910</td>
-                    <td><span class="status-badge status-active">Active</span></td>
-                  </tr>
-                  <tr>
-                    <td>Silver Feather Bracelet</td>
-                    <td>SFB-003</td>
-                    <td>67</td>
-                    <td>78</td>
-                    <td>$6,240</td>
-                    <td><span class="status-badge status-active">Active</span></td>
-                  </tr>
-                  <tr>
-                    <td>Platinum Feather Earrings</td>
-                    <td>PFE-004</td>
-                    <td>12</td>
-                    <td>45</td>
-                    <td>$5,400</td>
-                    <td><span class="status-badge status-active">Active</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sidebar -->
-        <aside class="sidebar">
-          <h3>Quick Actions</h3>
-          <a href="/admin/orders/new" class="sidebar-item">Create Order</a>
-          <a href="/admin/products/new" class="sidebar-item">Add Product</a>
-          <a href="/admin/customers" class="sidebar-item">View Customers</a>
-          <a href="/admin/settings" class="sidebar-item">Settings</a>
-          <a href="/admin/reports" class="sidebar-item">Reports</a>
-          <a href="/admin/help" class="sidebar-item">Help</a>
-        </aside>
+    <div class="grid grid-2">
+      <!-- Plan Distribution -->
+      <div class="card">
+        <div class="section-title"><span>📊</span> Membership Breakdown</div>
+        <div id="plan-chart"></div>
+      </div>
+      <!-- RPM Chart -->
+      <div class="card">
+        <div class="section-title"><span>📈</span> Requests / Minute (last 10 min)</div>
+        <div id="rpm-chart" class="bar-chart"></div>
       </div>
     </div>
-  </main>
 
-  <footer>
-    <div class="container">
-      <h3>Legendary Feather</h3>
-      <p>&copy; 2026 Legendary Feather Admin Panel. All rights reserved.</p>
+    <div class="grid grid-2">
+      <!-- Recent Users -->
+      <div class="card">
+        <div class="section-title"><span>👥</span> Recent Signups</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Joined</th></tr></thead>
+            <tbody id="recent-users"><tr><td colspan="4" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Security Summary -->
+      <div class="card">
+        <div class="section-title"><span>🛡️</span> Security Status</div>
+        <div id="security-summary"></div>
+      </div>
     </div>
-  </footer>
+  </div>
 
-  <script src="{{ url_for('static', filename='js/stars.js') }}"></script>
-  <script>
-    // Sidebar navigation
-    document.querySelectorAll('.sidebar-item').forEach(item => {
-      item.addEventListener('click', function() {
-        document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-        this.classList.add('active');
-      });
-    });
+  <!-- ═══════════ USERS ═══════════ -->
+  <div class="view" id="view-users">
+    <div class="card">
+      <div class="card-header">
+        <div class="section-title"><span>👥</span> User Management</div>
+        <input type="text" id="user-search" placeholder="Search by name or email..."
+          style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 14px;border-radius:8px;font-size:13px;width:260px;">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Plan</th><th>Minutes Used</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+          <tbody id="users-table"><tr><td colspan="7" class="loading">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-    // Status update functionality
-    document.querySelectorAll('.btn-icon').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const action = this.textContent.trim();
-        const orderId = this.closest('tr').querySelector('td').textContent;
+  <!-- ═══════════ SESSIONS ═══════════ -->
+  <div class="view" id="view-sessions">
+    <div class="grid grid-3" id="session-kpis"></div>
+    <div class="card" style="margin-top:16px;">
+      <div class="section-title"><span>🎙️</span> Recent Translation Sessions</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>User</th><th>Mode</th><th>Languages</th><th>Duration</th><th>Status</th><th>Started</th></tr></thead>
+          <tbody id="sessions-table"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-        if (action === 'View') {
-          window.location.href = `/admin/orders/${orderId}`;
-        } else if (action === 'Edit') {
-          showEditModal(orderId);
-        }
-      });
-    });
+  <!-- ═══════════ SECURITY ═══════════ -->
+  <div class="view" id="view-security">
+    <div class="grid grid-3" id="security-kpis"></div>
+    <div class="grid grid-2" style="margin-top:16px;">
+      <div class="card">
+        <div class="section-title"><span>🚫</span> Blocked IPs</div>
+        <div id="blocked-ips-list"><div class="loading">Loading...</div></div>
+      </div>
+      <div class="card">
+        <div class="section-title"><span>🔒</span> Locked Accounts</div>
+        <div id="locked-accounts-list"><div class="loading">Loading...</div></div>
+      </div>
+    </div>
+  </div>
 
-    // Modal functionality
-    function showEditModal(orderId) {
-      // This would be implemented with a real modal
-      alert('Edit functionality for ' + orderId);
-    }
+  <!-- ═══════════ SERVER HEALTH ═══════════ -->
+  <div class="view" id="view-server">
+    <div class="grid grid-3" id="server-kpis"></div>
+    <div class="grid grid-2" style="margin-top:16px;">
+      <div class="card">
+        <div class="section-title"><span>💻</span> System Resources</div>
+        <div id="system-resources"></div>
+      </div>
+      <div class="card">
+        <div class="section-title"><span>🎮</span> GPU Status</div>
+        <div id="gpu-status"></div>
+      </div>
+    </div>
+  </div>
 
-    // Auto-refresh dashboard data every 60 seconds
-    setInterval(() => {
-      // Fetch updated data
-      console.log('Refreshing dashboard data...');
-    }, 60000);
+  <!-- ═══════════ API METRICS ═══════════ -->
+  <div class="view" id="view-api">
+    <div class="grid grid-4" id="api-kpis"></div>
+    <div class="grid grid-2" style="margin-top:16px;">
+      <div class="card">
+        <div class="section-title"><span>🔥</span> Top Endpoints (last hour)</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Endpoint</th><th>Requests</th><th>%</th></tr></thead>
+            <tbody id="top-endpoints"><tr><td colspan="3" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title"><span>🌐</span> Top IPs (last hour)</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>IP Address</th><th>Requests</th></tr></thead>
+            <tbody id="top-ips"><tr><td colspan="2" class="loading">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="section-title"><span>📈</span> Requests / Minute (last 10 min)</div>
+      <div id="rpm-chart-full" class="bar-chart" style="height:160px;"></div>
+    </div>
+  </div>
 
-    // Chart placeholder for future Chart.js integration
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('Admin dashboard loaded successfully');
-    });
-  </script>
+</div>
+
+<script>
+// ── Auth ──
+function getToken() {
+  return sessionStorage.getItem('lf_token') || '';
+}
+
+async function apiFetch(url) {
+  const res = await fetch(url, {
+    headers: { 'Authorization': 'Bearer ' + getToken() }
+  });
+  if (res.status === 401) {
+    alert('Owner access required. Please log in.');
+    window.location.href = '/auth';
+    return null;
+  }
+  return res.json();
+}
+
+async function apiPost(url) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' }
+  });
+  return res.json();
+}
+
+// ── Tabs ──
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('view-' + tab.dataset.view).classList.add('active');
+    loadView(tab.dataset.view);
+  });
+});
+
+// ── Load Views ──
+async function loadView(name) {
+  switch(name) {
+    case 'overview': await loadOverview(); break;
+    case 'users': await loadUsers(); break;
+    case 'sessions': await loadSessions(); break;
+    case 'security': await loadSecurity(); break;
+    case 'server': await loadServer(); break;
+    case 'api': await loadAPI(); break;
+  }
+}
+
+// ── OVERVIEW ──
+async function loadOverview() {
+  const [stats, metrics, security] = await Promise.all([
+    apiFetch('/admin/api/stats'),
+    apiFetch('/admin/api/metrics'),
+    apiFetch('/admin/api/security')
+  ]);
+  if (!stats) return;
+
+  document.getElementById('kpi-cards').innerHTML = `
+    <div class="card metric-card">
+      <div class="card-title">Total Users</div>
+      <div class="card-value">${stats.total_users}</div>
+      <div class="card-sub">+${stats.new_today} today · +${stats.new_this_week} this week</div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-title">Estimated MRR</div>
+      <div class="card-value">€${stats.estimated_mrr.toLocaleString()}</div>
+      <div class="card-sub">${stats.active_subscriptions} active subscriptions</div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-title">Translations</div>
+      <div class="card-value">${stats.total_conversations}</div>
+      <div class="card-sub">${stats.total_minutes_used} min used</div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-title">Requests / Min</div>
+      <div class="card-value">${metrics ? metrics.requests_last_minute : 0}</div>
+      <div class="card-sub">${metrics ? metrics.unique_ips_last_hour : 0} unique IPs this hour</div>
+    </div>
+  `;
+
+  // Plan chart
+  const plans = stats.plan_distribution || {};
+  const total = Object.values(plans).reduce((s,v) => s+v, 0) || 1;
+  const colors = { basic: 'var(--blue)', premium: 'var(--gold)', business: 'var(--green)', owner: 'var(--red)' };
+  const labels = { basic: 'Personal', premium: 'Premium', business: 'Business', owner: 'Owner' };
+  let planHTML = '';
+  for (const [plan, count] of Object.entries(plans)) {
+    const pct = Math.round(count / total * 100);
+    const color = colors[plan] || 'var(--text-sub)';
+    planHTML += `
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:13px;">${labels[plan] || plan}</span>
+          <span style="font-size:13px;color:var(--text-sub);">${count} users (${pct}%)</span>
+        </div>
+        <div class="progress"><div class="progress-bar" style="width:${pct}%;background:${color};"></div></div>
+      </div>`;
+  }
+  if (!planHTML) planHTML = '<div style="color:var(--text-sub);font-size:13px;">No users yet</div>';
+  document.getElementById('plan-chart').innerHTML = planHTML;
+
+  // RPM chart
+  if (metrics && metrics.rpm_chart) {
+    renderBarChart('rpm-chart', metrics.rpm_chart);
+  }
+
+  // Recent users
+  const usersData = await apiFetch('/admin/api/users?per_page=5');
+  if (usersData && usersData.users) {
+    document.getElementById('recent-users').innerHTML = usersData.users.map(u => `
+      <tr>
+        <td>${esc(u.name)}</td>
+        <td>${esc(u.email)}</td>
+        <td><span class="badge badge-${u.plan === 'premium' ? 'gold' : u.plan === 'business' ? 'green' : 'blue'}">${u.plan}</span></td>
+        <td>${timeAgo(u.created_at)}</td>
+      </tr>`).join('') || '<tr><td colspan="4">No users</td></tr>';
+  }
+
+  // Security summary
+  if (security) {
+    document.getElementById('security-summary').innerHTML = `
+      <div class="sec-item"><span class="sec-label">Blocked IPs</span><span class="sec-value" style="color:${security.blocked_ip_count > 0 ? 'var(--red)' : 'var(--green)'};">${security.blocked_ip_count}</span></div>
+      <div class="sec-item"><span class="sec-label">Suspicious IPs</span><span class="sec-value" style="color:${security.suspicious_ip_count > 0 ? 'var(--orange)' : 'var(--green)'};">${security.suspicious_ip_count}</span></div>
+      <div class="sec-item"><span class="sec-label">Locked Accounts</span><span class="sec-value" style="color:${security.locked_account_count > 0 ? 'var(--orange)' : 'var(--green)'};">${security.locked_account_count}</span></div>
+      <div class="sec-item"><span class="sec-label">Active Rate Limits</span><span class="sec-value">${security.rate_limit_keys}</span></div>
+      <div class="sec-item"><span class="sec-label">WAF Status</span><span class="sec-value" style="color:var(--green);">Active</span></div>
+      <div class="sec-item"><span class="sec-label">CSP Status</span><span class="sec-value" style="color:var(--green);">Active</span></div>
+    `;
+  }
+}
+
+// ── USERS ──
+async function loadUsers(search = '') {
+  const q = search ? `&search=${encodeURIComponent(search)}` : '';
+  const data = await apiFetch(`/admin/api/users?per_page=100${q}`);
+  if (!data) return;
+
+  document.getElementById('users-table').innerHTML = data.users.map(u => `
+    <tr>
+      <td>${esc(u.name)}</td>
+      <td>${esc(u.email)}</td>
+      <td><span class="badge badge-${u.plan === 'premium' ? 'gold' : u.plan === 'business' ? 'green' : u.is_owner ? 'orange' : 'blue'}">${u.is_owner ? 'owner' : u.plan}</span></td>
+      <td>${u.minutes_used} / ${u.minutes_total > 99999 ? '∞' : u.minutes_total}</td>
+      <td><span class="badge ${u.is_active ? 'badge-green' : 'badge-red'}">${u.is_active ? 'Active' : 'Disabled'}</span></td>
+      <td>${timeAgo(u.created_at)}</td>
+      <td>${u.is_owner ? '' : `<button class="btn-sm btn-danger" onclick="toggleUser('${u.user_id}')">${u.is_active ? 'Disable' : 'Enable'}</button>`}</td>
+    </tr>`).join('') || '<tr><td colspan="7">No users found</td></tr>';
+}
+
+document.getElementById('user-search').addEventListener('input', function() {
+  clearTimeout(this._timeout);
+  this._timeout = setTimeout(() => loadUsers(this.value), 300);
+});
+
+async function toggleUser(userId) {
+  if (!confirm('Toggle this user\'s status?')) return;
+  await apiPost(`/admin/api/users/${userId}/toggle`);
+  loadUsers(document.getElementById('user-search').value);
+}
+
+// ── SESSIONS ──
+async function loadSessions() {
+  const data = await apiFetch('/admin/api/conversations');
+  if (!data) return;
+
+  document.getElementById('session-kpis').innerHTML = `
+    <div class="card metric-card">
+      <div class="card-title">Active Now</div>
+      <div class="card-value" style="color:var(--green);">${data.active_sessions}</div>
+      <div class="card-sub">Live translation sessions</div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-title">Total Sessions</div>
+      <div class="card-value">${data.conversations.length}</div>
+      <div class="card-sub">Recent sessions loaded</div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-title">Modes</div>
+      <div class="card-value" style="font-size:20px;">${[...new Set(data.conversations.map(c => c.mode))].join(', ') || 'N/A'}</div>
+      <div class="card-sub">Translation modes used</div>
+    </div>
+  `;
+
+  document.getElementById('sessions-table').innerHTML = data.conversations.map(c => `
+    <tr>
+      <td>${esc(c.user_id.substring(0,8))}...</td>
+      <td><span class="badge badge-${c.mode === 'conference' ? 'blue' : 'gold'}">${c.mode}</span></td>
+      <td>${c.source_lang} → ${c.target_lang}</td>
+      <td>${c.duration_minutes} min</td>
+      <td><span class="badge ${c.status === 'active' ? 'badge-green' : c.status === 'completed' ? 'badge-blue' : 'badge-red'}">${c.status}</span></td>
+      <td>${timeAgo(c.started_at)}</td>
+    </tr>`).join('') || '<tr><td colspan="6">No sessions yet</td></tr>';
+}
+
+// ── SECURITY ──
+async function loadSecurity() {
+  const data = await apiFetch('/admin/api/security');
+  if (!data) return;
+
+  document.getElementById('security-kpis').innerHTML = `
+    <div class="card metric-card">
+      <div class="card-title">Blocked IPs</div>
+      <div class="card-value" style="color:${data.blocked_ip_count > 0 ? 'var(--red)' : 'var(--green)'};">${data.blocked_ip_count}</div>
+      <div class="card-sub">Auto-blacklisted</div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-title">Suspicious IPs</div>
+      <div class="card-value" style="color:${data.suspicious_ip_count > 0 ? 'var(--orange)' : 'var(--green)'};">${data.suspicious_ip_count}</div>
+      <div class="card-sub">5+ errors in 5 min</div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-title">Locked Accounts</div>
+      <div class="card-value" style="color:${data.locked_account_count > 0 ? 'var(--orange)' : 'var(--green)'};">${data.locked_account_count}</div>
+      <div class="card-sub">Failed login lockouts</div>
+    </div>
+  `;
+
+  // Blocked IPs list
+  const blockedIPs = Object.entries(data.blocked_ips || {});
+  document.getElementById('blocked-ips-list').innerHTML = blockedIPs.length > 0
+    ? blockedIPs.map(([ip, info]) => `
+      <div class="sec-item">
+        <span class="sec-label" style="font-family:monospace;">${ip}</span>
+        <span class="sec-value" style="color:var(--red);">Unblocks in ${Math.ceil(info.unblock_in/60)}m</span>
+      </div>`).join('')
+    : '<div style="color:var(--green);font-size:13px;padding:10px 0;">No blocked IPs — all clear</div>';
+
+  // Locked accounts list
+  const locked = Object.entries(data.locked_accounts || {});
+  document.getElementById('locked-accounts-list').innerHTML = locked.length > 0
+    ? locked.map(([email, info]) => `
+      <div class="sec-item">
+        <span class="sec-label">${esc(email)}</span>
+        <span class="sec-value" style="color:var(--orange);">Unlocks in ${Math.ceil(info.unlock_in/60)}m</span>
+      </div>`).join('')
+    : '<div style="color:var(--green);font-size:13px;padding:10px 0;">No locked accounts — all clear</div>';
+}
+
+// ── SERVER ──
+async function loadServer() {
+  const data = await apiFetch('/admin/api/health');
+  if (!data) return;
+
+  document.getElementById('uptime').textContent = data.uptime_human;
+
+  document.getElementById('server-kpis').innerHTML = `
+    <div class="card metric-card">
+      <div class="card-title">CPU Usage</div>
+      <div class="card-value" style="color:${data.cpu_percent > 80 ? 'var(--red)' : data.cpu_percent > 50 ? 'var(--orange)' : 'var(--green)'};">${data.cpu_percent}%</div>
+      <div class="progress"><div class="progress-bar ${data.cpu_percent > 80 ? 'progress-red' : 'progress-green'}" style="width:${data.cpu_percent}%;"></div></div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-title">Memory</div>
+      <div class="card-value" style="color:${data.memory_percent > 85 ? 'var(--red)' : 'var(--gold)'};">${data.memory_percent}%</div>
+      <div class="card-sub">${data.memory_used_gb} / ${data.memory_total_gb} GB</div>
+      <div class="progress"><div class="progress-bar ${data.memory_percent > 85 ? 'progress-red' : 'progress-gold'}" style="width:${data.memory_percent}%;"></div></div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-title">Disk</div>
+      <div class="card-value" style="color:${data.disk_percent > 90 ? 'var(--red)' : 'var(--blue)'};">${data.disk_percent}%</div>
+      <div class="card-sub">${data.disk_used_gb} / ${data.disk_total_gb} GB</div>
+      <div class="progress"><div class="progress-bar ${data.disk_percent > 90 ? 'progress-red' : 'progress-blue'}" style="width:${data.disk_percent}%;"></div></div>
+    </div>
+  `;
+
+  document.getElementById('system-resources').innerHTML = `
+    <div class="sec-item"><span class="sec-label">Uptime</span><span class="sec-value" style="color:var(--green);">${data.uptime_human}</span></div>
+    <div class="sec-item"><span class="sec-label">Python</span><span class="sec-value">${data.python_version}</span></div>
+    <div class="sec-item"><span class="sec-label">Process ID</span><span class="sec-value">${data.pid}</span></div>
+    <div class="sec-item"><span class="sec-label">CPU</span><span class="sec-value">${data.cpu_percent}%</span></div>
+    <div class="sec-item"><span class="sec-label">Memory</span><span class="sec-value">${data.memory_used_gb} / ${data.memory_total_gb} GB (${data.memory_percent}%)</span></div>
+    <div class="sec-item"><span class="sec-label">Disk</span><span class="sec-value">${data.disk_used_gb} / ${data.disk_total_gb} GB (${data.disk_percent}%)</span></div>
+  `;
+
+  // GPU
+  if (data.gpu) {
+    const g = data.gpu;
+    document.getElementById('gpu-status').innerHTML = `
+      <div class="sec-item"><span class="sec-label">GPU</span><span class="sec-value" style="color:var(--gold);">${g.name}</span></div>
+      <div class="sec-item"><span class="sec-label">Temperature</span><span class="sec-value" style="color:${g.temperature > 80 ? 'var(--red)' : 'var(--green)'};">${g.temperature}°C</span></div>
+      <div class="sec-item"><span class="sec-label">Utilization</span><span class="sec-value">${g.utilization}%</span></div>
+      <div class="sec-item"><span class="sec-label">VRAM</span><span class="sec-value">${g.memory_used_mb} / ${g.memory_total_mb} MB (${g.memory_percent}%)</span></div>
+      <div class="progress"><div class="progress-bar progress-gold" style="width:${g.memory_percent}%;"></div></div>
+    `;
+  } else {
+    document.getElementById('gpu-status').innerHTML = `
+      <div style="color:var(--orange);font-size:13px;padding:10px 0;">No GPU detected (running on CPU mode)</div>
+    `;
+  }
+}
+
+// ── API METRICS ──
+async function loadAPI() {
+  const data = await apiFetch('/admin/api/metrics');
+  if (!data) return;
+
+  document.getElementById('api-kpis').innerHTML = `
+    <div class="card metric-card">
+      <div class="card-title">Req / Min</div>
+      <div class="card-value">${data.requests_last_minute}</div>
+      <div class="card-sub">Right now</div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-title">Last 5 Min</div>
+      <div class="card-value">${data.requests_last_5min}</div>
+      <div class="card-sub">Total requests</div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-title">Last Hour</div>
+      <div class="card-value">${data.requests_last_hour}</div>
+      <div class="card-sub">Avg ${data.rpm_avg} req/min</div>
+    </div>
+    <div class="card metric-card">
+      <div class="card-title">Unique IPs</div>
+      <div class="card-value">${data.unique_ips_last_hour}</div>
+      <div class="card-sub">Last hour</div>
+    </div>
+  `;
+
+  // Top endpoints
+  document.getElementById('top-endpoints').innerHTML = data.top_endpoints.map(e => {
+    const pct = data.requests_last_hour > 0 ? Math.round(e.count / data.requests_last_hour * 100) : 0;
+    return `<tr><td style="font-family:monospace;font-size:12px;">${esc(e.path)}</td><td>${e.count}</td><td>${pct}%</td></tr>`;
+  }).join('') || '<tr><td colspan="3">No data yet</td></tr>';
+
+  // Top IPs
+  document.getElementById('top-ips').innerHTML = data.top_ips.map(e =>
+    `<tr><td style="font-family:monospace;">${esc(e.ip)}</td><td>${e.count}</td></tr>`
+  ).join('') || '<tr><td colspan="2">No data yet</td></tr>';
+
+  // RPM chart
+  if (data.rpm_chart) {
+    renderBarChart('rpm-chart-full', data.rpm_chart);
+  }
+}
+
+// ── Bar Chart Renderer ──
+function renderBarChart(containerId, data) {
+  const container = document.getElementById(containerId);
+  const max = Math.max(...data.map(d => d.count), 1);
+  container.innerHTML = data.map(d => {
+    const h = Math.max(4, (d.count / max) * 100);
+    return `<div class="bar-col">
+      <div class="bar-value">${d.count}</div>
+      <div class="bar" style="height:${h}%;"></div>
+      <div class="bar-label">${d.label}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Helpers ──
+function esc(str) { const d = document.createElement('div'); d.textContent = str || ''; return d.innerHTML; }
+
+function timeAgo(iso) {
+  if (!iso) return 'N/A';
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+// ── Init & Auto-refresh ──
+loadOverview();
+setInterval(() => {
+  const active = document.querySelector('.tab.active');
+  if (active) loadView(active.dataset.view);
+}, 30000); // Refresh every 30 seconds
+</script>
 </body>
 </html>
