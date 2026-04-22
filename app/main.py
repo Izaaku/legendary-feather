@@ -1,6 +1,8 @@
 """Legendary Feather Universal Translator - Main Entry Point."""
 import sys
 import os
+import time
+from collections import defaultdict
 
 # Ensure parent directory is in path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
@@ -39,6 +41,34 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(api_bp)
 app.register_blueprint(payments_bp)
 app.register_blueprint(admin_bp)
+
+
+# ── Rate Limiting (in-memory, no external package) ──
+_rate_store = defaultdict(list)
+RATE_LIMITS = {
+    '/api/auth/login': (5, 60),      # 5 requests per 60 seconds
+    '/api/auth/signup': (3, 60),     # 3 per 60s
+    '/api/translate': (30, 60),      # 30 per 60s
+    '/api/transcribe': (20, 60),     # 20 per 60s
+    '/api/synthesize': (20, 60),     # 20 per 60s
+}
+
+@app.before_request
+def check_rate_limit():
+    path = request.path
+    limit_config = RATE_LIMITS.get(path)
+    if not limit_config:
+        return None
+    max_requests, window = limit_config
+    ip = request.remote_addr or 'unknown'
+    key = f"{ip}:{path}"
+    now = time.time()
+    # Clean old entries
+    _rate_store[key] = [t for t in _rate_store[key] if now - t < window]
+    if len(_rate_store[key]) >= max_requests:
+        return jsonify({'error': 'Too many requests. Please slow down.'}), 429
+    _rate_store[key].append(now)
+    return None
 
 
 # ── Security Headers ────────────────────────────────

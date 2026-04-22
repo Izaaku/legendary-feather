@@ -1146,15 +1146,168 @@ function showPlan(planKey) {
 
 // Init — load user's actual plan from session
 const userPlan = currentSession ? currentSession.plan : 'personal';
-showPlan(userPlan);
+showPlan(userPlan === 'owner' ? 'personal' : userPlan);
 
 // Highlight the correct switcher button for owners
-if (OWNER_EMAILS.includes(currentSession?.email)) {
+if (currentSession && currentSession.is_owner) {
   const planBtns = document.querySelectorAll('.plan-switcher button');
   planBtns.forEach(b => b.classList.remove('active'));
   const planIndex = { personal: 0, premium: 1, business: 2 };
-  if (planBtns[planIndex[userPlan]]) planBtns[planIndex[userPlan]].classList.add('active');
+  const viewPlan = userPlan === 'owner' ? 'personal' : userPlan;
+  if (planBtns[planIndex[viewPlan]]) planBtns[planIndex[viewPlan]].classList.add('active');
 }
+
+// ── SIDEBAR NAVIGATION ──
+const sidebarItems = document.querySelectorAll('.sidebar-item');
+sidebarItems.forEach(item => {
+  item.addEventListener('click', function(e) {
+    if (this.getAttribute('onclick')) return; // Sign out has its own handler
+    e.preventDefault();
+    const text = this.textContent.trim();
+
+    // Update active state
+    sidebarItems.forEach(i => i.classList.remove('active'));
+    this.classList.add('active');
+
+    // Handle navigation
+    switch(text) {
+      case 'Dashboard':
+        showPlan(userPlan === 'owner' ? 'personal' : userPlan);
+        break;
+      case 'Start Translation':
+        toggleMiniPlayer();
+        break;
+      case 'Languages':
+        showLanguagesView();
+        break;
+      case 'Voice Profiles':
+        showVoiceProfilesView();
+        break;
+      case 'History':
+        showHistoryView();
+        break;
+      case 'Settings':
+        showSettingsView();
+        break;
+    }
+  });
+});
+
+// ── SIDEBAR VIEW FUNCTIONS ──
+function showLanguagesView() {
+  const plan = plans[userPlan === 'owner' ? 'personal' : userPlan] || plans.personal;
+  document.getElementById('main-content').innerHTML = `
+    <div class="welcome-header animate-in">
+      <div><div class="welcome-name">Languages</div>
+      <div class="welcome-date">100+ languages supported</div></div>
+    </div>
+    <div class="card animate-in delay-1">
+      <div class="card-header"><div class="card-title">Core Languages <em>(16 native TTS)</em></div></div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${['English','Spanish','French','German','Italian','Portuguese','Polish','Turkish','Russian','Dutch','Czech','Arabic','Chinese','Japanese','Korean','Hungarian'].map(l =>
+          '<span style="padding:8px 14px;border-radius:8px;background:var(--gold-dim);border:1px solid var(--border);font-size:12px;color:var(--gold);">'+l+'</span>'
+        ).join('')}
+      </div>
+    </div>
+    <div class="card animate-in delay-2">
+      <div class="card-header"><div class="card-title">All Supported Languages</div></div>
+      <div style="font-size:13px;color:var(--text-sub);line-height:2;">
+        Hindi, Filipino, Swedish, Danish, Thai, Vietnamese, Indonesian, Bengali, Tamil, Telugu, Greek, Romanian, Bulgarian, Ukrainian, Norwegian, Finnish, and 80+ more...
+      </div>
+    </div>`;
+}
+
+function showVoiceProfilesView() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="welcome-header animate-in">
+      <div><div class="welcome-name">Voice Profiles</div>
+      <div class="welcome-date">Clone your voice for personalized translations</div></div>
+    </div>
+    <div class="card animate-in delay-1">
+      <div class="card-header"><div class="card-title">Your Voice Profiles</div></div>
+      <div id="voiceProfilesList" style="color:var(--text-sub);font-size:13px;">Loading...</div>
+    </div>
+    <div class="card animate-in delay-2">
+      <div class="card-header"><div class="card-title">Register New Voice</div></div>
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:16px;">Record 10-30 seconds of speech to create a voice profile.</p>
+      <button class="quick-btn primary" onclick="alert('Voice registration coming soon!')">Start Recording</button>
+    </div>`;
+  // Load profiles
+  authFetch('/api/voice/profiles?user_id=' + currentSession.user_id)
+    .then(r => r.json())
+    .then(data => {
+      const el = document.getElementById('voiceProfilesList');
+      if (data.profiles && data.profiles.length > 0) {
+        el.innerHTML = data.profiles.map(p => '<div style="padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;"><strong style="color:var(--gold);">' + p.profile_name + '</strong> — ' + (p.duration_seconds||0).toFixed(1) + 's</div>').join('');
+      } else {
+        el.textContent = 'No voice profiles yet. Record one below!';
+      }
+    }).catch(() => { document.getElementById('voiceProfilesList').textContent = 'Could not load profiles.'; });
+}
+
+function showHistoryView() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="welcome-header animate-in">
+      <div><div class="welcome-name">Translation History</div>
+      <div class="welcome-date">Your recent sessions</div></div>
+    </div>
+    <div class="card animate-in delay-1">
+      <div class="card-header"><div class="card-title">Recent Sessions</div></div>
+      <div style="color:var(--text-sub);font-size:13px;">No translation sessions recorded yet. Start a translation to see your history here.</div>
+    </div>`;
+}
+
+function showSettingsView() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="welcome-header animate-in">
+      <div><div class="welcome-name">Settings</div>
+      <div class="welcome-date">Manage your account</div></div>
+    </div>
+    <div class="card animate-in delay-1">
+      <div class="card-header"><div class="card-title">Account Info</div></div>
+      <div style="font-size:13px;color:var(--text-sub);line-height:2;">
+        <div><strong style="color:var(--text);">Name:</strong> ${currentSession.name}</div>
+        <div><strong style="color:var(--text);">Email:</strong> ${currentSession.email}</div>
+        <div><strong style="color:var(--text);">Plan:</strong> ${currentSession.plan}</div>
+      </div>
+    </div>
+    <div class="card animate-in delay-2">
+      <div class="card-header"><div class="card-title">Change Password</div></div>
+      <div style="display:flex;flex-direction:column;gap:12px;max-width:400px;">
+        <input type="password" id="currentPw" placeholder="Current password" style="padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:Outfit;">
+        <input type="password" id="newPw" placeholder="New password" style="padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:Outfit;">
+        <button class="quick-btn primary" onclick="changePassword()">Update Password</button>
+        <div id="pwMsg" style="font-size:12px;"></div>
+      </div>
+    </div>
+    <div class="card animate-in delay-3">
+      <div class="card-header"><div class="card-title">Danger Zone</div></div>
+      <button class="quick-btn" style="border-color:var(--red);color:var(--red);" onclick="logout()">Sign Out</button>
+    </div>`;
+}
+
+async function changePassword() {
+  const current = document.getElementById('currentPw').value;
+  const newPw = document.getElementById('newPw').value;
+  const msg = document.getElementById('pwMsg');
+  try {
+    const res = await authFetch('/api/auth/change-password', {
+      method: 'POST', body: JSON.stringify({ current_password: current, new_password: newPw })
+    });
+    const data = await res.json();
+    if (res.ok) { msg.style.color = 'var(--green)'; msg.textContent = 'Password updated!'; }
+    else { msg.style.color = 'var(--red)'; msg.textContent = data.error; }
+  } catch { msg.style.color = 'var(--red)'; msg.textContent = 'Failed to update password.'; }
+}
+
+// Quick action buttons
+document.querySelectorAll('.quick-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const text = this.textContent.trim();
+    if (text === 'Start Translation') toggleMiniPlayer();
+    if (text === 'Change Languages') showLanguagesView();
+  });
+});
 
 // ── MINI PLAYER LOGIC ──
 const miniPlayer = document.getElementById('miniPlayer');
