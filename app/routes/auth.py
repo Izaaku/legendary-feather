@@ -8,6 +8,7 @@ from app.utils.database import db_session
 from app.utils.auth import (
     hash_password, verify_password, create_token, token_required
 )
+from app.utils.alerts import alert_account_locked, alert_new_signup
 from app.models.user import User
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
@@ -42,6 +43,7 @@ def _record_failed_login(email):
         _account_locks[email] = now + _LOCKOUT_DURATION
         _login_attempts[email] = []
         print(f'[SECURITY] Account {email} locked for {_LOCKOUT_DURATION}s (too many failed attempts)')
+        alert_account_locked(email, _MAX_LOGIN_ATTEMPTS)
         return True
     return False
 
@@ -125,6 +127,7 @@ def signup():
         db.commit()
 
         token = create_token(user.user_id, user.email, user.is_owner)
+        alert_new_signup(name, email, plan)
 
         return jsonify({
             'token': token,

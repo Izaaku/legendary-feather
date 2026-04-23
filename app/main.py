@@ -18,6 +18,10 @@ load_dotenv()
 from app.config import Config, LANGUAGES
 from app.routes import api_bp, auth_bp, payments_bp, admin_bp
 from app.utils.database import init_db
+from app.utils.alerts import (
+    alert_waf_block, alert_ip_blacklisted,
+    record_server_error, start_health_monitor
+)
 
 # ── App Factory ──────────────────────────────────────
 
@@ -101,6 +105,7 @@ def _record_ip_error(ip):
         _ip_blacklist[ip] = now + _IP_BLOCK_DURATION
         _ip_error_store[ip] = []  # Reset counter
         print(f'[SECURITY] IP {ip} auto-blocked for {_IP_BLOCK_DURATION}s ({_IP_ERROR_THRESHOLD}+ errors)')
+        alert_ip_blacklisted(ip, _IP_ERROR_THRESHOLD)
 
 
 # ── Rate Limiting (in-memory, no external package) ──
@@ -133,6 +138,7 @@ def security_gate():
         # Check URL path
         if _waf_check(path):
             _record_ip_error(ip)
+            alert_waf_block(ip, 'Path Injection', path[:100])
             print(f'[WAF] Blocked path attack from {ip}: {path[:100]}')
             return jsonify({'error': 'Forbidden'}), 403
 
@@ -140,6 +146,7 @@ def security_gate():
         for key, val in request.args.items():
             if _waf_check(key) or _waf_check(val):
                 _record_ip_error(ip)
+                alert_waf_block(ip, 'Query Injection', f'{key}={val[:100]}')
                 print(f'[WAF] Blocked query attack from {ip}: {key}={val[:100]}')
                 return jsonify({'error': 'Forbidden'}), 403
 
@@ -152,6 +159,7 @@ def security_gate():
                         continue
                     if isinstance(val, str) and _waf_check(val):
                         _record_ip_error(ip)
+                        alert_waf_block(ip, 'Body Injection', key)
                         print(f'[WAF] Blocked body attack from {ip}: {key}')
                         return jsonify({'error': 'Forbidden'}), 403
             except Exception:
@@ -200,11 +208,13 @@ def add_security_headers(response):
     if request.is_secure:
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
 
-    # Track IP errors for auto-blacklist
+    # Track IP errors for auto-blacklist + alert on 5xx
     status = response.status_code
     if status >= 400:
         ip = request.remote_addr or 'unknown'
         _record_ip_error(ip)
+    if status >= 500:
+        record_server_error(f'{status} {request.method} {request.path}')
 
     return response
 
@@ -639,6 +649,7 @@ if __name__ == '__main__':
     init_db()
     from app.utils.seed_admin import seed_admin
     seed_admin()
+    start_health_monitor(app)
     print("\n  Legendary Feather Universal Translator")
     print("  Dual TTS Engine: XTTS v2 (Conference) + GPT-SoVITS (Face-to-Face)")
     print("  Running on http://localhost:5000\n")
