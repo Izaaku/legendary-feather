@@ -531,97 +531,84 @@ body {
   content: '▾'; margin-left: 6px; font-size: 10px; opacity: 0.5;
 }
 
-/* ── Wheel Picker Overlay ── */
-.wheel-overlay {
+/* ── Centered Language Dropdown ── */
+.lang-dd-backdrop {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
-  z-index: 500; display: none; align-items: flex-end; justify-content: center;
-  animation: wheelFadeIn 0.25s ease;
+  z-index: 450; display: none;
 }
-.wheel-overlay.open { display: flex; }
-@keyframes wheelFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.lang-dd-backdrop.open { display: block; }
 
-.wheel-container {
-  width: 340px; max-width: calc(100% - 24px);
-  background: var(--bg2); border: 1px solid var(--border-bright);
-  border-radius: 18px 18px 0 0;
-  box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
+.lang-dd {
+  position: fixed; z-index: 460;
+  width: 200px;
+  background: var(--bg2);
+  border: 1px solid var(--border-bright);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(212,168,67,0.08);
   overflow: hidden;
-  animation: wheelSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  display: none;
+  flex-direction: column;
+  animation: ddOpen 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-@keyframes wheelSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.lang-dd.open { display: flex; }
+@keyframes ddOpen {
+  from { opacity: 0; transform: scaleY(0.6); }
+  to   { opacity: 1; transform: scaleY(1); }
+}
 
-.wheel-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-}
-.wheel-title { font-size: 14px; font-weight: 600; color: var(--gold); }
-.wheel-done {
-  background: none; border: none; color: var(--gold); font-family: 'Outfit', sans-serif;
-  font-size: 14px; font-weight: 600; cursor: pointer; padding: 4px 10px;
-  border-radius: 6px; transition: background 0.2s;
-}
-.wheel-done:hover { background: var(--gold-dim); }
-
-.wheel-search {
-  margin: 10px 16px 6px; padding: 9px 12px;
-  border: 1px solid var(--border); border-radius: 10px;
+.lang-dd-search {
+  padding: 8px 10px; margin: 6px 8px 4px;
+  border: 1px solid var(--border); border-radius: 8px;
   background: var(--bg3); color: var(--text);
-  font-family: 'Outfit', sans-serif; font-size: 13px;
-  outline: none; width: calc(100% - 32px);
+  font-family: 'Outfit', sans-serif; font-size: 12px;
+  outline: none; width: calc(100% - 16px);
 }
-.wheel-search::placeholder { color: var(--text-muted); }
-.wheel-search:focus { border-color: var(--gold); }
+.lang-dd-search::placeholder { color: var(--text-muted); }
+.lang-dd-search:focus { border-color: var(--gold); }
 
-.wheel-viewport {
-  position: relative; height: 210px; overflow: hidden;
+.lang-dd-viewport {
+  position: relative; height: 224px; overflow: hidden;
 }
-/* Fade masks top and bottom */
-.wheel-viewport::before, .wheel-viewport::after {
-  content: ''; position: absolute; left: 0; right: 0; height: 70px;
+.lang-dd-viewport::before, .lang-dd-viewport::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 28px;
   z-index: 2; pointer-events: none;
 }
-.wheel-viewport::before {
-  top: 0;
-  background: linear-gradient(to bottom, var(--bg2) 0%, transparent 100%);
+.lang-dd-viewport::before {
+  top: 0; background: linear-gradient(to bottom, var(--bg2), transparent);
 }
-.wheel-viewport::after {
-  bottom: 0;
-  background: linear-gradient(to top, var(--bg2) 0%, transparent 100%);
+.lang-dd-viewport::after {
+  bottom: 0; background: linear-gradient(to top, var(--bg2), transparent);
 }
-/* Selection highlight band */
-.wheel-highlight {
-  position: absolute; top: 50%; left: 12px; right: 12px;
-  height: 42px; transform: translateY(-50%);
-  border-radius: 10px;
-  background: var(--gold-dim);
-  border: 1px solid var(--border-bright);
+/* Highlight band in the center */
+.lang-dd-highlight {
+  position: absolute; top: 50%; left: 6px; right: 6px;
+  height: 32px; transform: translateY(-50%);
+  border-radius: 8px; background: var(--gold-dim);
+  border: 1px solid rgba(212,168,67,0.25);
   z-index: 1; pointer-events: none;
 }
 
-.wheel-scroll {
+.lang-dd-scroll {
   position: relative; z-index: 3;
   height: 100%; overflow-y: auto;
   scroll-snap-type: y mandatory;
   -webkit-overflow-scrolling: touch;
-  padding: 84px 0;
+  padding-top: 96px; padding-bottom: 96px;
 }
-.wheel-scroll::-webkit-scrollbar { display: none; }
-.wheel-scroll { scrollbar-width: none; }
+.lang-dd-scroll::-webkit-scrollbar { width: 3px; }
+.lang-dd-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-.wheel-item {
-  height: 42px; display: flex; align-items: center; gap: 10px;
-  padding: 0 20px; font-size: 14px; color: var(--text-sub);
+.lang-dd-item {
+  height: 32px; display: flex; align-items: center; gap: 8px;
+  padding: 0 14px; font-size: 13px; color: var(--text-sub);
   scroll-snap-align: center; cursor: pointer;
-  transition: color 0.15s, transform 0.15s;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: color 0.12s;
+  white-space: nowrap;
 }
-.wheel-item.selected { color: var(--gold); font-weight: 600; font-size: 15px; }
-.wheel-item .wh-flag { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
-.wheel-item .wh-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-.wheel-item .wh-code { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+.lang-dd-item:hover { color: var(--text); }
+.lang-dd-item.selected { color: var(--gold); font-weight: 600; }
+.lang-dd-item .dd-flag { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+.lang-dd-item .dd-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
 
 /* Translation result text */
 .mp-result {
@@ -1511,11 +1498,11 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
   <div class="mp-body">
     <!-- Language Pair -->
     <div class="mp-langs">
-      <div class="mp-lang" id="mpLang1" onclick="openWheelPicker(1)">English</div>
+      <div class="mp-lang" id="mpLang1" onclick="openLangDD(1)">English</div>
       <button class="mp-side-btn" onclick="swapLangs()" title="Swap languages" style="width:32px;height:32px;border-radius:50%;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
       </button>
-      <div class="mp-lang" id="mpLang2" onclick="openWheelPicker(2)">Spanish</div>
+      <div class="mp-lang" id="mpLang2" onclick="openLangDD(2)">Spanish</div>
     </div>
 
     <!-- Translation result display -->
@@ -1622,18 +1609,13 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
   </div>
 </div>
 
-<!-- ═══════ LANGUAGE WHEEL PICKER ═══════ -->
-<div class="wheel-overlay" id="wheelOverlay" onclick="closeWheelPicker()">
-  <div class="wheel-container" onclick="event.stopPropagation()">
-    <div class="wheel-header">
-      <span class="wheel-title" id="wheelTitle">Select Language</span>
-      <button class="wheel-done" onclick="closeWheelPicker()">Done</button>
-    </div>
-    <input class="wheel-search" id="wheelSearch" type="text" placeholder="Search languages..." oninput="filterWheel(this.value)">
-    <div class="wheel-viewport">
-      <div class="wheel-highlight"></div>
-      <div class="wheel-scroll" id="wheelScroll"></div>
-    </div>
+<!-- ═══════ CENTERED LANGUAGE DROPDOWN ═══════ -->
+<div class="lang-dd-backdrop" id="langBackdrop" onclick="closeLangDD()"></div>
+<div class="lang-dd" id="langDD">
+  <input class="lang-dd-search" id="langDDSearch" type="text" placeholder="Search..." oninput="filterLangDD(this.value)">
+  <div class="lang-dd-viewport">
+    <div class="lang-dd-highlight"></div>
+    <div class="lang-dd-scroll" id="langDDScroll"></div>
   </div>
 </div>
 
@@ -1650,10 +1632,10 @@ let mpLang2Name = 'Spanish';
 let mpCurrentMode = 'face_to_face';
 let mpSettingsOpen = false;
 
-// ── Language data (fetched from API, fallback embedded) ──
+// ── Language data ──
 let mpLanguages = {};
 let mpLangSorted = [];
-let wheelActiveSlot = 0;
+let ddActiveSlot = 0;
 
 (async function loadLanguages() {
   try {
@@ -1666,86 +1648,85 @@ let wheelActiveSlot = 0;
   mpLangSorted = Object.entries(mpLanguages).sort((a,b) => a[1].name.localeCompare(b[1].name));
 })();
 
-// ── Wheel Picker ──
-function openWheelPicker(slot) {
-  wheelActiveSlot = slot;
-  const overlay = document.getElementById('wheelOverlay');
-  const title = document.getElementById('wheelTitle');
-  const search = document.getElementById('wheelSearch');
-  title.textContent = slot === 1 ? 'Translate From' : 'Translate To';
+// ── Centered Dropdown ──
+function openLangDD(slot) {
+  ddActiveSlot = slot;
+  const trigger = document.getElementById('mpLang' + slot);
+  const dd = document.getElementById('langDD');
+  const backdrop = document.getElementById('langBackdrop');
+  const search = document.getElementById('langDDSearch');
+
+  // Position: center the dropdown on the trigger element
+  const rect = trigger.getBoundingClientRect();
+  const ddW = 200;
+  const ddH = 276; // search + viewport
+  // Horizontal: center on the trigger
+  let left = rect.left + rect.width / 2 - ddW / 2;
+  // Vertical: center the highlight band on the trigger
+  let top = rect.top + rect.height / 2 - ddH / 2;
+  // Clamp to viewport
+  left = Math.max(8, Math.min(left, window.innerWidth - ddW - 8));
+  top = Math.max(8, Math.min(top, window.innerHeight - ddH - 8));
+
+  dd.style.left = left + 'px';
+  dd.style.top = top + 'px';
+  dd.style.transformOrigin = 'center ' + (rect.top - top + rect.height / 2) + 'px';
+
   search.value = '';
-  overlay.classList.add('open');
-  renderWheel();
-  // Scroll to selected after render
-  requestAnimationFrame(() => scrollToSelected());
+  renderLangDD();
+  backdrop.classList.add('open');
+  dd.classList.add('open');
+
+  // Scroll selected to center after render
+  requestAnimationFrame(() => {
+    scrollDDToSelected();
+    search.focus();
+  });
 }
 
-function closeWheelPicker() {
-  document.getElementById('wheelOverlay').classList.remove('open');
-  // Read which item is centered and select it
-  snapAndSelect();
+function closeLangDD() {
+  document.getElementById('langDD').classList.remove('open');
+  document.getElementById('langBackdrop').classList.remove('open');
 }
 
-function renderWheel(filter = '') {
-  const scroll = document.getElementById('wheelScroll');
-  const currentCode = wheelActiveSlot === 1 ? mpLang1Code : mpLang2Code;
+function renderLangDD(filter = '') {
+  const scroll = document.getElementById('langDDScroll');
+  const currentCode = ddActiveSlot === 1 ? mpLang1Code : mpLang2Code;
   const f = filter.toLowerCase();
   scroll.innerHTML = '';
 
   for (const [code, info] of mpLangSorted) {
     if (f && !info.name.toLowerCase().includes(f) && !code.includes(f)) continue;
     const div = document.createElement('div');
-    div.className = 'wheel-item' + (code === currentCode ? ' selected' : '');
+    div.className = 'lang-dd-item' + (code === currentCode ? ' selected' : '');
     div.dataset.code = code;
     div.dataset.name = info.name;
-    div.innerHTML = '<span class="wh-flag">' + (info.flag || '') + '</span><span class="wh-name">' + info.name + '</span><span class="wh-code">' + code + '</span>';
-    div.addEventListener('click', function() {
-      // Select this item immediately
-      scroll.querySelectorAll('.wheel-item').forEach(i => i.classList.remove('selected'));
+    div.innerHTML = '<span class="dd-flag">' + (info.flag || '') + '</span><span class="dd-name">' + info.name + '</span>';
+    div.addEventListener('click', function(e) {
+      e.stopPropagation();
+      scroll.querySelectorAll('.lang-dd-item').forEach(i => i.classList.remove('selected'));
       div.classList.add('selected');
-      selectLang(wheelActiveSlot, code, info.name);
-      // Smooth scroll to center it
-      const scrollTop = div.offsetTop - (scroll.parentElement.clientHeight / 2) + 21;
-      scroll.scrollTo({ top: scrollTop, behavior: 'smooth' });
-      // Close after brief delay
-      setTimeout(() => closeWheelPickerNoSnap(), 300);
+      selectLang(ddActiveSlot, code, info.name);
+      // Scroll to center, then close
+      const st = div.offsetTop - (scroll.parentElement.clientHeight / 2) + 16;
+      scroll.scrollTo({ top: st, behavior: 'smooth' });
+      setTimeout(() => closeLangDD(), 250);
     });
     scroll.appendChild(div);
   }
 }
 
-function filterWheel(value) {
-  renderWheel(value);
+function filterLangDD(value) {
+  renderLangDD(value);
 }
 
-function scrollToSelected() {
-  const scroll = document.getElementById('wheelScroll');
-  const selected = scroll.querySelector('.wheel-item.selected');
-  if (selected) {
-    const scrollTop = selected.offsetTop - (scroll.parentElement.clientHeight / 2) + 21;
-    scroll.scrollTo({ top: scrollTop, behavior: 'smooth' });
+function scrollDDToSelected() {
+  const scroll = document.getElementById('langDDScroll');
+  const sel = scroll.querySelector('.lang-dd-item.selected');
+  if (sel) {
+    const st = sel.offsetTop - (scroll.parentElement.clientHeight / 2) + 16;
+    scroll.scrollTop = st;
   }
-}
-
-function snapAndSelect() {
-  const scroll = document.getElementById('wheelScroll');
-  const viewportH = scroll.parentElement.clientHeight;
-  const centerY = scroll.scrollTop + viewportH / 2;
-  let closest = null, closestDist = Infinity;
-  scroll.querySelectorAll('.wheel-item').forEach(item => {
-    const itemCenter = item.offsetTop + 21;
-    const dist = Math.abs(itemCenter - centerY);
-    if (dist < closestDist) { closestDist = dist; closest = item; }
-  });
-  if (closest) {
-    scroll.querySelectorAll('.wheel-item').forEach(i => i.classList.remove('selected'));
-    closest.classList.add('selected');
-    selectLang(wheelActiveSlot, closest.dataset.code, closest.dataset.name);
-  }
-}
-
-function closeWheelPickerNoSnap() {
-  document.getElementById('wheelOverlay').classList.remove('open');
 }
 
 function selectLang(slot, code, name) {
@@ -1857,7 +1838,7 @@ async function enumerateAudioDevices() {
 // ── Close popups when clicking outside ──
 function closeAllPopups() {
   document.getElementById('mpModePopup').classList.remove('open');
-  document.getElementById('wheelOverlay').classList.remove('open');
+  closeLangDD();
 }
 
 document.addEventListener('click', function(e) {
