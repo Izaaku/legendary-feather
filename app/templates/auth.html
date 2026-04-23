@@ -13,9 +13,9 @@
   --gold-ll: #F7DFA0;
   --gold-dim: rgba(212,168,67,0.15);
   --gold-glow: rgba(212,168,67,0.35);
-  --bg: #060D16;
-  --bg2: #0B1929;
-  --bg3: #0F2035;
+  --bg: #000000;
+  --bg2: #0A0A0A;
+  --bg3: #111111;
   --text: #EAE4D8;
   --text-sub: #7A9AB5;
   --text-muted: #3A5A70;
@@ -415,7 +415,7 @@ canvas#stars {
 </div>
 
 <script>
-// ── Stars Background ──
+// ── Golden Dots Background (drifting particles with glow) ──
 (function(){
   const c = document.getElementById('stars');
   const ctx = c.getContext('2d');
@@ -423,32 +423,53 @@ canvas#stars {
   function resize(){ c.width = innerWidth; c.height = innerHeight; init(); }
   function init(){
     stars = [];
-    for(let i = 0; i < 120; i++){
+    for(let i = 0; i < 200; i++){
       stars.push({
         x: Math.random() * c.width,
         y: Math.random() * c.height,
-        r: Math.random() * 1.2 + 0.3,
-        a: Math.random() * 0.5 + 0.2,
+        r: Math.random() * 1.5 + 0.3,
+        o: Math.random() * 0.6 + 0.1,
         speed: Math.random() * 0.3 + 0.05,
-        phase: Math.random() * Math.PI * 2
+        phase: Math.random() * Math.PI * 2,
+        vx: (Math.random() - 0.5) * 0.15,
+        vy: -0.05 - Math.random() * 0.15,
+        wobbleAmp: 0.2 + Math.random() * 0.4,
+        wobbleSpeed: 0.002 + Math.random() * 0.003,
+        glowSize: 2 + Math.random() * 4,
+        h: 34 + Math.random() * 16,
+        s: 75 + Math.random() * 20,
+        l: 52 + Math.random() * 30
       });
     }
   }
-  function draw(){
+  function draw(t){
     ctx.clearRect(0, 0, c.width, c.height);
-    const t = Date.now() * 0.001;
     stars.forEach(s => {
-      const alpha = s.a + Math.sin(t * s.speed + s.phase) * 0.2;
+      s.x += s.vx + Math.sin(t * s.wobbleSpeed + s.phase) * s.wobbleAmp * 0.1;
+      s.y += s.vy;
+      if(s.y < -10){ s.y = c.height + 10; s.x = Math.random() * c.width; }
+      if(s.x < -10) s.x = c.width + 10;
+      if(s.x > c.width + 10) s.x = -10;
+      const opacity = s.o * (0.5 + 0.5 * Math.sin(t * s.speed + s.phase));
+      ctx.save();
+      ctx.globalAlpha = opacity * 0.3;
+      ctx.shadowColor = 'hsla(' + s.h + ',' + s.s + '%,' + s.l + '%,0.6)';
+      ctx.shadowBlur = s.glowSize;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r * 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'hsla(' + s.h + ',' + s.s + '%,' + s.l + '%,' + opacity + ')';
+      ctx.fill();
+      ctx.restore();
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(212,168,67,${Math.max(0, alpha)})`;
+      ctx.fillStyle = 'rgba(212,168,67,' + opacity + ')';
       ctx.fill();
     });
     requestAnimationFrame(draw);
   }
   resize();
   addEventListener('resize', resize);
-  draw();
+  requestAnimationFrame(draw);
 })();
 
 // ── Tab Switching ──
