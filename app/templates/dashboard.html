@@ -1317,63 +1317,7 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
   });
 });
 
-// ── MINI PLAYER LOGIC ──
-const miniPlayer = document.getElementById('miniPlayer');
-const mpToggle = document.getElementById('mpToggle');
-let mpVisible = false;
-let mpRecording = false;
-let mpLang1 = 'English';
-let mpLang2 = 'Spanish';
 
-function toggleMiniPlayer() {
-  mpVisible = !mpVisible;
-  miniPlayer.classList.toggle('visible', mpVisible);
-  mpToggle.classList.toggle('hidden', mpVisible);
-}
-
-function closeMiniPlayer() {
-  mpVisible = false;
-  miniPlayer.classList.remove('visible');
-  mpToggle.classList.remove('hidden');
-}
-
-function collapseMiniPlayer() {
-  miniPlayer.classList.toggle('collapsed');
-}
-
-function toggleRecording() {
-  mpRecording = !mpRecording;
-  const btn = document.getElementById('mpRecBtn');
-  btn.classList.toggle('recording', mpRecording);
-  const statusDot = document.querySelector('.mp-status .dot');
-  const statusText = document.getElementById('mpStatusText');
-
-  if (mpRecording) {
-    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
-    statusDot.classList.remove('idle');
-    statusDot.classList.add('live');
-    statusText.textContent = 'Translating...';
-  } else {
-    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/></svg>';
-    statusDot.classList.remove('live');
-    statusDot.classList.add('idle');
-    statusText.textContent = 'Ready';
-  }
-}
-
-function swapLangs() {
-  const temp = mpLang1;
-  mpLang1 = mpLang2;
-  mpLang2 = temp;
-  document.getElementById('mpLang1').textContent = mpLang1;
-  document.getElementById('mpLang2').textContent = mpLang2;
-}
-
-// Update credits in mini player
-const plan = plans[userPlan];
-const mpPct = Math.round(((plan.minutes - plan.used) / plan.minutes) * 100);
-document.getElementById('mpCreditsFill').style.width = mpPct + '%';
-document.getElementById('mpCreditsText').textContent = (plan.minutes - plan.used) + ' min left';
 </script>
 
 <!-- ═══════ MINI PLAYER TOGGLE BUTTON ═══════ -->
@@ -1437,6 +1381,66 @@ document.getElementById('mpCreditsText').textContent = (plan.minutes - plan.used
     </div>
   </div>
 </div>
+
+<!-- ═══════ MINI PLAYER LOGIC (must run after DOM elements above) ═══════ -->
+<script>
+const miniPlayer = document.getElementById('miniPlayer');
+const mpToggle = document.getElementById('mpToggle');
+let mpVisible = false;
+let mpRecording = false;
+let mpLang1 = 'English';
+let mpLang2 = 'Spanish';
+
+function toggleMiniPlayer() {
+  mpVisible = !mpVisible;
+  miniPlayer.classList.toggle('visible', mpVisible);
+  mpToggle.classList.toggle('hidden', mpVisible);
+}
+
+function closeMiniPlayer() {
+  mpVisible = false;
+  miniPlayer.classList.remove('visible');
+  mpToggle.classList.remove('hidden');
+}
+
+function collapseMiniPlayer() {
+  miniPlayer.classList.toggle('collapsed');
+}
+
+function toggleRecording() {
+  mpRecording = !mpRecording;
+  const btn = document.getElementById('mpRecBtn');
+  btn.classList.toggle('recording', mpRecording);
+  const statusDot = document.querySelector('.mp-status .dot');
+  const statusText = document.getElementById('mpStatusText');
+
+  if (mpRecording) {
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+    statusDot.classList.remove('idle');
+    statusDot.classList.add('live');
+    statusText.textContent = 'Translating...';
+  } else {
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/></svg>';
+    statusDot.classList.remove('live');
+    statusDot.classList.add('idle');
+    statusText.textContent = 'Ready';
+  }
+}
+
+function swapLangs() {
+  const temp = mpLang1;
+  mpLang1 = mpLang2;
+  mpLang2 = temp;
+  document.getElementById('mpLang1').textContent = mpLang1;
+  document.getElementById('mpLang2').textContent = mpLang2;
+}
+
+// Update credits in mini player (handle 'owner' plan)
+const mpPlan = plans[userPlan === 'owner' ? 'personal' : userPlan] || plans.personal;
+const mpPct = Math.round(((mpPlan.minutes - mpPlan.used) / mpPlan.minutes) * 100);
+document.getElementById('mpCreditsFill').style.width = mpPct + '%';
+document.getElementById('mpCreditsText').textContent = (mpPlan.minutes - mpPlan.used) + ' min left';
+</script>
 
 </body>
 </html>
