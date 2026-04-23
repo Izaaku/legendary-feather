@@ -1169,6 +1169,7 @@ const sidebarItems = document.querySelectorAll('.sidebar-item');
 sidebarItems.forEach(item => {
   item.addEventListener('click', function(e) {
     if (this.getAttribute('onclick')) return; // Sign out has its own handler
+    if (this.id === 'nav-admin') return; // Let admin link navigate normally
     e.preventDefault();
     const text = this.textContent.trim();
 
