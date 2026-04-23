@@ -523,12 +523,116 @@ body {
   padding: 6px 14px; border-radius: 8px;
   background: var(--bg3); border: 1px solid var(--border);
   min-width: 70px; text-align: center;
+  cursor: pointer; position: relative; transition: all 0.2s;
+  user-select: none;
+}
+.mp-lang:hover { border-color: var(--gold); color: var(--gold); }
+.mp-lang::after {
+  content: '▾'; margin-left: 6px; font-size: 10px; opacity: 0.5;
 }
 .mp-lang-arrow {
   color: var(--gold); font-size: 16px;
   display: flex; align-items: center;
 }
 .mp-lang-arrow svg { width: 20px; height: 20px; }
+
+/* Language dropdown */
+.mp-lang-dropdown {
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+  width: 220px; max-height: 280px; background: var(--bg2);
+  border: 1px solid var(--border-bright); border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5); z-index: 400;
+  display: none; flex-direction: column; overflow: hidden;
+  margin-bottom: 6px;
+}
+.mp-lang-dropdown.open { display: flex; }
+.mp-lang-search {
+  padding: 8px 10px; border: none; border-bottom: 1px solid var(--border);
+  background: var(--bg3); color: var(--text); font-family: 'Outfit', sans-serif;
+  font-size: 12px; outline: none;
+}
+.mp-lang-search::placeholder { color: var(--text-muted); }
+.mp-lang-list {
+  overflow-y: auto; flex: 1; padding: 4px 0;
+}
+.mp-lang-list::-webkit-scrollbar { width: 4px; }
+.mp-lang-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.mp-lang-option {
+  padding: 7px 12px; font-size: 12px; color: var(--text-sub);
+  cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 8px;
+}
+.mp-lang-option:hover { background: var(--gold-dim); color: var(--gold); }
+.mp-lang-option.active { color: var(--gold); font-weight: 500; }
+.mp-lang-option .lang-flag { font-size: 14px; }
+
+/* Translation result text */
+.mp-result {
+  margin-bottom: 10px; padding: 8px 10px; border-radius: 8px;
+  background: var(--bg3); border: 1px solid var(--border);
+  min-height: 36px; max-height: 80px; overflow-y: auto;
+  font-size: 12px; color: var(--text-sub); line-height: 1.5;
+}
+.mp-result::-webkit-scrollbar { width: 3px; }
+.mp-result::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.mp-result .mp-original { color: var(--text-muted); font-size: 11px; margin-bottom: 3px; }
+.mp-result .mp-translated { color: var(--gold-l); font-size: 13px; }
+.mp-result-empty { color: var(--text-muted); font-style: italic; font-size: 11px; }
+
+/* Mode selector popup */
+.mp-mode-popup {
+  position: absolute; bottom: calc(100% + 8px); left: 0;
+  background: var(--bg2); border: 1px solid var(--border-bright);
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 400; display: none; overflow: hidden; min-width: 170px;
+}
+.mp-mode-popup.open { display: block; }
+.mp-mode-option {
+  padding: 9px 14px; font-size: 12px; color: var(--text-sub);
+  cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 8px;
+}
+.mp-mode-option:hover { background: var(--gold-dim); color: var(--gold); }
+.mp-mode-option.active { color: var(--gold); font-weight: 500; }
+.mp-mode-option svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* Settings panel */
+.mp-settings-panel {
+  display: none; padding: 12px 16px;
+}
+.mp-settings-panel.open { display: block; }
+.mp-settings-title {
+  font-size: 13px; font-weight: 600; color: var(--gold); margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.mp-settings-title button {
+  background: none; border: none; color: var(--text-sub); cursor: pointer;
+  font-size: 11px; padding: 2px 6px; border-radius: 4px;
+}
+.mp-settings-title button:hover { color: var(--gold); background: var(--gold-dim); }
+.mp-setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.mp-setting-row:last-child { border-bottom: none; }
+.mp-setting-label { font-size: 11px; color: var(--text-sub); }
+.mp-setting-control select, .mp-setting-control input[type="range"] {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); font-size: 11px; font-family: 'Outfit', sans-serif;
+  padding: 4px 6px; outline: none; cursor: pointer;
+}
+.mp-setting-control select { min-width: 100px; }
+.mp-setting-control input[type="range"] { width: 80px; }
+.mp-toggle-switch {
+  width: 34px; height: 18px; border-radius: 9px;
+  background: var(--bg3); border: 1px solid var(--border);
+  position: relative; cursor: pointer; transition: all 0.2s;
+}
+.mp-toggle-switch.on { background: var(--gold-dim); border-color: var(--gold); }
+.mp-toggle-switch::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--text-sub); transition: all 0.2s;
+}
+.mp-toggle-switch.on::after { left: 18px; background: var(--gold); }
 
 /* Main control button */
 .mp-controls {
@@ -1349,25 +1453,56 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
   <div class="mp-body">
     <!-- Language Pair -->
     <div class="mp-langs">
-      <div class="mp-lang" id="mpLang1">English</div>
+      <div class="mp-lang" id="mpLang1" onclick="openLangDropdown(1)">English
+        <div class="mp-lang-dropdown" id="mpLangDrop1">
+          <input class="mp-lang-search" type="text" placeholder="Search languages..." oninput="filterLangs(1, this.value)" onclick="event.stopPropagation()">
+          <div class="mp-lang-list" id="mpLangList1"></div>
+        </div>
+      </div>
       <button class="mp-side-btn" onclick="swapLangs()" title="Swap languages" style="width:32px;height:32px;border-radius:50%;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
       </button>
-      <div class="mp-lang" id="mpLang2">Spanish</div>
+      <div class="mp-lang" id="mpLang2" onclick="openLangDropdown(2)">Spanish
+        <div class="mp-lang-dropdown" id="mpLangDrop2">
+          <input class="mp-lang-search" type="text" placeholder="Search languages..." oninput="filterLangs(2, this.value)" onclick="event.stopPropagation()">
+          <div class="mp-lang-list" id="mpLangList2"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Translation result display -->
+    <div class="mp-result" id="mpResult">
+      <div class="mp-result-empty">Translation will appear here...</div>
     </div>
 
     <!-- Controls -->
-    <div class="mp-controls">
-      <button class="mp-side-btn" title="Change mode">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      </button>
+    <div class="mp-controls" style="position:relative;">
+      <div style="position:relative;">
+        <button class="mp-side-btn" id="mpModeBtn" onclick="toggleModePopup()" title="Change mode">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </button>
+        <div class="mp-mode-popup" id="mpModePopup">
+          <div class="mp-mode-option active" data-mode="face_to_face" onclick="selectMode(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Face to Face
+          </div>
+          <div class="mp-mode-option" data-mode="presentation" onclick="selectMode(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            Presentation
+          </div>
+          <div class="mp-mode-option" data-mode="phone_call" onclick="selectMode(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.81.36 1.6.68 2.34a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.74.32 1.53.55 2.34.68A2 2 0 0 1 22 16.92z"/></svg>
+            Phone Call
+          </div>
+        </div>
+      </div>
       <button class="mp-rec-btn" id="mpRecBtn" onclick="toggleRecording()" title="Start/Stop translation">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
           <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
         </svg>
       </button>
-      <button class="mp-side-btn" title="Settings">
+      <button class="mp-side-btn" id="mpSettingsBtn" onclick="toggleSettingsPanel()" title="Settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
     </div>
@@ -1380,6 +1515,63 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
       <div class="mp-credits-text" id="mpCreditsText">37 min left</div>
     </div>
   </div>
+
+  <!-- Settings Panel (replaces body when open) -->
+  <div class="mp-settings-panel" id="mpSettingsPanel">
+    <div class="mp-settings-title">
+      Settings
+      <button onclick="toggleSettingsPanel()">Close</button>
+    </div>
+    <div class="mp-setting-row">
+      <span class="mp-setting-label">Translation Speed</span>
+      <div class="mp-setting-control">
+        <select id="mpSettingSpeed">
+          <option value="realtime">Real-time</option>
+          <option value="sentence">Sentence</option>
+          <option value="paragraph">Paragraph</option>
+        </select>
+      </div>
+    </div>
+    <div class="mp-setting-row">
+      <span class="mp-setting-label">Auto-play TTS</span>
+      <div class="mp-setting-control">
+        <div class="mp-toggle-switch on" id="mpSettingAutoTTS" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+    <div class="mp-setting-row">
+      <span class="mp-setting-label">Text Size</span>
+      <div class="mp-setting-control">
+        <input type="range" id="mpSettingTextSize" min="10" max="18" value="13" oninput="document.getElementById('mpResult').style.fontSize=this.value+'px'">
+      </div>
+    </div>
+    <div class="mp-setting-row">
+      <span class="mp-setting-label">Auto-detect Language</span>
+      <div class="mp-setting-control">
+        <div class="mp-toggle-switch" id="mpSettingAutoDetect" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+    <div class="mp-setting-row">
+      <span class="mp-setting-label">TTS Voice</span>
+      <div class="mp-setting-control">
+        <select id="mpSettingVoice">
+          <option value="default">Default</option>
+          <option value="cloned">My Voice Clone</option>
+        </select>
+      </div>
+    </div>
+    <div class="mp-setting-row">
+      <span class="mp-setting-label">Audio Input</span>
+      <div class="mp-setting-control">
+        <select id="mpSettingInput"><option>Default Mic</option></select>
+      </div>
+    </div>
+    <div class="mp-setting-row">
+      <span class="mp-setting-label">Audio Output</span>
+      <div class="mp-setting-control">
+        <select id="mpSettingOutput"><option>Default Speaker</option></select>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════ MINI PLAYER LOGIC (must run after DOM elements above) ═══════ -->
@@ -1388,19 +1580,98 @@ const miniPlayer = document.getElementById('miniPlayer');
 const mpToggle = document.getElementById('mpToggle');
 let mpVisible = false;
 let mpRecording = false;
-let mpLang1 = 'English';
-let mpLang2 = 'Spanish';
+let mpLang1Code = 'en';
+let mpLang2Code = 'es';
+let mpLang1Name = 'English';
+let mpLang2Name = 'Spanish';
+let mpCurrentMode = 'face_to_face';
+let mpSettingsOpen = false;
+
+// ── Language data (fetched from API, fallback embedded) ──
+let mpLanguages = {};
+(async function loadLanguages() {
+  try {
+    const res = await authFetch('/api/languages');
+    if (res.ok) mpLanguages = await res.json();
+  } catch(e) {}
+  if (!Object.keys(mpLanguages).length) {
+    // Fallback core set
+    mpLanguages = {en:{name:'English',flag:'\u{1F1FA}\u{1F1F8}'},es:{name:'Spanish',flag:'\u{1F1F2}\u{1F1FD}'},fr:{name:'French',flag:'\u{1F1EB}\u{1F1F7}'},de:{name:'German',flag:'\u{1F1E9}\u{1F1EA}'},it:{name:'Italian',flag:'\u{1F1EE}\u{1F1F9}'},pt:{name:'Portuguese',flag:'\u{1F1E7}\u{1F1F7}'},ru:{name:'Russian',flag:'\u{1F1F7}\u{1F1FA}'},zh:{name:'Chinese',flag:'\u{1F1E8}\u{1F1F3}'},ja:{name:'Japanese',flag:'\u{1F1EF}\u{1F1F5}'},ko:{name:'Korean',flag:'\u{1F1F0}\u{1F1F7}'},ar:{name:'Arabic',flag:'\u{1F1F8}\u{1F1E6}'},hi:{name:'Hindi',flag:'\u{1F1EE}\u{1F1F3}'}};
+  }
+  renderLangList(1); renderLangList(2);
+})();
+
+function renderLangList(slot, filter = '') {
+  const list = document.getElementById('mpLangList' + slot);
+  const currentCode = slot === 1 ? mpLang1Code : mpLang2Code;
+  const f = filter.toLowerCase();
+  list.innerHTML = '';
+  const sorted = Object.entries(mpLanguages).sort((a,b) => a[1].name.localeCompare(b[1].name));
+  let hasMatch = false;
+  for (const [code, info] of sorted) {
+    if (f && !info.name.toLowerCase().includes(f) && !code.includes(f)) continue;
+    hasMatch = true;
+    const div = document.createElement('div');
+    div.className = 'mp-lang-option' + (code === currentCode ? ' active' : '');
+    div.dataset.code = code;
+    div.innerHTML = '<span class="lang-flag">' + (info.flag || '') + '</span>' + info.name;
+    div.addEventListener('click', function(e) {
+      e.stopPropagation();
+      selectLang(slot, code, info.name);
+    });
+    list.appendChild(div);
+  }
+  if (!hasMatch) list.innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:11px;">No matches</div>';
+}
+
+function openLangDropdown(slot) {
+  // Close other dropdown first
+  const other = slot === 1 ? 2 : 1;
+  document.getElementById('mpLangDrop' + other).classList.remove('open');
+  const dd = document.getElementById('mpLangDrop' + slot);
+  dd.classList.toggle('open');
+  if (dd.classList.contains('open')) {
+    const input = dd.querySelector('.mp-lang-search');
+    input.value = '';
+    renderLangList(slot);
+    setTimeout(() => input.focus(), 50);
+  }
+}
+
+function filterLangs(slot, value) {
+  renderLangList(slot, value);
+}
+
+function selectLang(slot, code, name) {
+  if (slot === 1) { mpLang1Code = code; mpLang1Name = name; }
+  else { mpLang2Code = code; mpLang2Name = name; }
+  updateLangDisplay();
+  document.getElementById('mpLangDrop' + slot).classList.remove('open');
+}
+
+function updateLangDisplay() {
+  const el1 = document.getElementById('mpLang1');
+  const el2 = document.getElementById('mpLang2');
+  // Preserve dropdown children, update text
+  const dd1 = document.getElementById('mpLangDrop1');
+  const dd2 = document.getElementById('mpLangDrop2');
+  el1.childNodes[0].textContent = mpLang1Name + ' ';
+  el2.childNodes[0].textContent = mpLang2Name + ' ';
+}
 
 function toggleMiniPlayer() {
   mpVisible = !mpVisible;
   miniPlayer.classList.toggle('visible', mpVisible);
   mpToggle.classList.toggle('hidden', mpVisible);
+  // Close settings if opening
+  if (mpVisible && mpSettingsOpen) toggleSettingsPanel();
 }
 
 function closeMiniPlayer() {
   mpVisible = false;
   miniPlayer.classList.remove('visible');
   mpToggle.classList.remove('hidden');
+  closeAllPopups();
 }
 
 function collapseMiniPlayer() {
@@ -1413,12 +1684,14 @@ function toggleRecording() {
   btn.classList.toggle('recording', mpRecording);
   const statusDot = document.querySelector('.mp-status .dot');
   const statusText = document.getElementById('mpStatusText');
+  const result = document.getElementById('mpResult');
 
   if (mpRecording) {
     btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
     statusDot.classList.remove('idle');
     statusDot.classList.add('live');
     statusText.textContent = 'Translating...';
+    result.innerHTML = '<div class="mp-original">Listening...</div><div class="mp-translated" style="color:var(--text-muted);font-style:italic;">Waiting for speech...</div>';
   } else {
     btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/></svg>';
     statusDot.classList.remove('live');
@@ -1428,11 +1701,80 @@ function toggleRecording() {
 }
 
 function swapLangs() {
-  const temp = mpLang1;
-  mpLang1 = mpLang2;
-  mpLang2 = temp;
-  document.getElementById('mpLang1').textContent = mpLang1;
-  document.getElementById('mpLang2').textContent = mpLang2;
+  const tc = mpLang1Code; const tn = mpLang1Name;
+  mpLang1Code = mpLang2Code; mpLang1Name = mpLang2Name;
+  mpLang2Code = tc; mpLang2Name = tn;
+  updateLangDisplay();
+}
+
+// ── Mode selector ──
+function toggleModePopup() {
+  const popup = document.getElementById('mpModePopup');
+  popup.classList.toggle('open');
+}
+
+function selectMode(el) {
+  mpCurrentMode = el.dataset.mode;
+  document.querySelectorAll('.mp-mode-option').forEach(o => o.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('mpModePopup').classList.remove('open');
+  // Update mode button tooltip
+  document.getElementById('mpModeBtn').title = el.textContent.trim();
+}
+
+// ── Settings panel ──
+function toggleSettingsPanel() {
+  mpSettingsOpen = !mpSettingsOpen;
+  const panel = document.getElementById('mpSettingsPanel');
+  const body = miniPlayer.querySelector('.mp-body');
+  panel.classList.toggle('open', mpSettingsOpen);
+  body.style.display = mpSettingsOpen ? 'none' : 'block';
+  // Enumerate audio devices when opening
+  if (mpSettingsOpen) enumerateAudioDevices();
+}
+
+async function enumerateAudioDevices() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const inputSel = document.getElementById('mpSettingInput');
+    const outputSel = document.getElementById('mpSettingOutput');
+    inputSel.innerHTML = '';
+    outputSel.innerHTML = '';
+    devices.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.deviceId;
+      opt.textContent = d.label || (d.kind === 'audioinput' ? 'Microphone' : 'Speaker');
+      if (d.kind === 'audioinput') inputSel.appendChild(opt);
+      if (d.kind === 'audiooutput') outputSel.appendChild(opt);
+    });
+    if (!inputSel.options.length) inputSel.innerHTML = '<option>Default Mic</option>';
+    if (!outputSel.options.length) outputSel.innerHTML = '<option>Default Speaker</option>';
+  } catch(e) {
+    console.log('Could not enumerate audio devices:', e);
+  }
+}
+
+// ── Close popups when clicking outside ──
+function closeAllPopups() {
+  document.getElementById('mpLangDrop1').classList.remove('open');
+  document.getElementById('mpLangDrop2').classList.remove('open');
+  document.getElementById('mpModePopup').classList.remove('open');
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.mp-lang') && !e.target.closest('.mp-lang-dropdown')) {
+    document.getElementById('mpLangDrop1').classList.remove('open');
+    document.getElementById('mpLangDrop2').classList.remove('open');
+  }
+  if (!e.target.closest('#mpModeBtn') && !e.target.closest('.mp-mode-popup')) {
+    document.getElementById('mpModePopup').classList.remove('open');
+  }
+});
+
+// ── Update translation result (called by WebSocket/API) ──
+function updateTranslationResult(original, translated) {
+  const result = document.getElementById('mpResult');
+  result.innerHTML = '<div class="mp-original">' + original + '</div><div class="mp-translated">' + translated + '</div>';
 }
 
 // Update credits in mini player (handle 'owner' plan)
@@ -1440,6 +1782,15 @@ const mpPlan = plans[userPlan === 'owner' ? 'personal' : userPlan] || plans.pers
 const mpPct = Math.round(((mpPlan.minutes - mpPlan.used) / mpPlan.minutes) * 100);
 document.getElementById('mpCreditsFill').style.width = mpPct + '%';
 document.getElementById('mpCreditsText').textContent = (mpPlan.minutes - mpPlan.used) + ' min left';
+
+// Fix lang display text nodes (ensure first child is text)
+(function initLangLabels() {
+  const el1 = document.getElementById('mpLang1');
+  const el2 = document.getElementById('mpLang2');
+  // The first child text node needs to just be the language name
+  if (el1.childNodes[0].nodeType === 3) el1.childNodes[0].textContent = mpLang1Name + ' ';
+  if (el2.childNodes[0].nodeType === 3) el2.childNodes[0].textContent = mpLang2Name + ' ';
+})();
 </script>
 
 </body>
