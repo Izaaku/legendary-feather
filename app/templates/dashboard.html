@@ -530,40 +530,98 @@ body {
 .mp-lang::after {
   content: '▾'; margin-left: 6px; font-size: 10px; opacity: 0.5;
 }
-.mp-lang-arrow {
-  color: var(--gold); font-size: 16px;
-  display: flex; align-items: center;
-}
-.mp-lang-arrow svg { width: 20px; height: 20px; }
 
-/* Language dropdown */
-.mp-lang-dropdown {
-  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
-  width: 220px; max-height: 280px; background: var(--bg2);
-  border: 1px solid var(--border-bright); border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.5); z-index: 400;
-  display: none; flex-direction: column; overflow: hidden;
-  margin-bottom: 6px;
+/* ── Wheel Picker Overlay ── */
+.wheel-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+  z-index: 500; display: none; align-items: flex-end; justify-content: center;
+  animation: wheelFadeIn 0.25s ease;
 }
-.mp-lang-dropdown.open { display: flex; }
-.mp-lang-search {
-  padding: 8px 10px; border: none; border-bottom: 1px solid var(--border);
-  background: var(--bg3); color: var(--text); font-family: 'Outfit', sans-serif;
-  font-size: 12px; outline: none;
+.wheel-overlay.open { display: flex; }
+@keyframes wheelFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.wheel-container {
+  width: 340px; max-width: calc(100% - 24px);
+  background: var(--bg2); border: 1px solid var(--border-bright);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
+  overflow: hidden;
+  animation: wheelSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-.mp-lang-search::placeholder { color: var(--text-muted); }
-.mp-lang-list {
-  overflow-y: auto; flex: 1; padding: 4px 0;
+@keyframes wheelSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.wheel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
 }
-.mp-lang-list::-webkit-scrollbar { width: 4px; }
-.mp-lang-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-.mp-lang-option {
-  padding: 7px 12px; font-size: 12px; color: var(--text-sub);
-  cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 8px;
+.wheel-title { font-size: 14px; font-weight: 600; color: var(--gold); }
+.wheel-done {
+  background: none; border: none; color: var(--gold); font-family: 'Outfit', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer; padding: 4px 10px;
+  border-radius: 6px; transition: background 0.2s;
 }
-.mp-lang-option:hover { background: var(--gold-dim); color: var(--gold); }
-.mp-lang-option.active { color: var(--gold); font-weight: 500; }
-.mp-lang-option .lang-flag { font-size: 14px; }
+.wheel-done:hover { background: var(--gold-dim); }
+
+.wheel-search {
+  margin: 10px 16px 6px; padding: 9px 12px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg3); color: var(--text);
+  font-family: 'Outfit', sans-serif; font-size: 13px;
+  outline: none; width: calc(100% - 32px);
+}
+.wheel-search::placeholder { color: var(--text-muted); }
+.wheel-search:focus { border-color: var(--gold); }
+
+.wheel-viewport {
+  position: relative; height: 210px; overflow: hidden;
+}
+/* Fade masks top and bottom */
+.wheel-viewport::before, .wheel-viewport::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 70px;
+  z-index: 2; pointer-events: none;
+}
+.wheel-viewport::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--bg2) 0%, transparent 100%);
+}
+.wheel-viewport::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--bg2) 0%, transparent 100%);
+}
+/* Selection highlight band */
+.wheel-highlight {
+  position: absolute; top: 50%; left: 12px; right: 12px;
+  height: 42px; transform: translateY(-50%);
+  border-radius: 10px;
+  background: var(--gold-dim);
+  border: 1px solid var(--border-bright);
+  z-index: 1; pointer-events: none;
+}
+
+.wheel-scroll {
+  position: relative; z-index: 3;
+  height: 100%; overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding: 84px 0;
+}
+.wheel-scroll::-webkit-scrollbar { display: none; }
+.wheel-scroll { scrollbar-width: none; }
+
+.wheel-item {
+  height: 42px; display: flex; align-items: center; gap: 10px;
+  padding: 0 20px; font-size: 14px; color: var(--text-sub);
+  scroll-snap-align: center; cursor: pointer;
+  transition: color 0.15s, transform 0.15s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wheel-item.selected { color: var(--gold); font-weight: 600; font-size: 15px; }
+.wheel-item .wh-flag { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
+.wheel-item .wh-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.wheel-item .wh-code { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
 
 /* Translation result text */
 .mp-result {
@@ -1453,21 +1511,11 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
   <div class="mp-body">
     <!-- Language Pair -->
     <div class="mp-langs">
-      <div class="mp-lang" id="mpLang1" onclick="openLangDropdown(1)">English
-        <div class="mp-lang-dropdown" id="mpLangDrop1">
-          <input class="mp-lang-search" type="text" placeholder="Search languages..." oninput="filterLangs(1, this.value)" onclick="event.stopPropagation()">
-          <div class="mp-lang-list" id="mpLangList1"></div>
-        </div>
-      </div>
+      <div class="mp-lang" id="mpLang1" onclick="openWheelPicker(1)">English</div>
       <button class="mp-side-btn" onclick="swapLangs()" title="Swap languages" style="width:32px;height:32px;border-radius:50%;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
       </button>
-      <div class="mp-lang" id="mpLang2" onclick="openLangDropdown(2)">Spanish
-        <div class="mp-lang-dropdown" id="mpLangDrop2">
-          <input class="mp-lang-search" type="text" placeholder="Search languages..." oninput="filterLangs(2, this.value)" onclick="event.stopPropagation()">
-          <div class="mp-lang-list" id="mpLangList2"></div>
-        </div>
-      </div>
+      <div class="mp-lang" id="mpLang2" onclick="openWheelPicker(2)">Spanish</div>
     </div>
 
     <!-- Translation result display -->
@@ -1574,6 +1622,21 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
   </div>
 </div>
 
+<!-- ═══════ LANGUAGE WHEEL PICKER ═══════ -->
+<div class="wheel-overlay" id="wheelOverlay" onclick="closeWheelPicker()">
+  <div class="wheel-container" onclick="event.stopPropagation()">
+    <div class="wheel-header">
+      <span class="wheel-title" id="wheelTitle">Select Language</span>
+      <button class="wheel-done" onclick="closeWheelPicker()">Done</button>
+    </div>
+    <input class="wheel-search" id="wheelSearch" type="text" placeholder="Search languages..." oninput="filterWheel(this.value)">
+    <div class="wheel-viewport">
+      <div class="wheel-highlight"></div>
+      <div class="wheel-scroll" id="wheelScroll"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════ MINI PLAYER LOGIC (must run after DOM elements above) ═══════ -->
 <script>
 const miniPlayer = document.getElementById('miniPlayer');
@@ -1589,74 +1652,111 @@ let mpSettingsOpen = false;
 
 // ── Language data (fetched from API, fallback embedded) ──
 let mpLanguages = {};
+let mpLangSorted = [];
+let wheelActiveSlot = 0;
+
 (async function loadLanguages() {
   try {
     const res = await authFetch('/api/languages');
     if (res.ok) mpLanguages = await res.json();
   } catch(e) {}
   if (!Object.keys(mpLanguages).length) {
-    // Fallback core set
     mpLanguages = {en:{name:'English',flag:'\u{1F1FA}\u{1F1F8}'},es:{name:'Spanish',flag:'\u{1F1F2}\u{1F1FD}'},fr:{name:'French',flag:'\u{1F1EB}\u{1F1F7}'},de:{name:'German',flag:'\u{1F1E9}\u{1F1EA}'},it:{name:'Italian',flag:'\u{1F1EE}\u{1F1F9}'},pt:{name:'Portuguese',flag:'\u{1F1E7}\u{1F1F7}'},ru:{name:'Russian',flag:'\u{1F1F7}\u{1F1FA}'},zh:{name:'Chinese',flag:'\u{1F1E8}\u{1F1F3}'},ja:{name:'Japanese',flag:'\u{1F1EF}\u{1F1F5}'},ko:{name:'Korean',flag:'\u{1F1F0}\u{1F1F7}'},ar:{name:'Arabic',flag:'\u{1F1F8}\u{1F1E6}'},hi:{name:'Hindi',flag:'\u{1F1EE}\u{1F1F3}'}};
   }
-  renderLangList(1); renderLangList(2);
+  mpLangSorted = Object.entries(mpLanguages).sort((a,b) => a[1].name.localeCompare(b[1].name));
 })();
 
-function renderLangList(slot, filter = '') {
-  const list = document.getElementById('mpLangList' + slot);
-  const currentCode = slot === 1 ? mpLang1Code : mpLang2Code;
+// ── Wheel Picker ──
+function openWheelPicker(slot) {
+  wheelActiveSlot = slot;
+  const overlay = document.getElementById('wheelOverlay');
+  const title = document.getElementById('wheelTitle');
+  const search = document.getElementById('wheelSearch');
+  title.textContent = slot === 1 ? 'Translate From' : 'Translate To';
+  search.value = '';
+  overlay.classList.add('open');
+  renderWheel();
+  // Scroll to selected after render
+  requestAnimationFrame(() => scrollToSelected());
+}
+
+function closeWheelPicker() {
+  document.getElementById('wheelOverlay').classList.remove('open');
+  // Read which item is centered and select it
+  snapAndSelect();
+}
+
+function renderWheel(filter = '') {
+  const scroll = document.getElementById('wheelScroll');
+  const currentCode = wheelActiveSlot === 1 ? mpLang1Code : mpLang2Code;
   const f = filter.toLowerCase();
-  list.innerHTML = '';
-  const sorted = Object.entries(mpLanguages).sort((a,b) => a[1].name.localeCompare(b[1].name));
-  let hasMatch = false;
-  for (const [code, info] of sorted) {
+  scroll.innerHTML = '';
+
+  for (const [code, info] of mpLangSorted) {
     if (f && !info.name.toLowerCase().includes(f) && !code.includes(f)) continue;
-    hasMatch = true;
     const div = document.createElement('div');
-    div.className = 'mp-lang-option' + (code === currentCode ? ' active' : '');
+    div.className = 'wheel-item' + (code === currentCode ? ' selected' : '');
     div.dataset.code = code;
-    div.innerHTML = '<span class="lang-flag">' + (info.flag || '') + '</span>' + info.name;
-    div.addEventListener('click', function(e) {
-      e.stopPropagation();
-      selectLang(slot, code, info.name);
+    div.dataset.name = info.name;
+    div.innerHTML = '<span class="wh-flag">' + (info.flag || '') + '</span><span class="wh-name">' + info.name + '</span><span class="wh-code">' + code + '</span>';
+    div.addEventListener('click', function() {
+      // Select this item immediately
+      scroll.querySelectorAll('.wheel-item').forEach(i => i.classList.remove('selected'));
+      div.classList.add('selected');
+      selectLang(wheelActiveSlot, code, info.name);
+      // Smooth scroll to center it
+      const scrollTop = div.offsetTop - (scroll.parentElement.clientHeight / 2) + 21;
+      scroll.scrollTo({ top: scrollTop, behavior: 'smooth' });
+      // Close after brief delay
+      setTimeout(() => closeWheelPickerNoSnap(), 300);
     });
-    list.appendChild(div);
-  }
-  if (!hasMatch) list.innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:11px;">No matches</div>';
-}
-
-function openLangDropdown(slot) {
-  // Close other dropdown first
-  const other = slot === 1 ? 2 : 1;
-  document.getElementById('mpLangDrop' + other).classList.remove('open');
-  const dd = document.getElementById('mpLangDrop' + slot);
-  dd.classList.toggle('open');
-  if (dd.classList.contains('open')) {
-    const input = dd.querySelector('.mp-lang-search');
-    input.value = '';
-    renderLangList(slot);
-    setTimeout(() => input.focus(), 50);
+    scroll.appendChild(div);
   }
 }
 
-function filterLangs(slot, value) {
-  renderLangList(slot, value);
+function filterWheel(value) {
+  renderWheel(value);
+}
+
+function scrollToSelected() {
+  const scroll = document.getElementById('wheelScroll');
+  const selected = scroll.querySelector('.wheel-item.selected');
+  if (selected) {
+    const scrollTop = selected.offsetTop - (scroll.parentElement.clientHeight / 2) + 21;
+    scroll.scrollTo({ top: scrollTop, behavior: 'smooth' });
+  }
+}
+
+function snapAndSelect() {
+  const scroll = document.getElementById('wheelScroll');
+  const viewportH = scroll.parentElement.clientHeight;
+  const centerY = scroll.scrollTop + viewportH / 2;
+  let closest = null, closestDist = Infinity;
+  scroll.querySelectorAll('.wheel-item').forEach(item => {
+    const itemCenter = item.offsetTop + 21;
+    const dist = Math.abs(itemCenter - centerY);
+    if (dist < closestDist) { closestDist = dist; closest = item; }
+  });
+  if (closest) {
+    scroll.querySelectorAll('.wheel-item').forEach(i => i.classList.remove('selected'));
+    closest.classList.add('selected');
+    selectLang(wheelActiveSlot, closest.dataset.code, closest.dataset.name);
+  }
+}
+
+function closeWheelPickerNoSnap() {
+  document.getElementById('wheelOverlay').classList.remove('open');
 }
 
 function selectLang(slot, code, name) {
   if (slot === 1) { mpLang1Code = code; mpLang1Name = name; }
   else { mpLang2Code = code; mpLang2Name = name; }
   updateLangDisplay();
-  document.getElementById('mpLangDrop' + slot).classList.remove('open');
 }
 
 function updateLangDisplay() {
-  const el1 = document.getElementById('mpLang1');
-  const el2 = document.getElementById('mpLang2');
-  // Preserve dropdown children, update text
-  const dd1 = document.getElementById('mpLangDrop1');
-  const dd2 = document.getElementById('mpLangDrop2');
-  el1.childNodes[0].textContent = mpLang1Name + ' ';
-  el2.childNodes[0].textContent = mpLang2Name + ' ';
+  document.getElementById('mpLang1').textContent = mpLang1Name;
+  document.getElementById('mpLang2').textContent = mpLang2Name;
 }
 
 function toggleMiniPlayer() {
@@ -1756,16 +1856,11 @@ async function enumerateAudioDevices() {
 
 // ── Close popups when clicking outside ──
 function closeAllPopups() {
-  document.getElementById('mpLangDrop1').classList.remove('open');
-  document.getElementById('mpLangDrop2').classList.remove('open');
   document.getElementById('mpModePopup').classList.remove('open');
+  document.getElementById('wheelOverlay').classList.remove('open');
 }
 
 document.addEventListener('click', function(e) {
-  if (!e.target.closest('.mp-lang') && !e.target.closest('.mp-lang-dropdown')) {
-    document.getElementById('mpLangDrop1').classList.remove('open');
-    document.getElementById('mpLangDrop2').classList.remove('open');
-  }
   if (!e.target.closest('#mpModeBtn') && !e.target.closest('.mp-mode-popup')) {
     document.getElementById('mpModePopup').classList.remove('open');
   }
@@ -1783,14 +1878,9 @@ const mpPct = Math.round(((mpPlan.minutes - mpPlan.used) / mpPlan.minutes) * 100
 document.getElementById('mpCreditsFill').style.width = mpPct + '%';
 document.getElementById('mpCreditsText').textContent = (mpPlan.minutes - mpPlan.used) + ' min left';
 
-// Fix lang display text nodes (ensure first child is text)
-(function initLangLabels() {
-  const el1 = document.getElementById('mpLang1');
-  const el2 = document.getElementById('mpLang2');
-  // The first child text node needs to just be the language name
-  if (el1.childNodes[0].nodeType === 3) el1.childNodes[0].textContent = mpLang1Name + ' ';
-  if (el2.childNodes[0].nodeType === 3) el2.childNodes[0].textContent = mpLang2Name + ' ';
-})();
+// Initialize language display
+document.getElementById('mpLang1').textContent = mpLang1Name;
+document.getElementById('mpLang2').textContent = mpLang2Name;
 </script>
 
 </body>
