@@ -1153,6 +1153,15 @@ const CONFIG = {
     useServerWhisper: false
 };
 
+// Auth helper — get JWT token from session
+function getToken(){ return sessionStorage.getItem('lf_token'); }
+function authHeaders(){
+    const t = getToken();
+    const h = {'Content-Type':'application/json'};
+    if(t) h['Authorization'] = 'Bearer '+t;
+    return h;
+}
+
 const FLAG_CODES = {
     'en':'US','es':'MX','fr':'FR','de':'DE','it':'IT','pt':'BR','ru':'RU','zh':'CN',
     'ja':'JP','ko':'KR','ar':'SA','hi':'IN','fil':'PH','nl':'NL','pl':'PL','tr':'TR',
@@ -1563,8 +1572,8 @@ function initSocket(){
     socket.on('whisper_status', (data)=>{
         CONFIG.useServerWhisper = data.available;
         if(data.available){
-            console.log('[Whisper] Server-side Whisper available — using GPU transcription');
-            showStatus('GPU Whisper active — enhanced transcription','success');
+            console.log('[Whisper] Cloud Whisper API available');
+            showStatus('Cloud Whisper active — enhanced transcription','success');
         } else {
             console.log('[Whisper] Server Whisper not available — using browser speech recognition');
         }
@@ -1697,7 +1706,7 @@ function startConferenceWhisper(){
             }
         }, WHISPER_CHUNK_MS);
 
-        document.getElementById('confLegendStatus').textContent = 'Whisper GPU active';
+        document.getElementById('confLegendStatus').textContent = 'Whisper Cloud active';
 
     }).catch(e=>{
         showStatus('Microphone access denied: '+e.message,'error');
@@ -2136,7 +2145,7 @@ document.getElementById('saveProfileBtn').addEventListener('click',()=>{
     reader.onload=async()=>{
         const b64=reader.result.split(',')[1];
         try{
-            const r=await fetch('/api/voice/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile_name:name.trim(),audio:b64,user_id:'default_user',language:'en'})});
+            const r=await fetch('/api/voice/register',{method:'POST',headers:authHeaders(),body:JSON.stringify({profile_name:name.trim(),audio:b64,user_id:'default_user',language:'en'})});
             if(r.ok){showStatus('Voice profile saved!','success');recordedAudioBlob=null;document.getElementById('profileSaveSection').style.display='none';document.getElementById('profileNameInput').value='';document.getElementById('recordBtnText').textContent='Press to record (5-60 seconds)';loadVoiceProfiles();}
             else{const e=await r.json();showStatus(e.error||'Save failed','error');}
         }catch(e){showStatus('Error: '+e.message,'error');}
@@ -2147,7 +2156,7 @@ document.getElementById('saveProfileBtn').addEventListener('click',()=>{
 
 async function loadVoiceProfiles(){
     try{
-        const r=await fetch('/api/voice/profiles?user_id=default_user');
+        const r=await fetch('/api/voice/profiles?user_id=default_user',{headers:authHeaders()});
         if(!r.ok)return;
         const data=await r.json();
         const profiles=(data.profiles||[]).map(p=>({id:p.profile_id||p.id,name:p.profile_name||p.name}));
@@ -2159,7 +2168,7 @@ async function loadVoiceProfiles(){
 
 async function deleteVoiceProfile(id){
     if(!confirm('Delete this profile?'))return;
-    try{await fetch(`/api/voice/profiles/${id}?user_id=default_user`,{method:'DELETE'});loadVoiceProfiles();showStatus('Profile deleted','success');}catch(e){}
+    try{await fetch(`/api/voice/profiles/${id}?user_id=default_user`,{method:'DELETE',headers:authHeaders()});loadVoiceProfiles();showStatus('Profile deleted','success');}catch(e){}
 }
 
 // ══════════════════════════════════════════════════════
