@@ -1150,7 +1150,7 @@ const CONFIG = {
     languages: {{ languages | tojson }},
     stripeKey: '{{ stripe_key }}',
     showPricing: {% if show_pricing %}true{% else %}false{% endif %},
-    useServerWhisper: false
+    useServerWhisper: true  // Default to cloud API — status check will override if unavailable
 };
 
 // Auth helper — get JWT token and user info from session
@@ -1685,11 +1685,15 @@ function startConference(){
     }
 }
 
-let confSendInterval = null;
+let confCycleTimer = null;
+let confCycleCount = 0;
 
 function startConferenceWhisper(){
+    console.log('[CONF] Starting conference with server transcription');
     navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
         confAudioStream = stream;
+        confCycleCount = 0;
+        console.log('[CONF] Microphone stream acquired');
 
         // Start the first recording cycle
         confStartRecordingCycle();
@@ -1697,16 +1701,42 @@ function startConferenceWhisper(){
         document.getElementById('confLegendStatus').textContent = 'Ready to start';
 
     }).catch(e=>{
+        console.error('[CONF] Mic error:', e);
         showStatus('Microphone access denied: '+e.message,'error');
         stopConference();
     });
 }
 
 function confStartRecordingCycle(){
-    if(!confActive || !confAudioStream) return;
+    if(!confActive || !confAudioStream) {
+        console.log('[CONF] Cycle skipped — not active or no stream');
+        return;
+    }
+
+    // Check stream is still alive
+    const tracks = confAudioStream.getTracks();
+    if(!tracks.length || tracks[0].readyState === 'ended'){
+        console.log('[CONF] Audio stream ended — stopping');
+        stopConference();
+        return;
+    }
+
+    confCycleCount++;
+    console.log('[CONF] Recording cycle #' + confCycleCount + ' started');
 
     // Create a FRESH MediaRecorder each cycle (each blob gets a valid webm header)
-    const recorder = new MediaRecorder(confAudioStream, {mimeType:'audio/webm;codecs=opus'});
+    let recorder;
+    try {
+        recorder = new MediaRecorder(confAudioStream, {mimeType:'audio/webm;codecs=opus'});
+    } catch(e) {
+        // Fallback mime type
+        try { recorder = new MediaRecorder(confAudioStream); } catch(e2) {
+            console.error('[CONF] MediaRecorder failed:', e2);
+            stopConference();
+            return;
+        }
+    }
+
     let chunks = [];
 
     recorder.ondataavailable = (e) => {
@@ -1714,21 +1744,29 @@ function confStartRecordingCycle(){
     };
 
     recorder.onstop = () => {
+        console.log('[CONF] Cycle #' + confCycleCount + ' stopped, chunks: ' + chunks.length);
         if(chunks.length > 0 && confActive){
-            const blob = new Blob(chunks, {type:'audio/webm'});
+            const blob = new Blob(chunks, {type: recorder.mimeType || 'audio/webm'});
+            console.log('[CONF] Sending audio blob: ' + blob.size + ' bytes');
             sendAudioToWhisper(blob);
         }
         // Start next cycle (stream stays open, only recorder restarts)
-        if(confActive) confStartRecordingCycle();
+        if(confActive){
+            setTimeout(()=> confStartRecordingCycle(), 100);
+        }
+    };
+
+    recorder.onerror = (e) => {
+        console.error('[CONF] Recorder error:', e);
     };
 
     confMediaRecorder = recorder;
-    recorder.start();  // No timeslice — record until we stop it
+    recorder.start();
 
     // Stop this recorder after WHISPER_CHUNK_MS to trigger onstop → send → next cycle
-    confSendInterval = setTimeout(()=>{
-        if(recorder.state === 'recording'){
-            try{ recorder.stop(); }catch(e){}
+    confCycleTimer = setTimeout(()=>{
+        if(recorder && recorder.state === 'recording'){
+            try{ recorder.stop(); }catch(e){ console.error('[CONF] Stop error:', e); }
         }
     }, WHISPER_CHUNK_MS);
 }
@@ -1737,7 +1775,10 @@ function sendAudioToWhisper(blob){
     const reader = new FileReader();
     reader.onload = () => {
         const b64 = reader.result.split(',')[1];
-        if(!b64 || b64.length < 100) return;  // Skip tiny/empty chunks
+        if(!b64 || b64.length < 500) {
+            console.log('[CONF] Audio too small, skipping: ' + (b64 ? b64.length : 0) + ' chars');
+            return;
+        }
 
         const now = Date.now();
         if(now - confLastResultTime > SILENCE_THRESHOLD && confLastResultTime > 0){
@@ -1746,8 +1787,10 @@ function sendAudioToWhisper(blob){
         confLastResultTime = now;
 
         const reqId = 'conf_'+now;
+        console.log('[CONF] Emitting transcribe event: ' + reqId);
         socket.emit('transcribe', {audio:b64, request_id:reqId});
         socket.once('transcription', (data)=>{
+            console.log('[CONF] Got transcription:', data.text ? data.text.substring(0,50) : '(empty)');
             if(data.text && data.text.trim()){
                 addConfEntry(confSpeakerNum, data.text.trim(), data.detected_language);
             }
@@ -1800,7 +1843,7 @@ function startConferenceWebSpeech(){
 function stopConference(){
     confActive = false;
     if(confRecognition){ confRecognition.abort(); confRecognition=null; }
-    if(confSendInterval){ clearTimeout(confSendInterval); confSendInterval=null; }
+    if(confCycleTimer){ clearTimeout(confCycleTimer); confCycleTimer=null; }
     if(confMediaRecorder && confMediaRecorder.state!=='inactive'){ try{confMediaRecorder.stop();}catch(e){} confMediaRecorder=null; }
     if(confAudioStream){ confAudioStream.getTracks().forEach(t=>t.stop()); confAudioStream=null; }
 
