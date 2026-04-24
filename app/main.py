@@ -434,7 +434,7 @@ def handle_transcribe(data):
         emit('transcription', {
             'text': '',
             'detected_language': '',
-            'error': 'Whisper API not configured (OPENAI_API_KEY missing)',
+            'error': 'Speech recognition not available on this server',
             'request_id': request_id
         })
         return
@@ -496,7 +496,7 @@ def handle_audio_chunk(data):
             transcript_text = result['text']
             detected_lang = result['detected_language']
         else:
-            emit('error', {'message': 'Whisper API not configured. Use browser speech recognition.'})
+            emit('error', {'message': 'Speech recognition not available. Use browser speech recognition.'})
             return
 
         if not transcript_text:

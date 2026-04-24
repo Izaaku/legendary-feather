@@ -1579,10 +1579,10 @@ function initSocket(){
     socket.on('whisper_status', (data)=>{
         CONFIG.useServerWhisper = data.available;
         if(data.available){
-            console.log('[Whisper] Cloud Whisper API available');
-            showStatus('Cloud Whisper active — enhanced transcription','success');
+            console.log('[STT] Server transcription available');
+            showStatus('Ready to translate','success');
         } else {
-            console.log('[Whisper] Server Whisper not available — using browser speech recognition');
+            console.log('[STT] Using browser speech recognition');
         }
     });
     socket.on('error', d=> showStatus(d.message||'Error','error'));
@@ -1710,7 +1710,7 @@ function startConferenceWhisper(){
             sendAudioToWhisper(blob);
         }, WHISPER_CHUNK_MS);
 
-        document.getElementById('confLegendStatus').textContent = 'Whisper Cloud active';
+        document.getElementById('confLegendStatus').textContent = 'Ready to start';
 
     }).catch(e=>{
         showStatus('Microphone access denied: '+e.message,'error');
@@ -2145,6 +2145,7 @@ function stopVoiceRecording(){
 document.getElementById('saveProfileBtn').addEventListener('click',()=>{
     const name=document.getElementById('profileNameInput').value;
     if(!recordedAudioBlob||!name.trim()){showStatus('Record audio and enter a name','error');return;}
+    if(!getToken()){showStatus('Please sign in first to save voice profiles','error');return;}
     const btn=document.getElementById('saveProfileBtn');
     btn.disabled=true; btn.textContent='Saving...';
     const reader=new FileReader();
