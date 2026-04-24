@@ -319,8 +319,7 @@ def handle_disconnect():
 @socketio.on('translate')
 def handle_translate(data):
     """Handle text translation request via WebSocket."""
-    from app.services.arcee_trinity import ArceeTrinity
-    from app.services.translation import TranslationService
+    from app.services.cloud_translation import CloudTranslationService
 
     text = (data.get('text', '') or '')[:5000]  # Limit input length
     source_lang = (data.get('source_language', '') or '')[:10]
@@ -330,37 +329,23 @@ def handle_translate(data):
         emit('error', {'message': 'No text provided'})
         return
 
-    # If source_lang is empty or 'auto', let MyMemory auto-detect
+    # If source_lang is empty or 'auto', let DeepL auto-detect
     if not source_lang or source_lang == 'auto':
-        source_lang = ''  # MyMemory auto-detects when source is empty
+        source_lang = ''
 
     detected_language = ''
 
     try:
-        arcee = ArceeTrinity()
-        basic = TranslationService()
+        translator = CloudTranslationService()
 
         # Detect language when source is auto/empty
         if not source_lang:
-            detected_language = basic.detect_language(text)
+            detected_language = translator.detect_language(text)
             print(f'[WS] Auto-detected language: {detected_language}')
 
-        # Try Arcee first, fallback to MyMemory
-        if arcee.api_key and (source_lang or detected_language):
-            from app.config import LANGUAGES as langs
-            src_code = source_lang or detected_language
-            source_name = langs.get(src_code, {}).get('name', src_code)
-            target_name = langs.get(target_lang, {}).get('name', target_lang)
-            translated = arcee.translate(text, source_name, target_name)
-        else:
-            # MyMemory handles auto-detect when source_lang is empty
-            src = source_lang if source_lang else 'autodetect'
-            translated = basic.translate(text, src, target_lang)
-
-        # If Arcee returned the original text (failed), try MyMemory
-        if translated == text and arcee.api_key:
-            src = source_lang if source_lang else 'autodetect'
-            translated = basic.translate(text, src, target_lang)
+        # Translate using DeepL (falls back to MyMemory automatically)
+        src = source_lang if source_lang else 'auto'
+        translated = translator.translate(text, src, target_lang)
 
         emit('translation', {
             'original': text,
@@ -372,21 +357,7 @@ def handle_translate(data):
 
     except Exception as e:
         print(f'[WS] Translation error: {e}')
-        # Last resort fallback to MyMemory
-        try:
-            basic = TranslationService()
-            if not detected_language:
-                detected_language = basic.detect_language(text)
-            translated = basic.translate(text, source_lang or 'autodetect', target_lang)
-            emit('translation', {
-                'original': text,
-                'translated': translated,
-                'source_lang': source_lang or detected_language,
-                'target_lang': target_lang,
-                'detected_language': detected_language
-            })
-        except Exception as e2:
-            emit('error', {'message': f'Translation failed: {str(e2)}'})
+        emit('error', {'message': f'Translation failed: {str(e)}'})
 
 
 @socketio.on('translate_f2f')
@@ -396,7 +367,7 @@ def handle_f2f_translate(data):
     Receives both languages, detects which one was spoken,
     and translates to the opposite language automatically.
     """
-    from app.services.translation import TranslationService
+    from app.services.cloud_translation import CloudTranslationService
 
     text = data.get('text', '')
     lang1 = data.get('lang1', 'en')
@@ -407,39 +378,23 @@ def handle_f2f_translate(data):
         return
 
     try:
-        basic = TranslationService()
+        translator = CloudTranslationService()
 
         # Detect the spoken language
-        detected = basic.detect_language(text)
+        detected = translator.detect_language(text)
         print(f'[F2F] Detected language: {detected}, lang1={lang1}, lang2={lang2}')
 
         # Determine translation direction based on detected language
         if detected == lang2:
-            # Speaker used Language 2 → translate to Language 1
             source = lang2
             target = lang1
             speaker = 'lang2'
         else:
-            # Default: speaker used Language 1 → translate to Language 2
             source = lang1
             target = lang2
             speaker = 'lang1'
 
-        translated = basic.translate(text, source, target)
-
-        # If Arcee is available, try it for better quality
-        try:
-            from app.services.arcee_trinity import ArceeTrinity
-            from app.config import LANGUAGES as langs
-            arcee = ArceeTrinity()
-            if arcee.api_key:
-                source_name = langs.get(source, {}).get('name', source)
-                target_name = langs.get(target, {}).get('name', target)
-                arcee_result = arcee.translate(text, source_name, target_name)
-                if arcee_result and arcee_result != text:
-                    translated = arcee_result
-        except Exception:
-            pass  # Stick with MyMemory result
+        translated = translator.translate(text, source, target)
 
         emit('f2f_translation', {
             'original': text,
@@ -457,14 +412,14 @@ def handle_f2f_translate(data):
 
 @socketio.on('transcribe')
 def handle_transcribe(data):
-    """Transcribe audio using Faster-Whisper (server-side).
+    """Transcribe audio using OpenAI Whisper API (cloud).
 
     Receives base64-encoded audio, transcribes it, and returns
     the text with detected language. Used by both Conference and
-    Face-to-Face modes when server-side Whisper is available.
+    Face-to-Face modes.
     """
     import base64
-    from app.services.faster_whisper_service import FasterWhisperService
+    from app.services.cloud_whisper import CloudWhisperService
 
     audio_b64 = data.get('audio', '')
     language_hint = data.get('language', None)  # Optional hint
@@ -474,12 +429,12 @@ def handle_transcribe(data):
         emit('error', {'message': 'No audio data provided'})
         return
 
-    whisper = FasterWhisperService()
+    whisper = CloudWhisperService()
     if not whisper.is_available():
         emit('transcription', {
             'text': '',
             'detected_language': '',
-            'error': 'Whisper not available on this server',
+            'error': 'Whisper API not configured (OPENAI_API_KEY missing)',
             'request_id': request_id
         })
         return
@@ -508,19 +463,19 @@ def handle_transcribe(data):
 
 @socketio.on('check_whisper')
 def handle_check_whisper(data=None):
-    """Check if server-side Whisper is available."""
-    from app.services.faster_whisper_service import FasterWhisperService
-    whisper = FasterWhisperService()
+    """Check if cloud Whisper API is available."""
+    from app.services.cloud_whisper import CloudWhisperService
+    whisper = CloudWhisperService()
     available = whisper.is_available()
     emit('whisper_status', {'available': available})
 
 
 @socketio.on('audio_chunk')
 def handle_audio_chunk(data):
-    """Legacy audio chunk handler — redirects to transcribe."""
+    """Legacy audio chunk handler — transcribe + translate pipeline."""
     import base64
-    from app.services.faster_whisper_service import FasterWhisperService
-    from app.services.translation import TranslationService
+    from app.services.cloud_whisper import CloudWhisperService
+    from app.services.cloud_translation import CloudTranslationService
 
     audio_b64 = data.get('audio', '')
     source_lang = data.get('source_lang', 'en')
@@ -529,8 +484,8 @@ def handle_audio_chunk(data):
     if not audio_b64:
         return
 
-    whisper = FasterWhisperService()
-    basic = TranslationService()
+    whisper = CloudWhisperService()
+    translator = CloudTranslationService()
 
     try:
         audio_bytes = base64.b64decode(audio_b64)
@@ -541,7 +496,7 @@ def handle_audio_chunk(data):
             transcript_text = result['text']
             detected_lang = result['detected_language']
         else:
-            emit('error', {'message': 'Whisper not available. Use browser speech recognition.'})
+            emit('error', {'message': 'Whisper API not configured. Use browser speech recognition.'})
             return
 
         if not transcript_text:
@@ -555,21 +510,7 @@ def handle_audio_chunk(data):
 
         # 2. Translate
         src = detected_lang or source_lang
-        translated = basic.translate(transcript_text, src, target_lang)
-
-        # Try Arcee for better quality
-        try:
-            from app.services.arcee_trinity import ArceeTrinity
-            from app.config import LANGUAGES as langs
-            arcee = ArceeTrinity()
-            if arcee.api_key:
-                source_name = langs.get(src, {}).get('name', src)
-                target_name = langs.get(target_lang, {}).get('name', target_lang)
-                arcee_result = arcee.translate(transcript_text, source_name, target_name)
-                if arcee_result and arcee_result != transcript_text:
-                    translated = arcee_result
-        except Exception:
-            pass
+        translated = translator.translate(transcript_text, src, target_lang)
 
         emit('translation', {
             'original': transcript_text,

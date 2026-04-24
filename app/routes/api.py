@@ -3,10 +3,9 @@ import uuid
 import base64
 from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, g
-from app.services.whisper_ollama import WhisperOllama
-from app.services.tts_engine import TTSEngine
-from app.services.arcee_trinity import ArceeTrinity
-from app.services.translation import TranslationService
+from app.services.cloud_whisper import CloudWhisperService
+from app.services.cloud_tts import CloudTTSEngine
+from app.services.cloud_translation import CloudTranslationService
 from app.services.voice_cloner import VoiceCloner
 from app.utils.database import db_session
 from app.utils.audio_processor import decode_audio_base64
@@ -19,11 +18,10 @@ from app.config import LANGUAGES
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
-# Initialize services
-whisper = WhisperOllama()
-tts_engine = TTSEngine()
-arcee = ArceeTrinity()
-basic_translator = TranslationService()
+# Initialize cloud services
+whisper = CloudWhisperService()
+tts_engine = CloudTTSEngine()
+translator = CloudTranslationService()
 voice_cloner = VoiceCloner()
 
 
@@ -171,13 +169,8 @@ def translate_text():
         return jsonify({'error': 'text is required'}), 400
 
     try:
-        # Use Arcee for advanced translations, fallback to basic
-        if use_advanced and arcee.api_key:
-            source_name = LANGUAGES.get(source_lang, {}).get('name', source_lang)
-            target_name = LANGUAGES.get(target_lang, {}).get('name', target_lang)
-            translated = arcee.translate(text, source_name, target_name)
-        else:
-            translated = basic_translator.translate(text, source_lang, target_lang)
+        # Use DeepL cloud translation (auto-falls back to MyMemory)
+        translated = translator.translate(text, source_lang, target_lang)
 
         # Append to conversation transcript
         if conversation_id and translated:
@@ -395,10 +388,11 @@ def health_check():
     tts_health = tts_engine.health_check()
     return jsonify({
         'status': 'ok',
+        'mode': 'cloud',
         'services': {
-            'whisper': whisper.health_check(),
-            'tts_xtts': tts_health.get('xtts', False),
-            'tts_gptsovits': tts_health.get('gptsovits', False),
-            'arcee': arcee.health_check() if arcee.api_key else False,
+            'whisper_api': whisper.is_available(),
+            'deepl': translator.health_check(),
+            'openai_tts': tts_health.get('openai_tts', False),
+            'elevenlabs': tts_health.get('elevenlabs', False),
         }
     })

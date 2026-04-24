@@ -11,31 +11,19 @@ eventlet==0.35.1
 python-jose==3.3.0
 bcrypt==4.1.2
 
-# GPU support
-torch>=2.1.0
-torchaudio>=2.1.0
-numpy>=1.24.0
+# ── Cloud API Services (no GPU required) ──────────
+openai>=1.30.0
+deepl>=1.16.0
+elevenlabs>=1.2.0
 
-# Speech-to-Text — Faster Whisper (GPU-accelerated transcription)
-faster-whisper>=1.0.0
-
-# TTS Engines — Core
-TTS>=0.22.0
-
-# TTS Engines — Global Languages (install for 100+ language support)
-# pip install melotts
+# ── GPU support (optional — for self-hosted mode) ──
+# torch>=2.1.0
+# torchaudio>=2.1.0
+# numpy>=1.24.0
+# faster-whisper>=1.0.0
+# TTS>=0.22.0
 # melotts>=0.1.0
-
-# Voice Conversion — RVC (for cross-language voice cloning)
-# pip install rvc-infer
 # rvc-infer>=0.1.0
-
-# Voice Style Transfer — OpenVoice V2
-# pip install openvoice
 # openvoice>=0.1.0
-
-# Face-to-face mode — GPT-SoVITS (optional, high VRAM)
-# pip install GPT-SoVITS>=0.5.0
-
-# Performance — RunPod GPU optimization
+# GPT-SoVITS>=0.5.0
 # deepspeed>=0.12.0
