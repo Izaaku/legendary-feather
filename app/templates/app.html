@@ -1685,30 +1685,14 @@ function startConference(){
     }
 }
 
-let confChunkBuffer = [];
 let confSendInterval = null;
 
 function startConferenceWhisper(){
     navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
         confAudioStream = stream;
-        confMediaRecorder = new MediaRecorder(stream, {mimeType:'audio/webm;codecs=opus'});
-        confChunkBuffer = [];
 
-        // Collect small chunks continuously (every 250ms)
-        confMediaRecorder.ondataavailable = (e) => {
-            if(e.data.size > 0) confChunkBuffer.push(e.data);
-        };
-
-        // Start recording with small timeslice — keeps mic OPEN continuously
-        confMediaRecorder.start(250);
-
-        // Every WHISPER_CHUNK_MS, send accumulated audio to Whisper
-        confSendInterval = setInterval(()=>{
-            if(!confActive || confChunkBuffer.length === 0) return;
-            const blob = new Blob(confChunkBuffer, {type:'audio/webm'});
-            confChunkBuffer = [];  // Reset buffer for next interval
-            sendAudioToWhisper(blob);
-        }, WHISPER_CHUNK_MS);
+        // Start the first recording cycle
+        confStartRecordingCycle();
 
         document.getElementById('confLegendStatus').textContent = 'Ready to start';
 
@@ -1716,6 +1700,37 @@ function startConferenceWhisper(){
         showStatus('Microphone access denied: '+e.message,'error');
         stopConference();
     });
+}
+
+function confStartRecordingCycle(){
+    if(!confActive || !confAudioStream) return;
+
+    // Create a FRESH MediaRecorder each cycle (each blob gets a valid webm header)
+    const recorder = new MediaRecorder(confAudioStream, {mimeType:'audio/webm;codecs=opus'});
+    let chunks = [];
+
+    recorder.ondataavailable = (e) => {
+        if(e.data.size > 0) chunks.push(e.data);
+    };
+
+    recorder.onstop = () => {
+        if(chunks.length > 0 && confActive){
+            const blob = new Blob(chunks, {type:'audio/webm'});
+            sendAudioToWhisper(blob);
+        }
+        // Start next cycle (stream stays open, only recorder restarts)
+        if(confActive) confStartRecordingCycle();
+    };
+
+    confMediaRecorder = recorder;
+    recorder.start();  // No timeslice — record until we stop it
+
+    // Stop this recorder after WHISPER_CHUNK_MS to trigger onstop → send → next cycle
+    confSendInterval = setTimeout(()=>{
+        if(recorder.state === 'recording'){
+            try{ recorder.stop(); }catch(e){}
+        }
+    }, WHISPER_CHUNK_MS);
 }
 
 function sendAudioToWhisper(blob){
@@ -1785,10 +1800,9 @@ function startConferenceWebSpeech(){
 function stopConference(){
     confActive = false;
     if(confRecognition){ confRecognition.abort(); confRecognition=null; }
-    if(confSendInterval){ clearInterval(confSendInterval); confSendInterval=null; }
+    if(confSendInterval){ clearTimeout(confSendInterval); confSendInterval=null; }
     if(confMediaRecorder && confMediaRecorder.state!=='inactive'){ try{confMediaRecorder.stop();}catch(e){} confMediaRecorder=null; }
     if(confAudioStream){ confAudioStream.getTracks().forEach(t=>t.stop()); confAudioStream=null; }
-    confChunkBuffer = [];
 
     document.getElementById('confStartBtn').classList.remove('hidden');
     document.getElementById('confStopBtn').classList.add('hidden');
