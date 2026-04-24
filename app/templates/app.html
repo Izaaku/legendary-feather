@@ -916,7 +916,7 @@ footer {
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://js.stripe.com/v3/"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 </head>
 <body>
     <canvas id="starCanvas"></canvas>
@@ -2146,12 +2146,16 @@ document.getElementById('ocrFileInput').addEventListener('change',async(e)=>{
         const srcLang = document.getElementById('txtSourceLang').value || 'en';
         const tessLang = TESS_LANG_MAP[srcLang] || 'eng';
         console.log('[OCR] Starting with language:', tessLang);
-        const worker = await Tesseract.createWorker(tessLang, 1, {
-            workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
-            corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core-simd-lstm.wasm.js',
+
+        // Tesseract.js v4 API
+        const worker = await Tesseract.createWorker({
+            logger: m => console.log('[OCR]', m.status, Math.round((m.progress||0)*100)+'%')
         });
+        await worker.loadLanguage(tessLang);
+        await worker.initialize(tessLang);
         const {data:{text}} = await worker.recognize(file);
         await worker.terminate();
+
         if(text.trim()){
             txtSource.value = text.trim();
             showStatus('Text extracted from image','success');
@@ -2160,7 +2164,7 @@ document.getElementById('ocrFileInput').addEventListener('change',async(e)=>{
         }
     }catch(err){
         console.error('[OCR] Error:', err);
-        showStatus('OCR failed: '+err.message,'error');
+        showStatus('OCR failed: '+(err&&err.message?err.message:String(err)),'error');
     }
     document.getElementById('ocrOverlay').classList.add('hidden');
     e.target.value='';

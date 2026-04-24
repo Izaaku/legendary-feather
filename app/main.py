@@ -197,12 +197,12 @@ def add_security_headers(response):
     # Content Security Policy — blocks unauthorized scripts, styles, connections
     csp_parts = [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://js.stripe.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:",
         "img-src 'self' data: blob: https:",
-        "connect-src 'self' https://api.stripe.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net wss: ws:",
-        "worker-src 'self' blob: https://cdn.jsdelivr.net",
+        "connect-src 'self' https://api.stripe.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://tessdata.projectnaptha.com wss: ws:",
+        "worker-src 'self' blob: https://cdn.jsdelivr.net https://unpkg.com",
         "frame-src https://js.stripe.com",
         "media-src 'self' blob:",
         "object-src 'none'",
