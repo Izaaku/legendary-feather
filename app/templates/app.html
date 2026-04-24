@@ -1153,8 +1153,15 @@ const CONFIG = {
     useServerWhisper: false
 };
 
-// Auth helper — get JWT token from session
+// Auth helper — get JWT token and user info from session
 function getToken(){ return sessionStorage.getItem('lf_token'); }
+function getUser(){
+    try{ return JSON.parse(sessionStorage.getItem('lf_session')); }catch(e){ return null; }
+}
+function getUserId(){
+    const u = getUser();
+    return u ? (u.user_id || u.id || 'default_user') : 'default_user';
+}
 function authHeaders(){
     const t = getToken();
     const h = {'Content-Type':'application/json'};
@@ -1642,7 +1649,7 @@ function getSR(){
 }
 
 // ══════════════════════════════════════════════════════
-// CONFERENCE MODE (Whisper GPU + Web Speech API fallback)
+// CONFERENCE MODE (Cloud Whisper + Web Speech API fallback)
 // ══════════════════════════════════════════════════════
 let confRecognition = null;
 let confActive = false;
@@ -1651,7 +1658,7 @@ let confLastResultTime = 0;
 let confMediaRecorder = null;
 let confAudioStream = null;
 const SILENCE_THRESHOLD = 2000;
-const WHISPER_CHUNK_MS = 4000;
+const WHISPER_CHUNK_MS = 5000;  // Send audio every 5 seconds
 
 document.getElementById('confStartBtn').addEventListener('click', startConference);
 document.getElementById('confStopBtn').addEventListener('click', stopConference);
@@ -1678,32 +1685,29 @@ function startConference(){
     }
 }
 
+let confChunkBuffer = [];
+let confSendInterval = null;
+
 function startConferenceWhisper(){
     navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
         confAudioStream = stream;
         confMediaRecorder = new MediaRecorder(stream, {mimeType:'audio/webm;codecs=opus'});
-        let chunks = [];
+        confChunkBuffer = [];
 
+        // Collect small chunks continuously (every 250ms)
         confMediaRecorder.ondataavailable = (e) => {
-            if(e.data.size > 0) chunks.push(e.data);
+            if(e.data.size > 0) confChunkBuffer.push(e.data);
         };
 
-        confMediaRecorder.onstop = () => {
-            if(chunks.length > 0 && confActive){
-                const blob = new Blob(chunks, {type:'audio/webm'});
-                chunks = [];
-                sendAudioToWhisper(blob, 'conference');
-                if(confActive && confMediaRecorder && confAudioStream){
-                    try{ confMediaRecorder.start(WHISPER_CHUNK_MS); }catch(e){}
-                }
-            }
-        };
+        // Start recording with small timeslice — keeps mic OPEN continuously
+        confMediaRecorder.start(250);
 
-        confMediaRecorder.start(WHISPER_CHUNK_MS);
-        confWhisperInterval = setInterval(()=>{
-            if(confActive && confMediaRecorder && confMediaRecorder.state==='recording'){
-                confMediaRecorder.stop();
-            }
+        // Every WHISPER_CHUNK_MS, send accumulated audio to Whisper
+        confSendInterval = setInterval(()=>{
+            if(!confActive || confChunkBuffer.length === 0) return;
+            const blob = new Blob(confChunkBuffer, {type:'audio/webm'});
+            confChunkBuffer = [];  // Reset buffer for next interval
+            sendAudioToWhisper(blob);
         }, WHISPER_CHUNK_MS);
 
         document.getElementById('confLegendStatus').textContent = 'Whisper Cloud active';
@@ -1713,12 +1717,13 @@ function startConferenceWhisper(){
         stopConference();
     });
 }
-let confWhisperInterval = null;
 
-function sendAudioToWhisper(blob, mode){
+function sendAudioToWhisper(blob){
     const reader = new FileReader();
     reader.onload = () => {
         const b64 = reader.result.split(',')[1];
+        if(!b64 || b64.length < 100) return;  // Skip tiny/empty chunks
+
         const now = Date.now();
         if(now - confLastResultTime > SILENCE_THRESHOLD && confLastResultTime > 0){
             confSpeakerNum++;
@@ -1780,9 +1785,10 @@ function startConferenceWebSpeech(){
 function stopConference(){
     confActive = false;
     if(confRecognition){ confRecognition.abort(); confRecognition=null; }
-    if(confWhisperInterval){ clearInterval(confWhisperInterval); confWhisperInterval=null; }
+    if(confSendInterval){ clearInterval(confSendInterval); confSendInterval=null; }
     if(confMediaRecorder && confMediaRecorder.state!=='inactive'){ try{confMediaRecorder.stop();}catch(e){} confMediaRecorder=null; }
     if(confAudioStream){ confAudioStream.getTracks().forEach(t=>t.stop()); confAudioStream=null; }
+    confChunkBuffer = [];
 
     document.getElementById('confStartBtn').classList.remove('hidden');
     document.getElementById('confStopBtn').classList.add('hidden');
@@ -2145,7 +2151,7 @@ document.getElementById('saveProfileBtn').addEventListener('click',()=>{
     reader.onload=async()=>{
         const b64=reader.result.split(',')[1];
         try{
-            const r=await fetch('/api/voice/register',{method:'POST',headers:authHeaders(),body:JSON.stringify({profile_name:name.trim(),audio:b64,user_id:'default_user',language:'en'})});
+            const r=await fetch('/api/voice/register',{method:'POST',headers:authHeaders(),body:JSON.stringify({profile_name:name.trim(),audio:b64,user_id:getUserId(),language:'en'})});
             if(r.ok){showStatus('Voice profile saved!','success');recordedAudioBlob=null;document.getElementById('profileSaveSection').style.display='none';document.getElementById('profileNameInput').value='';document.getElementById('recordBtnText').textContent='Press to record (5-60 seconds)';loadVoiceProfiles();}
             else{const e=await r.json();showStatus(e.error||'Save failed','error');}
         }catch(e){showStatus('Error: '+e.message,'error');}
@@ -2156,7 +2162,7 @@ document.getElementById('saveProfileBtn').addEventListener('click',()=>{
 
 async function loadVoiceProfiles(){
     try{
-        const r=await fetch('/api/voice/profiles?user_id=default_user',{headers:authHeaders()});
+        const r=await fetch('/api/voice/profiles?user_id='+getUserId(),{headers:authHeaders()});
         if(!r.ok)return;
         const data=await r.json();
         const profiles=(data.profiles||[]).map(p=>({id:p.profile_id||p.id,name:p.profile_name||p.name}));
@@ -2168,7 +2174,7 @@ async function loadVoiceProfiles(){
 
 async function deleteVoiceProfile(id){
     if(!confirm('Delete this profile?'))return;
-    try{await fetch(`/api/voice/profiles/${id}?user_id=default_user`,{method:'DELETE',headers:authHeaders()});loadVoiceProfiles();showStatus('Profile deleted','success');}catch(e){}
+    try{await fetch(`/api/voice/profiles/${id}?user_id=${getUserId()}`,{method:'DELETE',headers:authHeaders()});loadVoiceProfiles();showStatus('Profile deleted','success');}catch(e){}
 }
 
 // ══════════════════════════════════════════════════════
