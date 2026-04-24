@@ -382,6 +382,60 @@ def delete_voice_profile(profile_id):
         db.close()
 
 
+@api_bp.route('/ocr', methods=['POST'])
+@token_required
+def ocr_image():
+    """Extract text from an image using OpenAI Vision API."""
+    import os
+    from openai import OpenAI
+
+    data = request.get_json()
+    image_b64 = data.get('image')
+    source_lang = data.get('source_lang', 'auto')
+
+    if not image_b64:
+        return jsonify({'error': 'image is required'}), 400
+
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        return jsonify({'error': 'Vision API not configured'}), 503
+
+    try:
+        client = OpenAI(api_key=api_key)
+
+        # Build prompt based on language
+        lang_hint = f" The text is likely in language code '{source_lang}'." if source_lang != 'auto' else ''
+        prompt = (
+            "Extract ALL visible text from this image. "
+            "Include large text, signs, labels, and any readable words. "
+            "Return ONLY the extracted text, nothing else. "
+            "If there are multiple text elements, list the most prominent/largest text first."
+            f"{lang_hint}"
+        )
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {
+                        "url": f"data:image/jpeg;base64,{image_b64}",
+                        "detail": "low"
+                    }}
+                ]
+            }],
+            max_tokens=500
+        )
+
+        text = response.choices[0].message.content.strip()
+        return jsonify({'text': text, 'method': 'openai_vision'})
+
+    except Exception as e:
+        print(f"[OCR] Vision API error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @api_bp.route('/health', methods=['GET'])
 def health_check():
     """Check health of all services."""

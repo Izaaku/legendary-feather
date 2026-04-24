@@ -916,7 +916,7 @@ footer {
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://js.stripe.com/v3/"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <!-- OCR handled server-side via OpenAI Vision API -->
 </head>
 <body>
     <canvas id="starCanvas"></canvas>
@@ -2128,39 +2128,37 @@ txtMicBtn.addEventListener('click',()=>{
     try{txtSR.start();}catch(e){}
 });
 
-// OCR Camera/Image
-// Map ISO 639-1 codes to Tesseract language codes
-const TESS_LANG_MAP = {
-    'en':'eng','es':'spa','fr':'fra','de':'deu','it':'ita','pt':'por',
-    'nl':'nld','ru':'rus','zh':'chi_sim','ja':'jpn','ko':'kor','ar':'ara',
-    'hi':'hin','tr':'tur','pl':'pol','sv':'swe','da':'dan','no':'nor',
-    'fi':'fin','el':'ell','he':'heb','th':'tha','vi':'vie','uk':'ukr',
-    'cs':'ces','ro':'ron','hu':'hun','id':'ind','ms':'msa','auto':'eng'
-};
+// OCR Camera/Image — uses OpenAI Vision API via backend
 txtCamBtn.addEventListener('click',()=>document.getElementById('ocrFileInput').click());
 document.getElementById('ocrFileInput').addEventListener('change',async(e)=>{
     const file=e.target.files[0];
     if(!file)return;
     document.getElementById('ocrOverlay').classList.remove('hidden');
     try{
-        const srcLang = document.getElementById('txtSourceLang').value || 'en';
-        const tessLang = TESS_LANG_MAP[srcLang] || 'eng';
-        console.log('[OCR] Starting with language:', tessLang);
+        const srcLang = document.getElementById('txtSourceLang').value || 'auto';
+        console.log('[OCR] Sending image to Vision API, language:', srcLang);
 
-        // Tesseract.js v4 API
-        const worker = await Tesseract.createWorker({
-            logger: m => console.log('[OCR]', m.status, Math.round((m.progress||0)*100)+'%')
+        // Convert file to base64
+        const reader = new FileReader();
+        const b64 = await new Promise((resolve,reject)=>{
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
         });
-        await worker.loadLanguage(tessLang);
-        await worker.initialize(tessLang);
-        const {data:{text}} = await worker.recognize(file);
-        await worker.terminate();
 
-        if(text.trim()){
-            txtSource.value = text.trim();
+        const resp = await fetch('/api/ocr', {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ image: b64, source_lang: srcLang })
+        });
+        const data = await resp.json();
+
+        if(resp.ok && data.text && data.text.trim()){
+            txtSource.value = data.text.trim();
+            console.log('[OCR] Extracted:', data.text.trim());
             showStatus('Text extracted from image','success');
         } else {
-            showStatus('No text found in image','error');
+            showStatus(data.error || 'No text found in image','error');
         }
     }catch(err){
         console.error('[OCR] Error:', err);
