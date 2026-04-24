@@ -2092,26 +2092,39 @@ document.getElementById('txtSwap').addEventListener('click',()=>{
     const tt=txtSource.value;txtSource.value=txtResult.value;txtResult.value=tt;
 });
 
-// Text Mic Dictation
+// Text Mic Dictation — stays open until you click mic again
 let txtDictating = false;
 let txtSR = null;
 txtMicBtn.addEventListener('click',()=>{
-    if(txtDictating){ if(txtSR)try{txtSR.stop();}catch(e){} return; }
+    if(txtDictating){ txtDictating=false; if(txtSR)try{txtSR.stop();}catch(e){} txtMicBtn.classList.remove('active'); return; }
     const sr=getSR();
     if(!sr){showStatus('Speech recognition not supported','error');return;}
     txtSR=sr;
-    txtSR.continuous=false; txtSR.interimResults=true;
+    txtSR.continuous=true; txtSR.interimResults=true;
     const lang=document.getElementById('txtSourceLang').value;
     if(lang&&lang!=='auto'&&SPEECH_LANG_MAP[lang]) txtSR.lang=SPEECH_LANG_MAP[lang];
     txtDictating=true;
     txtMicBtn.classList.add('active');
 
+    let finalText = '';
     txtSR.onresult=(e)=>{
-        let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
-        txtSource.value=t;
+        let interim='';
+        finalText='';
+        for(let i=0;i<e.results.length;i++){
+            if(e.results[i].isFinal) finalText+=e.results[i][0].transcript+' ';
+            else interim+=e.results[i][0].transcript;
+        }
+        txtSource.value=(finalText+interim).trim();
     };
-    txtSR.onend=()=>{txtDictating=false;txtMicBtn.classList.remove('active');txtSR=null;};
-    txtSR.onerror=(e)=>{txtDictating=false;txtMicBtn.classList.remove('active');};
+    txtSR.onend=()=>{
+        // Auto-restart if user hasn't clicked stop
+        if(txtDictating){ try{txtSR.start();}catch(e){txtDictating=false;txtMicBtn.classList.remove('active');} }
+        else { txtMicBtn.classList.remove('active'); txtSR=null; }
+    };
+    txtSR.onerror=(e)=>{
+        if(e.error==='no-speech') return;  // Ignore silence — keep listening
+        txtDictating=false;txtMicBtn.classList.remove('active');
+    };
     try{txtSR.start();}catch(e){}
 });
 
