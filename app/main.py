@@ -74,7 +74,7 @@ _WAF_PATTERNS = [
 ]
 
 # Paths exempt from WAF (audio uploads, etc.)
-_WAF_EXEMPT_PATHS = {'/api/transcribe', '/api/synthesize', '/api/voice/register'}
+_WAF_EXEMPT_PATHS = {'/api/transcribe', '/api/synthesize', '/api/voice/register', '/api/ocr'}
 
 def _waf_check(value):
     """Return True if value contains a malicious pattern."""
