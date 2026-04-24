@@ -201,7 +201,7 @@ def add_security_headers(response):
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:",
         "img-src 'self' data: blob: https:",
-        "connect-src 'self' https://api.stripe.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://tessdata.projectnaptha.com wss: ws:",
+        "connect-src 'self' data: https://api.stripe.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://tessdata.projectnaptha.com wss: ws:",
         "worker-src 'self' blob: https://cdn.jsdelivr.net https://unpkg.com",
         "frame-src https://js.stripe.com",
         "media-src 'self' blob:",
