@@ -406,10 +406,11 @@ def ocr_image():
         # Build prompt based on language
         lang_hint = f" The text is likely in language code '{source_lang}'." if source_lang != 'auto' else ''
         prompt = (
-            "Extract ALL visible text from this image. "
-            "Include large text, signs, labels, and any readable words. "
-            "Return ONLY the extracted text, nothing else. "
-            "If there are multiple text elements, list the most prominent/largest text first."
+            "Look at this image and extract all visible text. "
+            "First, briefly describe what the image shows (e.g., 'Traffic stop sign', 'Restaurant menu', 'Document'). "
+            "Then on a new line write 'TEXT:' followed by all the text you can read. "
+            "Use natural language for the text — for example, if you see a stop sign, write 'Stop' not just copy the styling. "
+            "Include context so a translator can produce an accurate translation."
             f"{lang_hint}"
         )
 
@@ -428,8 +429,17 @@ def ocr_image():
             max_tokens=500
         )
 
-        text = response.choices[0].message.content.strip()
-        return jsonify({'text': text, 'method': 'openai_vision'})
+        raw = response.choices[0].message.content.strip()
+        # Extract text after "TEXT:" marker if present
+        if 'TEXT:' in raw:
+            text = raw.split('TEXT:', 1)[1].strip()
+            description = raw.split('TEXT:', 1)[0].strip()
+        else:
+            text = raw
+            description = ''
+        print(f"[OCR] Description: {description}")
+        print(f"[OCR] Extracted text: {text}")
+        return jsonify({'text': text, 'description': description, 'method': 'openai_vision'})
 
     except Exception as e:
         print(f"[OCR] Vision API error: {e}")
