@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from app.config import Config, LANGUAGES
-from app.routes import api_bp, auth_bp, payments_bp, admin_bp
+from app.routes import api_bp, auth_bp, payments_bp, admin_bp, support_bp
 from app.utils.database import init_db
 from app.utils.alerts import (
     alert_waf_block, alert_ip_blacklisted,
@@ -46,6 +46,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(api_bp)
 app.register_blueprint(payments_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(support_bp)
 
 
 # ── WAF — Web Application Firewall (Mejora #2) ─────
@@ -589,6 +590,97 @@ def handle_tts_mode_change(data):
         'tts_mode': new_mode,
         'message': f'TTS mode changed to {new_mode}'
     })
+
+
+# ── Support Chat WebSocket Events ─────────────────────
+
+@socketio.on('join_chat')
+def handle_join_chat(data):
+    """Join a chat room for real-time messaging."""
+    from flask_socketio import join_room
+    conv_id = data.get('conversation_id')
+    if conv_id:
+        join_room(f'chat_{conv_id}')
+        emit('chat_joined', {'conversation_id': conv_id})
+
+
+@socketio.on('leave_chat')
+def handle_leave_chat(data):
+    """Leave a chat room."""
+    from flask_socketio import leave_room
+    conv_id = data.get('conversation_id')
+    if conv_id:
+        leave_room(f'chat_{conv_id}')
+
+
+@socketio.on('chat_message')
+def handle_chat_message(data):
+    """Real-time chat message — broadcast to conversation room."""
+    from app.utils.supabase_client import supabase
+    import uuid
+    from datetime import datetime, timezone
+
+    conv_id = data.get('conversation_id')
+    message = data.get('message', '').strip()
+    sender_id = data.get('sender_id', 'unknown')
+    sender_type = data.get('sender_type', 'customer')
+    sender_name = data.get('sender_name', '')
+
+    if not conv_id or not message:
+        return
+
+    # Save to Supabase
+    msg = supabase.insert('chat_messages', {
+        'id': str(uuid.uuid4()),
+        'conversation_id': conv_id,
+        'sender_id': sender_id,
+        'sender_type': sender_type,
+        'sender_name': sender_name,
+        'message': message
+    })
+
+    # Update conversation timestamp
+    supabase.update('chat_conversations',
+        filters={'id': conv_id},
+        data={'updated_at': datetime.now(timezone.utc).isoformat()}
+    )
+
+    # Broadcast to all users in this chat room
+    emit('new_message', {
+        'conversation_id': conv_id,
+        'sender_id': sender_id,
+        'sender_type': sender_type,
+        'sender_name': sender_name,
+        'message': message,
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }, room=f'chat_{conv_id}')
+
+    # Also notify admin room about new messages
+    emit('new_message_notification', {
+        'conversation_id': conv_id,
+        'sender_name': sender_name,
+        'message': message[:100]
+    }, room='admin_support')
+
+
+@socketio.on('chat_typing')
+def handle_chat_typing(data):
+    """Broadcast typing indicator."""
+    conv_id = data.get('conversation_id')
+    sender_name = data.get('sender_name', '')
+    if conv_id:
+        emit('user_typing', {
+            'conversation_id': conv_id,
+            'sender_name': sender_name
+        }, room=f'chat_{conv_id}', include_self=False)
+
+
+@socketio.on('join_admin_support')
+def handle_join_admin():
+    """Agent/owner joins the admin support notification room."""
+    from flask_socketio import join_room
+    join_room('admin_support')
+    emit('admin_joined', {'message': 'Connected to support notifications'})
 
 
 # ── Init ─────────────────────────────────────────────
