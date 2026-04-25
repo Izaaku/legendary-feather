@@ -685,12 +685,18 @@ def handle_join_admin():
 
 # ── Init ─────────────────────────────────────────────
 
-if __name__ == '__main__':
-    init_db()
+# ── Auto-init on import (needed for gunicorn/Railway) ─
+init_db()
+try:
     from app.utils.seed_admin import seed_admin
     seed_admin()
+except Exception as e:
+    print(f"[Init] Seed admin skipped: {e}")
+
+if __name__ == '__main__':
     start_health_monitor(app)
-    print("\n  Legendary Feather Universal Translator")
-    print("  Dual TTS Engine: XTTS v2 (Conference) + GPT-SoVITS (Face-to-Face)")
-    print("  Running on http://localhost:5000\n")
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    port = int(os.getenv('PORT', 5000))
+    print(f"\n  Legendary Feather Universal Translator")
+    print(f"  Cloud Mode: OpenAI + DeepL + ElevenLabs")
+    print(f"  Running on http://localhost:{port}\n")
+    socketio.run(app, host='0.0.0.0', port=port, debug=True)
