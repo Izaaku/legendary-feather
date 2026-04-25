@@ -23,4 +23,6 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD curl -f http://localhost:5000/api/health || exit 1
 
-CMD ["sh", "-c", "gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:${PORT:-5000} --timeout 120 app.main:app"]
+COPY start.sh .
+RUN chmod +x start.sh
+CMD ["bash", "start.sh"]
