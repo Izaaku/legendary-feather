@@ -884,6 +884,14 @@ body {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     Team
   </a>
+  <a class="sidebar-item" href="#" id="nav-support">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Support
+  </a>
+  <a class="sidebar-item" href="#" id="nav-faq">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    FAQ
+  </a>
   <a class="sidebar-item" href="#">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     Settings
@@ -1399,6 +1407,8 @@ sidebarItems.forEach(item => {
     if (id === 'nav-meetings') { showMeetingsView(); return; }
     if (id === 'nav-team') { showTeamView(); return; }
     if (id === 'nav-voice') { showVoiceProfilesView(); return; }
+    if (id === 'nav-support') { showSupportChat(); return; }
+    if (id === 'nav-faq') { showFAQView(); return; }
 
     // Fallback: check by SVG/text content for items without unique IDs
     const svg = this.querySelector('svg');
@@ -1607,6 +1617,240 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
     else if (text === 'Schedule Meeting') showMeetingsView();
   });
 });
+
+// ── Support Chat View ──
+let supportSocket = null;
+let currentConvId = null;
+
+function showSupportChat() {
+  const mainContent = document.getElementById('mainContent');
+  mainContent.innerHTML = `
+  <div class="welcome-header animate-in"><div>
+    <div class="welcome-name" style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;">
+      Customer <em style="color:var(--gold);font-style:italic;">Support</em>
+    </div>
+    <div style="color:var(--muted);font-size:13px;margin-top:4px;">Chat with our team</div>
+  </div></div>
+
+  <div id="supportChatContainer" style="margin-top:20px;">
+    <div id="chatMessages" style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:20px;min-height:400px;max-height:500px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
+      <div style="text-align:center;color:var(--muted);padding:40px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;margin:0 auto 12px;opacity:0.3;display:block;">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        Loading conversation...
+      </div>
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:8px;">
+      <input type="text" id="chatInput" placeholder="Type your message..."
+        style="flex:1;padding:12px 16px;border-radius:25px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);font-size:14px;outline:none;"
+        onkeypress="if(event.key==='Enter')sendChatMessage()">
+      <button onclick="sendChatMessage()"
+        style="padding:12px 24px;border-radius:25px;background:var(--gold);color:#000;border:none;font-weight:600;cursor:pointer;font-size:14px;">
+        Send
+      </button>
+    </div>
+
+    <div id="typingIndicator" style="display:none;color:var(--muted);font-size:12px;margin-top:4px;padding-left:16px;">
+      Agent is typing...
+    </div>
+  </div>`;
+
+  initSupportChat();
+}
+
+async function initSupportChat() {
+  const token = sessionStorage.getItem('lf_token');
+  const user = JSON.parse(sessionStorage.getItem('lf_session') || '{}');
+  if (!token) return;
+
+  // Get or create conversation
+  try {
+    const resp = await fetch('/api/support/conversations/mine', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const convs = await resp.json();
+    const openConv = convs.find(c => c.status === 'open' || c.status === 'assigned');
+
+    if (openConv) {
+      currentConvId = openConv.id;
+    } else {
+      // Create new conversation
+      const newResp = await fetch('/api/support/conversations', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject: 'Support request', user_name: user.name || user.email })
+      });
+      const newConv = await newResp.json();
+      currentConvId = newConv.id;
+    }
+
+    // Load messages
+    const msgResp = await fetch('/api/support/conversations/' + currentConvId + '/messages', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const messages = await msgResp.json();
+    renderChatMessages(messages);
+
+    // Join WebSocket room
+    if (typeof io !== 'undefined') {
+      if (!supportSocket) supportSocket = io();
+      supportSocket.emit('join_chat', { conversation_id: currentConvId });
+      supportSocket.on('new_message', (data) => {
+        if (data.conversation_id === currentConvId && data.sender_type !== 'customer') {
+          appendChatMessage(data);
+        }
+      });
+      supportSocket.on('user_typing', (data) => {
+        if (data.conversation_id === currentConvId) {
+          const ti = document.getElementById('typingIndicator');
+          if (ti) { ti.style.display = 'block'; setTimeout(() => ti.style.display = 'none', 3000); }
+        }
+      });
+    }
+  } catch (err) {
+    console.error('[Support] Init error:', err);
+  }
+}
+
+function renderChatMessages(messages) {
+  const container = document.getElementById('chatMessages');
+  if (!messages || messages.length === 0) {
+    container.innerHTML = `<div style="text-align:center;color:var(--muted);padding:40px;">
+      <div style="font-size:24px;margin-bottom:8px;">👋</div>
+      <div>Welcome! How can we help you today?</div>
+      <div style="font-size:12px;margin-top:4px;">Send a message to start the conversation.</div>
+    </div>`;
+    return;
+  }
+  container.innerHTML = messages.map(m => chatBubbleHTML(m)).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+function chatBubbleHTML(m) {
+  const isCustomer = m.sender_type === 'customer';
+  const align = isCustomer ? 'flex-end' : 'flex-start';
+  const bg = isCustomer ? 'var(--gold)' : 'var(--card-bg)';
+  const color = isCustomer ? '#000' : 'var(--text)';
+  const border = isCustomer ? 'none' : '1px solid var(--border)';
+  const time = m.created_at ? new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+  return `<div style="display:flex;flex-direction:column;align-items:${align};">
+    <div style="max-width:75%;padding:10px 16px;border-radius:16px;background:${bg};color:${color};border:${border};font-size:14px;line-height:1.5;">
+      ${m.message}
+    </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:2px;padding:0 8px;">${time}</div>
+  </div>`;
+}
+
+function appendChatMessage(m) {
+  const container = document.getElementById('chatMessages');
+  // Remove welcome message if present
+  const welcome = container.querySelector('div[style*="text-align:center"]');
+  if (welcome && welcome.textContent.includes('Welcome')) welcome.remove();
+  container.insertAdjacentHTML('beforeend', chatBubbleHTML(m));
+  container.scrollTop = container.scrollHeight;
+}
+
+function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message || !currentConvId) return;
+
+  const user = JSON.parse(sessionStorage.getItem('lf_session') || '{}');
+
+  // Show immediately in UI
+  appendChatMessage({
+    message: message,
+    sender_type: 'customer',
+    created_at: new Date().toISOString()
+  });
+
+  // Send via WebSocket
+  if (supportSocket) {
+    supportSocket.emit('chat_message', {
+      conversation_id: currentConvId,
+      message: message,
+      sender_id: user.user_id || user.id || 'customer',
+      sender_type: 'customer',
+      sender_name: user.name || user.email || 'Customer'
+    });
+  }
+
+  input.value = '';
+  input.focus();
+}
+
+// ── FAQ View ──
+async function showFAQView() {
+  const mainContent = document.getElementById('mainContent');
+  mainContent.innerHTML = `
+  <div class="welcome-header animate-in"><div>
+    <div class="welcome-name" style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;">
+      Frequently Asked <em style="color:var(--gold);font-style:italic;">Questions</em>
+    </div>
+  </div></div>
+  <div style="margin:20px 0;">
+    <input type="text" id="faqSearch" placeholder="Search questions..."
+      oninput="filterFAQ(this.value)"
+      style="width:100%;max-width:500px;padding:12px 20px;border-radius:25px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);font-size:14px;outline:none;">
+  </div>
+  <div id="faqContainer" style="display:flex;flex-direction:column;gap:16px;">
+    <div style="text-align:center;color:var(--muted);padding:40px;">Loading FAQ...</div>
+  </div>`;
+
+  try {
+    const resp = await fetch('/api/support/faq');
+    const faqData = await resp.json();
+    renderFAQ(faqData);
+  } catch (err) {
+    document.getElementById('faqContainer').innerHTML = '<div style="color:var(--red);padding:20px;">Failed to load FAQ</div>';
+  }
+}
+
+let allFaqData = {};
+
+function renderFAQ(data) {
+  allFaqData = data;
+  const container = document.getElementById('faqContainer');
+  const categories = Object.keys(data);
+
+  if (categories.length === 0) {
+    container.innerHTML = '<div style="color:var(--muted);padding:20px;">No FAQ entries yet.</div>';
+    return;
+  }
+
+  container.innerHTML = categories.map(cat => `
+    <div class="faq-category" data-category="${cat}">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--gold);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">${cat}</div>
+      ${data[cat].map(q => `
+        <div class="faq-item" style="margin-bottom:8px;">
+          <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.querySelector('span').textContent=this.nextElementSibling.style.display==='block'?'−':'+';"
+            style="padding:12px 16px;background:var(--card-bg);border:1px solid var(--border);border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;color:var(--text);font-size:14px;">
+            ${q.question}
+            <span style="color:var(--gold);font-size:18px;font-weight:bold;min-width:20px;text-align:center;">+</span>
+          </div>
+          <div style="display:none;padding:12px 16px;color:var(--muted);font-size:13px;line-height:1.6;border-left:2px solid var(--gold);margin-left:16px;margin-top:4px;">
+            ${q.answer}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+function filterFAQ(query) {
+  if (!query) { renderFAQ(allFaqData); return; }
+  query = query.toLowerCase();
+  const filtered = {};
+  for (const cat in allFaqData) {
+    const matches = allFaqData[cat].filter(q =>
+      q.question.toLowerCase().includes(query) || q.answer.toLowerCase().includes(query)
+    );
+    if (matches.length > 0) filtered[cat] = matches;
+  }
+  renderFAQ(filtered);
+}
 
 </script>
 
