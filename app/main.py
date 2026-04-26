@@ -317,6 +317,29 @@ def watch():
     return render_template('watch.html')
 
 
+# ── PWA: serve manifest and service worker from root ──
+# Service workers can only control URLs at-or-below their own scope.
+# Serving sw.js from "/" lets it control all routes (/, /app, /pricing, etc.)
+# instead of only /static/* (which is what /static/sw.js would limit it to).
+
+@app.route('/sw.js')
+def service_worker():
+    """Serve the service worker from the site root with no-cache headers."""
+    response = send_from_directory('static', 'sw.js')
+    response.headers['Content-Type'] = 'application/javascript'
+    response.headers['Service-Worker-Allowed'] = '/'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
+
+
+@app.route('/manifest.json')
+def pwa_manifest():
+    """Serve the PWA manifest from the site root for cleaner referencing."""
+    response = send_from_directory('static', 'manifest.json')
+    response.headers['Content-Type'] = 'application/manifest+json'
+    return response
+
+
 # Note: the /pricing and /landing legacy routes were removed.
 # /pricing is now served by marketing_bp (app/routes/marketing.py).
 # /landing redirects to / (the new public landing page).

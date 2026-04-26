@@ -556,9 +556,20 @@ function getToken() {
   return sessionStorage.getItem('lf_token');
 }
 
+// Where to send the user after a successful login/signup
+// Reads ?next=... from the URL and validates it's a same-origin path.
+function getNextUrl(fallback) {
+  const fb = fallback || '/dashboard';
+  try {
+    const next = new URLSearchParams(window.location.search).get('next');
+    if (next && /^\/[^\/]/.test(next)) return next;  // must start with single slash (same-origin path)
+  } catch (e) {}
+  return fb;
+}
+
 // Redirect if already logged in
 if (getSession() && getToken()) {
-  window.location.href = '/dashboard';
+  window.location.href = getNextUrl('/dashboard');
 }
 
 // ── API helper ──
@@ -587,7 +598,7 @@ loginForm.addEventListener('submit', async function(e){
     const data = await apiCall('login', { email, password });
     setSession(data);
     showMsg('Welcome back! Redirecting...', 'success');
-    setTimeout(() => { window.location.href = '/dashboard'; }, 800);
+    setTimeout(() => { window.location.href = getNextUrl('/dashboard'); }, 800);
   } catch (err) {
     showMsg(err.message, 'error');
     setLoading(btn, false);
@@ -617,8 +628,8 @@ signupForm.addEventListener('submit', async function(e){
   try {
     const data = await apiCall('signup', { name, email, password, plan: selectedPlan });
     setSession(data);
-    showMsg('Account created! Redirecting to your dashboard...', 'success');
-    setTimeout(() => { window.location.href = '/dashboard'; }, 1000);
+    showMsg('Account created! Redirecting...', 'success');
+    setTimeout(() => { window.location.href = getNextUrl('/dashboard'); }, 1000);
   } catch (err) {
     showMsg(err.message, 'error');
     setLoading(btn, false);

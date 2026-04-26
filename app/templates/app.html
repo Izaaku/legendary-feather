@@ -2,8 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Legendary Feather — Real-Time AI Translation</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#D4A843">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Feather">
+    <link rel="apple-touch-icon" href="/static/images/golden-feather-web.png">
+    <link rel="icon" type="image/png" href="/static/images/golden-feather-nav.png">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -1146,6 +1156,21 @@ footer {
 
 <script>
 // ══════════════════════════════════════════════════════
+// AUTH GATE — must run before anything else
+// Redirect anonymous visitors to /auth (signup tab) and bring them back here.
+// Skip when ?demo=1 is set (for screenshots/marketing).
+// ══════════════════════════════════════════════════════
+(function () {
+    var hasToken = !!sessionStorage.getItem('lf_token');
+    var qs = new URLSearchParams(window.location.search);
+    var demoMode = qs.get('demo') === '1';
+    if (!hasToken && !demoMode) {
+        var here = window.location.pathname + window.location.search;
+        window.location.replace('/auth?signup=1&next=' + encodeURIComponent(here));
+    }
+})();
+
+// ══════════════════════════════════════════════════════
 // CONFIG
 // ══════════════════════════════════════════════════════
 const CONFIG = {
@@ -1155,6 +1180,13 @@ const CONFIG = {
     showPricing: {% if show_pricing %}true{% else %}false{% endif %},
     useServerWhisper: true  // Default to cloud API — status check will override if unavailable
 };
+
+// ── PWA: register service worker ──
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+}
 
 // Auth helper — get JWT token and user info from session
 function getToken(){ return sessionStorage.getItem('lf_token'); }

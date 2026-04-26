@@ -5,6 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Legendary Feather — Real-Time AI Translation</title>
 <meta name="description" content="Speak freely. Translate instantly. Real-time AI voice interpreter for travelers, expats, and global contact centers. 100+ languages.">
+
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#D4A843">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Feather">
+<link rel="apple-touch-icon" href="/static/images/golden-feather-web.png">
+<link rel="icon" type="image/png" href="/static/images/golden-feather-nav.png">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Legendary Feather — Real-Time AI Translation">
+<meta property="og:description" content="Speak freely. Translate instantly. 100+ languages, natural voice.">
+<meta property="og:image" content="/static/images/golden-feather-web.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://legendaryfeather.com/">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -714,6 +731,15 @@ footer a:hover { color: var(--gold); }
 </footer>
 
 <!-- ─────────── Scripts ─────────── -->
+<script>
+// ── PWA: register service worker ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+</script>
+
 <script>
 // Google Sheets endpoint (existing — keeps current waitlist alive)
 const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxJ9beI60NLNiCZBYiD-F3YCpcBODzv1ig8MWgNcdTZ9u-3gV31S5XLw2r7TY0l_vv6/exec';
