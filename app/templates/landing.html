@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Legendary Feather — Real-Time AI Translation</title>
+<meta name="description" content="Speak freely. Translate instantly. Real-time AI voice translation for travelers, expats, and contact centers. 100+ languages, natural voice, zero friction.">
+<meta property="og:title" content="Legendary Feather — Real-Time AI Translation">
+<meta property="og:description" content="Real-time voice translation for travelers and global teams. 100+ languages.">
+<meta property="og:type" content="website">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --gold:        #D4A843;
+  --gold-l:      #EEC96A;
+  --gold-ll:     #F7DFA0;
+  --gold-dim:    rgba(212,168,67,0.15);
+  --gold-glow:   rgba(212,168,67,0.35);
+  --bg:          #000000;
+  --bg2:         #0A0A0A;
+  --bg3:         #141414;
+  --bg-card:     #0D0D0D;
+  --border:      rgba(212,168,67,0.20);
+  --border-soft: rgba(255,255,255,0.07);
+  --text:        #EAE4D8;
+  --text-sub:    #A0A0A0;
+  --text-muted:  #5A5A5A;
+  --radius:      16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Outfit', sans-serif; overflow-x: hidden; min-height: 100vh;
+  background-image:
+    radial-gradient(ellipse at top, rgba(212,168,67,0.10), transparent 60%),
+    radial-gradient(circle at 90% 10%, rgba(212,168,67,0.05), transparent 40%);
+}
+a { color: var(--gold-l); text-decoration: none; }
+a:hover { color: var(--gold-ll); }
+
+/* ── Star canvas (subtle ambient) ── */
+#stars {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.4), transparent 50%),
+    radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,0.3), transparent 50%),
+    radial-gradient(1px 1px at 80% 20%, rgba(212,168,67,0.5), transparent 50%),
+    radial-gradient(1px 1px at 30% 80%, rgba(212,168,67,0.4), transparent 50%),
+    radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.3), transparent 50%),
+    radial-gradient(1px 1px at 10% 50%, rgba(212,168,67,0.4), transparent 50%);
+  background-size: 700px 700px;
+  animation: starsDrift 60s linear infinite;
+  opacity: 0.6;
+}
+@keyframes starsDrift {
+  0%   { transform: translate(0, 0); }
+  100% { transform: translate(-100px, -50px); }
+}
+
+/* ── Header ──────────────────────────────── */
+.nav {
+  position: relative; z-index: 10;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px clamp(20px, 5vw, 60px);
+  border-bottom: 1px solid var(--border-soft);
+  backdrop-filter: blur(8px);
+  background: rgba(0,0,0,0.5);
+}
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px; font-weight: 600; color: var(--gold-l);
+  letter-spacing: 0.5px;
+}
+.logo-mark {
+  width: 28px; height: 28px;
+  background: radial-gradient(circle, var(--gold-l), var(--gold) 70%);
+  border-radius: 50%;
+  box-shadow: 0 0 18px var(--gold-glow);
+}
+.nav-links { display: flex; gap: 28px; align-items: center; }
+.nav-links a { color: var(--text-sub); font-size: 14px; font-weight: 500; }
+.nav-links a:hover { color: var(--gold-l); }
+.nav-cta {
+  padding: 9px 18px; border: 1px solid var(--gold);
+  border-radius: 100px; color: var(--gold-l) !important;
+  font-size: 14px; font-weight: 500; transition: all 0.2s;
+}
+.nav-cta:hover { background: var(--gold-dim); }
+.nav-cta-primary {
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  color: #000 !important; border: none;
+}
+.nav-cta-primary:hover { box-shadow: 0 8px 24px -6px var(--gold-glow); }
+
+/* ── Hero ────────────────────────────────── */
+.hero {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+  padding: 60px clamp(20px, 5vw, 60px) 80px;
+}
+.hero-feather {
+  width: clamp(220px, 28vw, 320px);
+  margin-bottom: 14px;
+  filter: drop-shadow(0 0 60px var(--gold-glow))
+          drop-shadow(0 0 120px rgba(212,168,67,0.18));
+  animation: featherPulse 4s ease-in-out infinite;
+}
+@keyframes featherPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 60px var(--gold-glow))
+            drop-shadow(0 0 120px rgba(212,168,67,0.18));
+    transform: translateY(0);
+  }
+  50% {
+    filter: drop-shadow(0 0 90px var(--gold-glow))
+            drop-shadow(0 0 160px rgba(212,168,67,0.28));
+    transform: translateY(-8px);
+  }
+}
+
+.hero h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(46px, 7vw, 84px);
+  font-weight: 500; line-height: 1.05;
+  margin-bottom: 22px; letter-spacing: -0.5px;
+}
+.hero h1 em {
+  font-style: italic;
+  background: linear-gradient(135deg, var(--gold-ll), var(--gold));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero p.hero-sub {
+  font-size: clamp(16px, 1.7vw, 20px);
+  color: var(--text-sub);
+  max-width: 660px; line-height: 1.6;
+  margin-bottom: 38px;
+}
+.hero-cta-row {
+  display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
+}
+.btn {
+  padding: 14px 30px; border-radius: 100px;
+  font-family: 'Outfit', sans-serif; font-size: 15px;
+  font-weight: 600; cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px;
+  border: none; transition: all 0.25s; letter-spacing: 0.3px;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  color: #000;
+}
+.btn-primary:hover {
+  box-shadow: 0 12px 32px -6px var(--gold-glow);
+  transform: translateY(-2px);
+}
+.btn-ghost {
+  border: 1px solid var(--border);
+  color: var(--gold-l);
+  background: rgba(212,168,67,0.04);
+}
+.btn-ghost:hover { background: var(--gold-dim); border-color: var(--gold); }
+
+.hero-trust {
+  margin-top: 44px;
+  font-size: 12px; color: var(--text-muted);
+  letter-spacing: 1.2px; text-transform: uppercase;
+}
+
+/* ── Section base ────────────────────────── */
+section.section {
+  position: relative; z-index: 1;
+  padding: 90px clamp(20px, 5vw, 60px);
+}
+.section-head { text-align: center; max-width: 720px; margin: 0 auto 56px; }
+.section-eyebrow {
+  display: inline-block; padding: 4px 12px;
+  background: var(--gold-dim); color: var(--gold-l);
+  border-radius: 100px; font-size: 11px;
+  font-weight: 600; letter-spacing: 1.4px; margin-bottom: 16px;
+}
+.section-head h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(36px, 5vw, 54px);
+  font-weight: 500; line-height: 1.1; margin-bottom: 16px;
+}
+.section-head h2 em {
+  font-style: italic;
+  background: linear-gradient(135deg, var(--gold-ll), var(--gold));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.section-head p {
+  color: var(--text-sub); font-size: 17px; line-height: 1.6;
+}
+
+/* ── Two-modes section ───────────────────── */
+.modes-grid {
+  display: grid; gap: 28px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  max-width: 1100px; margin: 0 auto;
+}
+.mode-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 36px 32px; position: relative;
+  transition: all 0.25s;
+}
+.mode-card:hover {
+  border-color: var(--border);
+  transform: translateY(-4px);
+  box-shadow: 0 30px 60px -20px var(--gold-glow);
+}
+.mode-icon {
+  width: 56px; height: 56px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  color: #000; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; margin-bottom: 22px;
+}
+.mode-card h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 30px; font-weight: 600;
+  color: var(--text); margin-bottom: 8px;
+}
+.mode-card .mode-tagline {
+  color: var(--gold-l); font-size: 13px;
+  font-weight: 500; letter-spacing: 0.4px;
+  text-transform: uppercase; margin-bottom: 18px;
+}
+.mode-card p {
+  color: var(--text-sub); font-size: 15px;
+  line-height: 1.7; margin-bottom: 20px;
+}
+.mode-bullets { list-style: none; margin: 0 0 24px; padding: 0; }
+.mode-bullets li {
+  padding: 6px 0 6px 24px; position: relative;
+  font-size: 14px; color: var(--text);
+}
+.mode-bullets li::before {
+  content: '✓'; position: absolute; left: 0;
+  color: var(--gold); font-weight: 700;
+}
+.mode-card .btn { margin-top: 8px; }
+
+/* ── How it works ────────────────────────── */
+.how-grid {
+  display: grid; gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  max-width: 1100px; margin: 0 auto;
+}
+.how-step {
+  text-align: center; padding: 24px 16px;
+}
+.how-num {
+  width: 48px; height: 48px;
+  background: var(--gold-dim); color: var(--gold-l);
+  border: 1px solid var(--gold);
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px; font-weight: 600;
+  margin-bottom: 16px;
+}
+.how-step h4 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px; font-weight: 600; margin-bottom: 8px;
+}
+.how-step p {
+  color: var(--text-sub); font-size: 14px;
+  line-height: 1.6; max-width: 240px; margin: 0 auto;
+}
+
+/* ── Pricing preview ─────────────────────── */
+.pricing-preview {
+  display: grid; gap: 22px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  max-width: 1100px; margin: 0 auto;
+}
+.pp-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 32px 26px;
+  transition: all 0.25s;
+  display: flex; flex-direction: column;
+}
+.pp-card:hover {
+  border-color: var(--border);
+  transform: translateY(-3px);
+}
+.pp-card.featured {
+  border-color: var(--gold);
+  box-shadow: 0 0 32px -8px var(--gold-glow);
+}
+.pp-card h4 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px; font-weight: 600;
+  color: var(--text); margin-bottom: 4px;
+}
+.pp-tagline {
+  color: var(--text-sub); font-size: 13px;
+  margin-bottom: 18px; min-height: 36px;
+}
+.pp-price {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 38px; color: var(--gold-l);
+  font-weight: 600; margin-bottom: 4px;
+}
+.pp-price small { font-size: 14px; color: var(--text-muted); font-family: 'Outfit', sans-serif; }
+.pp-meta {
+  font-size: 12px; color: var(--text-muted);
+  margin-bottom: 18px;
+}
+.pp-features {
+  list-style: none; padding: 0; margin: 0 0 22px;
+  flex-grow: 1;
+}
+.pp-features li {
+  padding: 6px 0 6px 22px; position: relative;
+  font-size: 13px; color: var(--text-sub); line-height: 1.5;
+}
+.pp-features li::before {
+  content: '·'; position: absolute; left: 4px;
+  color: var(--gold); font-weight: 700; font-size: 18px; line-height: 1;
+}
+.pp-cta {
+  display: block; text-align: center;
+  padding: 11px 18px; border-radius: 100px;
+  font-size: 13px; font-weight: 600;
+  text-decoration: none; transition: all 0.2s;
+}
+.pp-cta-ghost {
+  border: 1px solid var(--gold); color: var(--gold-l);
+}
+.pp-cta-ghost:hover { background: var(--gold-dim); }
+.pp-cta-primary {
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  color: #000;
+}
+.pp-cta-primary:hover { box-shadow: 0 8px 20px -6px var(--gold-glow); }
+.pricing-cta-row {
+  text-align: center; margin-top: 40px;
+}
+
+/* ── Use cases marquee ───────────────────── */
+.uc-list {
+  display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+  max-width: 1000px; margin: 0 auto;
+}
+.uc-tag {
+  padding: 10px 18px; border: 1px solid var(--border-soft);
+  border-radius: 100px; font-size: 13px; color: var(--text-sub);
+  background: var(--bg-card);
+}
+.uc-tag em { color: var(--gold-l); font-style: normal; font-weight: 600; }
+
+/* ── Final CTA ───────────────────────────── */
+.final-cta {
+  position: relative; z-index: 1;
+  text-align: center;
+  padding: 100px clamp(20px, 5vw, 60px);
+  background: linear-gradient(180deg, transparent, rgba(212,168,67,0.05));
+  border-top: 1px solid var(--border-soft);
+}
+.final-cta h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 500; margin-bottom: 18px;
+}
+.final-cta h2 em {
+  font-style: italic;
+  background: linear-gradient(135deg, var(--gold-ll), var(--gold));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.final-cta p {
+  color: var(--text-sub); font-size: 17px;
+  max-width: 540px; margin: 0 auto 32px;
+}
+
+/* ── Footer ──────────────────────────────── */
+.footer {
+  position: relative; z-index: 1;
+  text-align: center; padding: 40px 20px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-muted); font-size: 13px;
+}
+.footer a { color: var(--text-sub); margin: 0 12px; }
+.footer a:hover { color: var(--gold-l); }
+
+@media (max-width: 600px) {
+  .nav-links a:not(.nav-cta-primary):not(.nav-cta) { display: none; }
+  .hero h1 { font-size: 44px; }
+  section.section { padding: 60px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div id="stars"></div>
+
+<!-- Header -->
+<nav class="nav">
+  <a href="/" class="logo">
+    <div class="logo-mark"></div>
+    Legendary Feather
+  </a>
+  <div class="nav-links">
+    <a href="#how-it-works">How it works</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/auth">Sign in</a>
+    <a href="/app" class="nav-cta nav-cta-primary">Try free</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <img src="/static/images/golden-feather-hero.png" class="hero-feather" alt="Legendary Feather">
+  <h1>Speak freely.<br><em>Translate instantly.</em></h1>
+  <p class="hero-sub">
+    Real-time AI voice translation for travelers, expats, and contact centers.
+    100+ languages. Natural voice. Zero friction.
+  </p>
+  <div class="hero-cta-row">
+    <a href="/app" class="btn btn-primary">Try it free →</a>
+    <a href="/pricing" class="btn btn-ghost">See pricing</a>
+  </div>
+  <div class="hero-trust">No credit card · 5 free minutes · 100+ languages</div>
+</section>
+
+<!-- ─────────── Two product modes ─────────── -->
+<section class="section" id="modes">
+  <div class="section-head">
+    <span class="section-eyebrow">ONE PLATFORM · TWO MODES</span>
+    <h2>Built for the way you actually <em>communicate</em></h2>
+    <p>Whether you're meeting someone face-to-face or running a contact center across three continents, Legendary Feather adapts to your workflow.</p>
+  </div>
+
+  <div class="modes-grid">
+    <!-- Travel / Tourist mode -->
+    <div class="mode-card">
+      <div class="mode-icon">✈️</div>
+      <div class="mode-tagline">For travelers, expats, hospitality</div>
+      <h3>Face-to-face mode</h3>
+      <p>You speak in your language. The other person hears you in theirs, instantly, through your phone's speaker. No app to install for them. No internet connection needed for the basics.</p>
+      <ul class="mode-bullets">
+        <li>Tourists, expats, hospitality workers</li>
+        <li>Mobile PWA (iPhone &amp; Android)</li>
+        <li>100+ languages with regional dialects</li>
+        <li>Premium voice cloning (your voice in any language)</li>
+        <li>Travel Pass €9.99 / 7 days — buy before your trip</li>
+      </ul>
+      <a href="/pricing#travelers" class="btn btn-ghost">See traveler plans →</a>
+    </div>
+
+    <!-- Pro / Business mode -->
+    <div class="mode-card">
+      <div class="mode-icon">📞</div>
+      <div class="mode-tagline">For contact centers &amp; global teams</div>
+      <h3>Pro mode</h3>
+      <p>A Virtual Audio Driver for Windows &amp; Mac that turns any softphone — Zoom, Teams, Twilio Flex, Five9, RingCentral — into a real-time translator. Your customer hears your agent in perfect English. Your agent hears the customer in their language.</p>
+      <ul class="mode-bullets">
+        <li>BPOs, contact centers, e-commerce sellers</li>
+        <li>Works with any softphone or browser meeting</li>
+        <li>Voice cloning of agent (premium quality)</li>
+        <li>Admin dashboard, analytics, recording</li>
+        <li>From $29/agent/mo · Enterprise contracts available</li>
+      </ul>
+      <a href="/pricing#business" class="btn btn-ghost">See business plans →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── How it works ─────────── -->
+<section class="section" id="how-it-works">
+  <div class="section-head">
+    <span class="section-eyebrow">HOW IT WORKS</span>
+    <h2>Translation that <em>feels invisible</em></h2>
+    <p>Three steps. From spoken word to translated voice in under a second.</p>
+  </div>
+
+  <div class="how-grid">
+    <div class="how-step">
+      <div class="how-num">1</div>
+      <h4>Listen</h4>
+      <p>Whisper transcribes your speech with state-of-the-art accuracy in 100+ languages.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">2</div>
+      <h4>Translate</h4>
+      <p>GPT-4 + DeepL convert meaning, not words — preserving tone, intent, and nuance.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">3</div>
+      <h4>Speak</h4>
+      <p>Natural voice (or YOUR voice via cloning) delivers the translation in real time.</p>
+    </div>
+    <div class="how-step">
+      <div class="how-num">4</div>
+      <h4>Repeat</h4>
+      <p>The conversation flows like there was never a language barrier in the first place.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── Pricing preview ─────────── -->
+<section class="section" id="pricing-preview">
+  <div class="section-head">
+    <span class="section-eyebrow">PRICING</span>
+    <h2>Pay only for what <em>you need</em></h2>
+    <p>From a 7-day Travel Pass to enterprise contracts for 200-agent BPOs.</p>
+  </div>
+
+  <div class="pricing-preview">
+    <div class="pp-card">
+      <h4>Free</h4>
+      <div class="pp-tagline">Try before you buy</div>
+      <div class="pp-price">€0</div>
+      <div class="pp-meta">5 min / month</div>
+      <ul class="pp-features">
+        <li>100+ languages</li>
+        <li>Mobile PWA</li>
+        <li>No card required</li>
+      </ul>
+      <a href="/auth?plan=free" class="pp-cta pp-cta-ghost">Start free</a>
+    </div>
+
+    <div class="pp-card featured">
+      <h4>Travel Pass</h4>
+      <div class="pp-tagline">Perfect for your trip</div>
+      <div class="pp-price">€9.99 <small>/ 7 days</small></div>
+      <div class="pp-meta">100 minutes · No subscription</div>
+      <ul class="pp-features">
+        <li>Natural voice</li>
+        <li>100+ languages</li>
+        <li>Buy once before traveling</li>
+      </ul>
+      <a href="/checkout?plan=travel_pass" class="pp-cta pp-cta-primary">Get Travel Pass</a>
+    </div>
+
+    <div class="pp-card">
+      <h4>Tourist Pro</h4>
+      <div class="pp-tagline">Premium for digital nomads</div>
+      <div class="pp-price">€14.99 <small>/ month</small></div>
+      <div class="pp-meta">150 standard + 30 premium min</div>
+      <ul class="pp-features">
+        <li>Voice cloning (1 profile)</li>
+        <li>ElevenLabs premium voice</li>
+        <li>Offline mode</li>
+      </ul>
+      <a href="/checkout?plan=tourist_pro" class="pp-cta pp-cta-ghost">Get Tourist Pro</a>
+    </div>
+
+    <div class="pp-card">
+      <h4>Scale</h4>
+      <div class="pp-tagline">For BPOs &amp; contact centers</div>
+      <div class="pp-price">$249 <small>/ agent / mo</small></div>
+      <div class="pp-meta">10+ agents · Virtual Audio Driver</div>
+      <ul class="pp-features">
+        <li>6,000 min + 200 premium per agent</li>
+        <li>Voice cloning of agent</li>
+        <li>Full API + dashboard + SSO</li>
+      </ul>
+      <a href="/pricing#business" class="pp-cta pp-cta-ghost">Talk to Sales</a>
+    </div>
+  </div>
+
+  <div class="pricing-cta-row">
+    <a href="/pricing" class="btn btn-ghost">See all plans &amp; ROI calculator →</a>
+  </div>
+</section>
+
+<!-- ─────────── Use cases ─────────── -->
+<section class="section" id="use-cases">
+  <div class="section-head">
+    <span class="section-eyebrow">WHO USES IT</span>
+    <h2>From Tokyo to Manila to <em>Mexico City</em></h2>
+    <p>The same engine, tuned for the job.</p>
+  </div>
+
+  <div class="uc-list">
+    <span class="uc-tag">📞 <em>BPOs &amp; call centers</em></span>
+    <span class="uc-tag">🛒 <em>Mercado Libre &amp; Amazon sellers</em></span>
+    <span class="uc-tag">💼 <em>B2B sales reps</em></span>
+    <span class="uc-tag">🩺 <em>Telemedicine</em></span>
+    <span class="uc-tag">✈️ <em>Travelers &amp; expats</em></span>
+    <span class="uc-tag">🏨 <em>Hospitality &amp; tourism</em></span>
+    <span class="uc-tag">👥 <em>Recruiters &amp; HR</em></span>
+    <span class="uc-tag">🏠 <em>International real estate</em></span>
+    <span class="uc-tag">🎓 <em>Online education</em></span>
+    <span class="uc-tag">⚖️ <em>Legal consultations</em></span>
+    <span class="uc-tag">🛟 <em>Customer support</em></span>
+    <span class="uc-tag">🌎 <em>Global remote teams</em></span>
+  </div>
+</section>
+
+<!-- ─────────── Final CTA ─────────── -->
+<section class="final-cta">
+  <h2>Ready to <em>speak freely?</em></h2>
+  <p>Try it free. No credit card needed. Five minutes is enough to feel the magic.</p>
+  <div class="hero-cta-row" style="justify-content:center;">
+    <a href="/app" class="btn btn-primary">Try Legendary Feather →</a>
+    <a href="/pricing" class="btn btn-ghost">See plans</a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div style="margin-bottom:14px;">
+    <a href="/">Home</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/app">App</a>
+    <a href="/auth">Sign in</a>
+    <a href="mailto:hello@legendaryfeather.com">Contact</a>
+  </div>
+  <div>© Legendary Feather — Real-time AI translation</div>
+</footer>
+
+</body>
+</html>

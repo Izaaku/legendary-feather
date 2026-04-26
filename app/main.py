@@ -261,22 +261,33 @@ def internal_error(e):
 
 
 # ── Page Routes ──────────────────────────────────────
+#
+# Public marketing pages live at the root of the domain:
+#   /          → landing.html  (marketing hero, modes, pricing preview)
+#   /pricing   → pricing.html  (handled by marketing_bp blueprint)
+#   /auth      → auth.html
+#
+# The actual translator app lives at /app — keeps marketing and product
+# concerns separated and lets us add a real auth gate later without breaking
+# everything.
+#   /app       → app.html   (full translator UI)
+#   /dashboard → dashboard.html
+#   /watch     → watch.html
+#   /success   → app.html with success modal
+
 
 @app.route('/')
 def index():
-    """Main translator app page."""
+    """Public landing page."""
+    return render_template('landing.html')
+
+
+@app.route('/app')
+def translator_app():
+    """The full translator app (face-to-face mode + future Pro mode)."""
     return render_template('app.html',
                            stripe_key=Config.STRIPE_PUBLISHABLE_KEY,
                            languages=LANGUAGES)
-
-
-@app.route('/pricing')
-def pricing():
-    """Pricing page."""
-    return render_template('app.html',
-                           stripe_key=Config.STRIPE_PUBLISHABLE_KEY,
-                           languages=LANGUAGES,
-                           show_pricing=True)
 
 
 @app.route('/success')
@@ -300,16 +311,20 @@ def dashboard():
     return render_template('dashboard.html')
 
 
-@app.route('/landing')
-def landing():
-    """Public landing page."""
-    return render_template('landing.html')
-
-
 @app.route('/watch')
 def watch():
     """Smartwatch web interface — compact translator control."""
     return render_template('watch.html')
+
+
+# Note: the /pricing and /landing legacy routes were removed.
+# /pricing is now served by marketing_bp (app/routes/marketing.py).
+# /landing redirects to / (the new public landing page).
+@app.route('/landing')
+def legacy_landing_redirect():
+    """Backward-compat: /landing → /."""
+    from flask import redirect
+    return redirect('/', code=301)
 
 
 # ── WebSocket Events (real-time audio streaming) ────
