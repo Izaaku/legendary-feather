@@ -501,7 +501,7 @@ document.getElementById('switchToSignup').addEventListener('click', e => { e.pre
 
 // Check URL params for default tab
 const params = new URLSearchParams(location.search);
-if (params.get('tab') === 'signup') switchTab('signup');
+if (params.get('tab') === 'signup' || params.get('signup') === '1') switchTab('signup');
 if (params.get('plan')) {
   switchTab('signup');
   const planEl = document.querySelector(`.plan-option[data-plan="${params.get('plan')}"]`);
