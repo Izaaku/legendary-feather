@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from app.config import Config, LANGUAGES
-from app.routes import api_bp, auth_bp, payments_bp, admin_bp, support_bp
+from app.routes import api_bp, auth_bp, payments_bp, admin_bp, support_bp, marketing_bp
 from app.utils.database import init_db
 from app.utils.alerts import (
     alert_waf_block, alert_ip_blacklisted,
@@ -47,6 +47,7 @@ app.register_blueprint(api_bp)
 app.register_blueprint(payments_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(support_bp)
+app.register_blueprint(marketing_bp)
 
 
 # ── WAF — Web Application Firewall (Mejora #2) ─────

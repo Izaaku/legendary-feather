@@ -1123,10 +1123,13 @@ footer {
         <!-- Status -->
         <div class="status-message" id="statusMessage"></div>
 
-        <!-- Pricing -->
-        <div class="pricing-container" id="pricingContainer" style="display:none;">
-            <h2 class="pricing-title">Upgrade Your <em>Experience</em></h2>
-            <div class="pricing-plans" id="pricingPlans"></div>
+        <!-- Pricing — moved to dedicated /pricing page. This stub is kept so
+             legacy code paths that toggle #pricingContainer don't crash; it
+             redirects users to /pricing instead. -->
+        <div class="pricing-container" id="pricingContainer" style="display:none;text-align:center;padding:40px 20px;">
+            <h2 class="pricing-title">See <em>Plans &amp; Pricing</em></h2>
+            <p style="color:var(--text-sub);margin:14px 0 22px;">Choose the right plan for travelers, expats, contact centers and global teams.</p>
+            <a href="/pricing" class="btn-primary" style="display:inline-block;padding:12px 28px;text-decoration:none;">View pricing</a>
         </div>
 
         <footer>
@@ -2272,17 +2275,15 @@ async function deleteVoiceProfile(id){
 // ══════════════════════════════════════════════════════
 // PRICING
 // ══════════════════════════════════════════════════════
+// Plans & pricing now live on dedicated /pricing page (Travelers + Business).
+// initPricing() is kept for backward compat: just shows the redirect stub.
 function initPricing(){
     if(!CONFIG.showPricing)return;
     document.getElementById('pricingContainer').style.display='block';
-    const plans=[{id:'basic',name:'Basic',price:'$9.99',features:['60 min/month','100+ languages','Text & audio translation']},{id:'pro',name:'Professional',price:'$29.99',features:['200 min/month','100+ languages','HD voice synthesis','Voice cloning']},{id:'enterprise',name:'Enterprise',price:'Custom',features:['Unlimited minutes','All features','API access','Priority support']}];
-    document.getElementById('pricingPlans').innerHTML=plans.map(p=>`<div class="plan-card"><div class="plan-name">${p.name}</div><div class="plan-price">${p.price}</div><ul class="plan-features">${p.features.map(f=>`<li>${f}</li>`).join('')}</ul><button class="btn-primary" style="width:100%;margin-top:16px;" onclick="handleCheckout('${p.id}')">Select</button></div>`).join('');
 }
 window.handleCheckout=function(planId){
-    if(!CONFIG.stripeKey){showStatus('Payments not available','error');return;}
-    showStatus('Processing...','info');
-    socket.emit('create_checkout',{plan_id:planId});
-    socket.on('checkout_url',d=>{if(d.url)location.href=d.url;});
+    // Redirect to dedicated checkout flow on the pricing/checkout page
+    location.href = '/checkout?plan=' + encodeURIComponent(planId);
 };
 
 // ══════════════════════════════════════════════════════

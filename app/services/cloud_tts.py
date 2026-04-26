@@ -43,7 +43,12 @@ class CloudTTSEngine:
     - Fallback: if one fails, tries the other
     """
 
-    AVAILABLE_MODES = ['conference', 'face_to_face']
+    # Active modes:
+    #   'face_to_face' — two people in person (tourist mode), premium voice when ElevenLabs is available
+    #   'pro'          — Virtual Audio Driver mode (call centers, B2B), low-latency OpenAI TTS
+    # Deprecated: 'conference' (still accepted as alias for 'face_to_face' for backward compat)
+    AVAILABLE_MODES = ['face_to_face', 'pro']
+    _DEPRECATED_MODE_ALIASES = {'conference': 'face_to_face'}
 
     def __init__(self):
         self.openai_key = os.getenv('OPENAI_API_KEY', '')
@@ -68,7 +73,9 @@ class CloudTTSEngine:
         else:
             print('[CloudTTS] WARNING: OPENAI_API_KEY not set — TTS unavailable.')
 
-        self.default_mode = os.getenv('TTS_DEFAULT_MODE', 'conference')
+        self.default_mode = os.getenv('TTS_DEFAULT_MODE', 'face_to_face')
+        # Normalize legacy mode names
+        self.default_mode = self._DEPRECATED_MODE_ALIASES.get(self.default_mode, self.default_mode)
         print(f'[CloudTTS] Default mode: {self.default_mode}')
         print(f'[CloudTTS] Core languages ({len(CORE_LANGUAGES)}): {", ".join(CORE_LANGUAGES)}')
 
@@ -102,6 +109,9 @@ class CloudTTSEngine:
         if mode is None:
             mode = self.default_mode
 
+        # Normalize deprecated mode names ('conference' → 'face_to_face')
+        mode = self._DEPRECATED_MODE_ALIASES.get(mode, mode)
+
         print(f'[CloudTTS] Synthesize: lang={language} mode={mode} gender={voice_gender}')
 
         try:
@@ -111,14 +121,15 @@ class CloudTTSEngine:
                 if result:
                     return result
 
-            # Route: face_to_face → try ElevenLabs for premium quality
+            # Route: face_to_face (tourist mode) → try ElevenLabs for premium quality
             if mode == 'face_to_face' and self.elevenlabs_client:
                 voice_id = _ELEVENLABS_VOICES.get(voice_gender, _ELEVENLABS_VOICES['female'])
                 result = self._synthesize_elevenlabs(text, language, voice_id, speed)
                 if result:
                     return result
 
-            # Route: conference or fallback → OpenAI TTS
+            # Route: pro mode (Virtual Audio Driver, call centers) → OpenAI TTS for low latency
+            # Route: any fallback → OpenAI TTS
             if self.openai_client:
                 result = self._synthesize_openai(text, language, voice_gender, speed)
                 if result:

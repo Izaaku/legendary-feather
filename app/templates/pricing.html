@@ -1,0 +1,1120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pricing — Legendary Feather</title>
+<meta name="description" content="Real-time AI translation pricing for travelers, expats, contact centers and global teams. Pay only for what you need.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --gold:        #D4A843;
+  --gold-l:      #EEC96A;
+  --gold-ll:     #F7DFA0;
+  --gold-dim:    rgba(212,168,67,0.15);
+  --gold-glow:   rgba(212,168,67,0.35);
+  --bg:          #000000;
+  --bg2:         #0A0A0A;
+  --bg3:         #141414;
+  --bg-card:     #0D0D0D;
+  --border:      rgba(212,168,67,0.20);
+  --border-soft: rgba(255,255,255,0.07);
+  --text:        #EAE4D8;
+  --text-sub:    #A0A0A0;
+  --text-muted:  #5A5A5A;
+  --green:       #6FCF97;
+  --radius:      16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; }
+body {
+  min-height: 100vh;
+  background-image:
+    radial-gradient(ellipse at top, rgba(212,168,67,0.08), transparent 60%),
+    radial-gradient(circle at 80% 20%, rgba(212,168,67,0.04), transparent 40%);
+}
+a { color: var(--gold-l); text-decoration: none; }
+a:hover { color: var(--gold-ll); }
+
+/* ── Header ──────────────────────────────── */
+.nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px clamp(20px, 5vw, 60px);
+  border-bottom: 1px solid var(--border-soft);
+  position: sticky; top: 0; backdrop-filter: blur(12px);
+  background: rgba(0,0,0,0.7); z-index: 50;
+}
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px; font-weight: 600; color: var(--gold-l);
+  letter-spacing: 0.5px;
+}
+.logo-mark {
+  width: 28px; height: 28px;
+  background: radial-gradient(circle, var(--gold-l), var(--gold) 70%);
+  border-radius: 50%;
+  box-shadow: 0 0 18px var(--gold-glow);
+}
+.nav-links { display: flex; gap: 28px; align-items: center; }
+.nav-links a { color: var(--text-sub); font-size: 14px; font-weight: 500; }
+.nav-links a:hover { color: var(--gold-l); }
+.nav-cta {
+  padding: 9px 18px; border: 1px solid var(--gold);
+  border-radius: 100px; color: var(--gold-l) !important;
+  font-size: 14px; font-weight: 500;
+  transition: all 0.2s;
+}
+.nav-cta:hover { background: var(--gold-dim); }
+
+/* ── Hero ────────────────────────────────── */
+.hero {
+  text-align: center;
+  padding: 80px clamp(20px, 5vw, 60px) 40px;
+}
+.hero h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(42px, 6vw, 68px);
+  font-weight: 500;
+  line-height: 1.1;
+  margin-bottom: 18px;
+  color: var(--text);
+}
+.hero h1 em {
+  font-style: italic;
+  background: linear-gradient(135deg, var(--gold-ll), var(--gold));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero p {
+  font-size: clamp(16px, 1.6vw, 19px);
+  color: var(--text-sub);
+  max-width: 660px; margin: 0 auto 40px;
+  line-height: 1.6;
+}
+
+/* ── Toggle (Travelers / Business) ───────── */
+.toggle-row {
+  display: flex; justify-content: center; gap: 0;
+  margin: 0 auto 28px;
+  padding: 5px; border: 1px solid var(--border);
+  border-radius: 100px; max-width: max-content;
+  background: var(--bg2);
+}
+.toggle-btn {
+  padding: 12px 28px; border: none; background: transparent;
+  color: var(--text-sub); font-family: 'Outfit', sans-serif;
+  font-size: 15px; font-weight: 500; cursor: pointer;
+  border-radius: 100px; transition: all 0.25s;
+  display: flex; align-items: center; gap: 8px;
+}
+.toggle-btn.active {
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  color: #000; font-weight: 600;
+  box-shadow: 0 0 20px var(--gold-glow);
+}
+.toggle-btn:not(.active):hover { color: var(--gold-l); }
+
+/* ── Currency switcher ───────────────────── */
+.currency-row {
+  display: flex; justify-content: center; gap: 14px;
+  margin-bottom: 50px; align-items: center;
+}
+.currency-row label { color: var(--text-muted); font-size: 13px; }
+.currency-pill {
+  padding: 5px 14px; border-radius: 100px; cursor: pointer;
+  border: 1px solid var(--border-soft);
+  color: var(--text-sub); font-size: 13px; font-weight: 500;
+  background: transparent; transition: all 0.2s;
+}
+.currency-pill.active {
+  border-color: var(--gold);
+  color: var(--gold-l);
+  background: var(--gold-dim);
+}
+
+/* ── Plans grid ──────────────────────────── */
+.plans-section { display: none; padding: 0 clamp(20px, 5vw, 60px) 80px; }
+.plans-section.active { display: block; }
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 22px; max-width: 1280px; margin: 0 auto;
+}
+
+.plan-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  display: flex; flex-direction: column;
+  position: relative;
+  transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+.plan-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--border);
+  box-shadow: 0 20px 60px -20px var(--gold-glow);
+}
+.plan-card.highlight {
+  border-color: var(--gold);
+  box-shadow: 0 0 40px -10px var(--gold-glow);
+}
+.plan-card.highlight::before {
+  content: 'MOST POPULAR';
+  position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  color: #000; padding: 4px 14px; border-radius: 100px;
+  font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+}
+
+.plan-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px; font-weight: 600; color: var(--text);
+  margin-bottom: 4px;
+}
+.plan-tagline {
+  font-size: 13px; color: var(--text-sub);
+  margin-bottom: 22px; min-height: 36px; line-height: 1.4;
+}
+.plan-price {
+  display: flex; align-items: baseline; gap: 6px;
+  margin-bottom: 6px;
+}
+.plan-price-amount {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 44px; font-weight: 600; color: var(--gold-l);
+  line-height: 1;
+}
+.plan-price-currency { font-size: 16px; color: var(--text-sub); }
+.plan-price-period { font-size: 14px; color: var(--text-muted); }
+.plan-price-custom {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 32px; color: var(--gold-l); font-weight: 600;
+  font-style: italic;
+}
+.plan-meta {
+  font-size: 12px; color: var(--text-muted);
+  margin-bottom: 24px; min-height: 18px;
+}
+
+.plan-features {
+  list-style: none; margin: 0 0 28px; padding: 0;
+  flex-grow: 1;
+}
+.plan-features li {
+  padding: 8px 0 8px 26px;
+  font-size: 14px; color: var(--text);
+  position: relative;
+  border-bottom: 1px solid var(--border-soft);
+  line-height: 1.5;
+}
+.plan-features li:last-child { border-bottom: none; }
+.plan-features li::before {
+  content: '✓'; position: absolute; left: 0; top: 8px;
+  color: var(--gold); font-weight: 700;
+}
+
+.plan-cta {
+  padding: 13px 22px; border-radius: 100px;
+  font-family: 'Outfit', sans-serif; font-size: 14px;
+  font-weight: 600; cursor: pointer; text-align: center;
+  text-decoration: none; display: block;
+  transition: all 0.25s;
+  letter-spacing: 0.3px;
+}
+.plan-cta-primary {
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  color: #000; border: none;
+}
+.plan-cta-primary:hover {
+  box-shadow: 0 8px 24px -6px var(--gold-glow);
+  transform: translateY(-1px);
+}
+.plan-cta-ghost {
+  background: transparent; color: var(--gold-l);
+  border: 1px solid var(--gold);
+}
+.plan-cta-ghost:hover { background: var(--gold-dim); }
+
+/* ── Social proof / Use cases ────────────── */
+.use-cases {
+  padding: 80px clamp(20px, 5vw, 60px) 60px;
+  background: linear-gradient(180deg, transparent, rgba(212,168,67,0.03));
+  border-top: 1px solid var(--border-soft);
+}
+.use-cases h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(32px, 4vw, 44px);
+  text-align: center; margin-bottom: 16px; font-weight: 500;
+}
+.use-cases h2 em {
+  font-style: italic; color: var(--gold-l);
+}
+.use-cases-sub {
+  text-align: center; color: var(--text-sub);
+  max-width: 620px; margin: 0 auto 50px;
+  font-size: 16px; line-height: 1.6;
+}
+.use-cases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  max-width: 1100px; margin: 0 auto;
+}
+.use-case {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 24px;
+}
+.use-case-icon {
+  width: 38px; height: 38px;
+  background: var(--gold-dim);
+  color: var(--gold-l);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 10px; font-size: 18px; margin-bottom: 14px;
+}
+.use-case-title {
+  font-weight: 600; color: var(--text);
+  font-size: 15px; margin-bottom: 6px;
+}
+.use-case-desc {
+  font-size: 13px; color: var(--text-sub); line-height: 1.5;
+}
+
+/* ── FAQ ─────────────────────────────────── */
+.faq {
+  padding: 60px clamp(20px, 5vw, 60px);
+  max-width: 800px; margin: 0 auto;
+}
+.faq h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(32px, 4vw, 44px);
+  text-align: center; margin-bottom: 40px; font-weight: 500;
+}
+.faq-item {
+  border-bottom: 1px solid var(--border-soft);
+  padding: 20px 0;
+}
+.faq-q {
+  font-weight: 500; color: var(--text); font-size: 16px;
+  cursor: pointer; padding-right: 30px; position: relative;
+  list-style: none;
+}
+.faq-q::after {
+  content: '+'; position: absolute; right: 0; top: -2px;
+  font-size: 22px; color: var(--gold); transition: transform 0.2s;
+}
+details[open] .faq-q::after { transform: rotate(45deg); }
+.faq-a {
+  margin-top: 12px; color: var(--text-sub);
+  font-size: 14px; line-height: 1.7;
+}
+
+/* ── Footer ──────────────────────────────── */
+.footer {
+  text-align: center; padding: 40px 20px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-muted); font-size: 13px;
+}
+.footer a { color: var(--text-sub); margin: 0 12px; }
+
+/* ── Modal (Talk to Sales) ───────────────── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(6px);
+  z-index: 100; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 100%; max-width: 480px;
+  padding: 36px 32px; position: relative;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-close {
+  position: absolute; top: 14px; right: 18px;
+  background: none; border: none; color: var(--text-muted);
+  font-size: 28px; cursor: pointer; line-height: 1;
+}
+.modal-close:hover { color: var(--gold-l); }
+.modal h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 30px; margin-bottom: 6px; font-weight: 500;
+}
+.modal h3 em { font-style: italic; color: var(--gold-l); }
+.modal p.modal-sub {
+  color: var(--text-sub); font-size: 14px;
+  margin-bottom: 24px; line-height: 1.5;
+}
+.form-row { margin-bottom: 14px; }
+.form-row label {
+  display: block; font-size: 12px; color: var(--text-sub);
+  margin-bottom: 5px; letter-spacing: 0.3px;
+}
+.form-row input, .form-row select, .form-row textarea {
+  width: 100%; padding: 11px 14px;
+  background: var(--bg3); color: var(--text);
+  border: 1px solid var(--border-soft); border-radius: 10px;
+  font-family: 'Outfit', sans-serif; font-size: 14px;
+  transition: border-color 0.2s;
+}
+.form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+  outline: none; border-color: var(--gold);
+}
+.form-row textarea { min-height: 90px; resize: vertical; }
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-submit {
+  width: 100%; margin-top: 8px;
+  padding: 13px; border: none; border-radius: 100px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  color: #000; font-weight: 600; font-size: 15px;
+  cursor: pointer; transition: all 0.2s;
+}
+.form-submit:hover { box-shadow: 0 8px 24px -6px var(--gold-glow); transform: translateY(-1px); }
+.form-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.form-status {
+  margin-top: 14px; padding: 10px; border-radius: 8px;
+  font-size: 13px; text-align: center; display: none;
+}
+.form-status.success { display: block; background: rgba(111,207,151,0.12); color: var(--green); }
+.form-status.error   { display: block; background: rgba(255,90,90,0.12); color: #FF8888; }
+
+/* ── ROI Calculator (Business section only) ── */
+.roi-section {
+  padding: 60px clamp(20px, 5vw, 60px) 20px;
+}
+.roi-card {
+  max-width: 1100px; margin: 0 auto;
+  background: linear-gradient(180deg, var(--bg-card), rgba(212,168,67,0.04));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 40px clamp(24px, 4vw, 48px);
+  position: relative;
+  overflow: hidden;
+}
+.roi-card::before {
+  content: ''; position: absolute; inset: -1px;
+  background: linear-gradient(135deg, transparent 50%, var(--gold-glow));
+  border-radius: var(--radius); opacity: 0.15; pointer-events: none;
+}
+.roi-header {
+  text-align: center; margin-bottom: 36px; position: relative;
+}
+.roi-eyebrow {
+  display: inline-block; padding: 4px 12px;
+  background: var(--gold-dim); color: var(--gold-l);
+  border-radius: 100px; font-size: 11px;
+  font-weight: 600; letter-spacing: 1.2px; margin-bottom: 14px;
+}
+.roi-header h2 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(28px, 3.6vw, 38px); font-weight: 500;
+  margin-bottom: 8px;
+}
+.roi-header h2 em { font-style: italic; color: var(--gold-l); }
+.roi-header p {
+  color: var(--text-sub); font-size: 14px; max-width: 540px; margin: 0 auto;
+}
+
+.roi-grid {
+  display: grid; gap: 28px;
+  grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr);
+  align-items: start;
+  position: relative;
+}
+.roi-inputs { display: flex; flex-direction: column; gap: 18px; }
+.roi-input {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.roi-input label {
+  font-size: 12px; color: var(--text-sub);
+  font-weight: 500; letter-spacing: 0.3px;
+}
+.roi-input .label-help {
+  font-size: 11px; color: var(--text-muted); font-weight: 400;
+}
+.roi-input input[type="number"], .roi-input select {
+  padding: 11px 14px; background: var(--bg3); color: var(--text);
+  border: 1px solid var(--border-soft); border-radius: 10px;
+  font-family: 'Outfit', sans-serif; font-size: 14px;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.roi-input input[type="number"]:focus, .roi-input select:focus {
+  outline: none; border-color: var(--gold);
+}
+.roi-slider-wrap { display: flex; align-items: center; gap: 14px; }
+.roi-slider-wrap input[type="range"] {
+  flex: 1; accent-color: var(--gold);
+  height: 4px;
+}
+.roi-slider-wrap .roi-slider-value {
+  font-family: 'Cormorant Garamond', serif;
+  color: var(--gold-l); font-size: 22px; font-weight: 600;
+  min-width: 60px; text-align: right;
+}
+
+.roi-output {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.roi-out-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.roi-out-row:last-child { border-bottom: none; padding-bottom: 0; }
+.roi-out-label { color: var(--text-sub); font-size: 13px; }
+.roi-out-value {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px; color: var(--text); font-weight: 600;
+}
+.roi-out-row.hero {
+  padding: 16px; margin: 4px -8px;
+  background: linear-gradient(135deg, var(--gold-dim), transparent);
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+}
+.roi-out-row.hero .roi-out-label {
+  color: var(--gold-l); font-weight: 600; font-size: 12px;
+  letter-spacing: 0.8px; text-transform: uppercase;
+}
+.roi-out-row.hero .roi-out-value {
+  font-size: 32px; color: var(--gold-l);
+}
+.roi-cta-row {
+  text-align: center; margin-top: 24px;
+}
+.roi-cta-row button {
+  background: linear-gradient(135deg, var(--gold), var(--gold-l));
+  color: #000; border: none;
+  padding: 13px 32px; border-radius: 100px;
+  font-family: 'Outfit', sans-serif; font-size: 14px;
+  font-weight: 600; cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: all 0.25s;
+}
+.roi-cta-row button:hover {
+  box-shadow: 0 8px 24px -6px var(--gold-glow);
+  transform: translateY(-1px);
+}
+.roi-disclaimer {
+  font-size: 11px; color: var(--text-muted);
+  text-align: center; margin-top: 16px; line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .roi-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .nav-links a:not(.nav-cta) { display: none; }
+  .form-grid-2 { grid-template-columns: 1fr; }
+  .toggle-btn { padding: 10px 18px; font-size: 14px; }
+  .roi-card { padding: 30px 22px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<nav class="nav">
+  <a href="/" class="logo">
+    <div class="logo-mark"></div>
+    Legendary Feather
+  </a>
+  <div class="nav-links">
+    <a href="/#features">Features</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/faq">FAQ</a>
+    <a href="/auth" class="nav-cta">Sign In</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <h1>Real-time AI translation,<br><em>built for the way you work.</em></h1>
+  <p>Whether you're traveling abroad or running a contact center across three continents, Legendary Feather translates voice in real time. Pay only for what you use.</p>
+
+  <div class="toggle-row" role="tablist" aria-label="Audience">
+    <button class="toggle-btn active" data-section="travelers" id="btn-travelers" role="tab" aria-selected="true">
+      <span>✈️</span> For Travelers
+    </button>
+    <button class="toggle-btn" data-section="business" id="btn-business" role="tab" aria-selected="false">
+      <span>📞</span> For Contact Centers & Business
+    </button>
+  </div>
+
+  <div class="currency-row">
+    <label>Currency:</label>
+    <button class="currency-pill" data-currency="eur">EUR €</button>
+    <button class="currency-pill" data-currency="usd">USD $</button>
+  </div>
+</section>
+
+<!-- ─────────── TRAVELERS PLANS ─────────── -->
+<section class="plans-section active" id="section-travelers" role="tabpanel" aria-labelledby="btn-travelers">
+  <div class="plans-grid" id="grid-travelers">
+    {% for p in traveler_plans %}
+    <div class="plan-card {{ 'highlight' if p.get('highlight') else '' }}" data-plan="{{ p.id }}">
+      <div class="plan-name">{{ p.name }}</div>
+      <div class="plan-tagline">{{ p.tagline }}</div>
+      <div class="plan-price">
+        {% if p.prices.eur is none and p.prices.usd is none %}
+          <span class="plan-price-custom">Custom</span>
+        {% elif p.billing == 'usage' %}
+          <span class="plan-price-amount" data-price-eur="{{ p.prices.eur }}" data-price-usd="{{ p.prices.usd }}">€{{ '%.2f'|format(p.prices.eur) }}</span>
+          <span class="plan-price-period">/min</span>
+        {% else %}
+          <span class="plan-price-currency" data-cur-symbol>€</span>
+          <span class="plan-price-amount" data-price-eur="{{ p.prices.eur }}" data-price-usd="{{ p.prices.usd }}">{{ '%.2f'|format(p.prices.eur) if p.prices.eur is not none else '0' }}</span>
+          {% if p.billing == 'one_time' %}
+            <span class="plan-price-period">/ {{ p.duration_days }} days</span>
+          {% elif p.billing == 'monthly' %}
+            <span class="plan-price-period">/ month</span>
+          {% endif %}
+        {% endif %}
+      </div>
+      <div class="plan-meta">
+        {% if p.minutes_openai > 0 %}{{ p.minutes_openai }} minutes / month{% endif %}
+        {% if p.minutes_elevenlabs > 0 %} + {{ p.minutes_elevenlabs }} premium{% endif %}
+      </div>
+      <ul class="plan-features">
+        {% for f in p.features %}<li>{{ f }}</li>{% endfor %}
+      </ul>
+      {% if p.id == 'free' %}
+        <a href="/auth?plan=free" class="plan-cta plan-cta-ghost">Start free</a>
+      {% else %}
+        <a href="/checkout?plan={{ p.id }}" class="plan-cta plan-cta-primary">Get {{ p.name }}</a>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- ─────────── BUSINESS PLANS ─────────── -->
+<section class="plans-section" id="section-business" role="tabpanel" aria-labelledby="btn-business">
+
+  <!-- ── ROI Calculator ── -->
+  <div class="roi-section">
+    <div class="roi-card">
+      <div class="roi-header">
+        <span class="roi-eyebrow">ROI CALCULATOR</span>
+        <h2>How much would you <em>save?</em></h2>
+        <p>Move your team from US-based agents to offshore + Legendary Feather. See your monthly savings in real time.</p>
+      </div>
+
+      <div class="roi-grid">
+        <!-- Inputs -->
+        <div class="roi-inputs">
+          <div class="roi-input">
+            <label>How many agents do you need?</label>
+            <div class="roi-slider-wrap">
+              <input type="range" id="roi-agents" min="1" max="500" value="50" step="1">
+              <span class="roi-slider-value" id="roi-agents-val">50</span>
+            </div>
+          </div>
+
+          <div class="roi-input">
+            <label>Current setup
+              <span class="label-help">— what you pay today per agent</span>
+            </label>
+            <select id="roi-current">
+              <option value="32" selected>US premium agent — $32/hr (sales, healthcare, financial)</option>
+              <option value="22">US mid-tier agent — $22/hr (general support)</option>
+              <option value="18">US entry-level — $18/hr (Tier 1 support)</option>
+              <option value="15">Bilingual US-based — $15/hr</option>
+            </select>
+          </div>
+
+          <div class="roi-input">
+            <label>New setup with Legendary Feather
+              <span class="label-help">— offshore agent + your software stack</span>
+            </label>
+            <select id="roi-offshore">
+              <option value="4" selected>Filipinas — $4/hr</option>
+              <option value="4">India — $4/hr</option>
+              <option value="6">México — $6/hr</option>
+              <option value="5">Colombia — $5/hr</option>
+              <option value="7">Argentina — $7/hr</option>
+              <option value="5">Egipto — $5/hr</option>
+              <option value="3">Bangladesh — $3/hr</option>
+            </select>
+          </div>
+
+          <div class="roi-input">
+            <label>Hours per agent / month
+              <span class="label-help">— full-time = 160h</span>
+            </label>
+            <input type="number" id="roi-hours" value="160" min="20" max="240" step="20">
+          </div>
+
+          <div class="roi-input">
+            <label>Legendary Feather plan</label>
+            <select id="roi-plan">
+              <option value="29" data-name="Solo">Solo — $29 / agent / mo (1+ agents)</option>
+              <option value="89" data-name="Team">Team — $89 / agent / mo (3+ agents)</option>
+              <option value="249" data-name="Scale" selected>Scale — $249 / agent / mo (10+ agents)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Output -->
+        <div class="roi-output" aria-live="polite">
+          <div class="roi-out-row">
+            <span class="roi-out-label">Current cost / month</span>
+            <span class="roi-out-value" id="roi-out-current">—</span>
+          </div>
+          <div class="roi-out-row">
+            <span class="roi-out-label">New cost / month <small style="color:var(--text-muted);">(offshore + Legendary Feather)</small></span>
+            <span class="roi-out-value" id="roi-out-new">—</span>
+          </div>
+          <div class="roi-out-row hero">
+            <span class="roi-out-label">Monthly savings</span>
+            <span class="roi-out-value" id="roi-out-save-month">—</span>
+          </div>
+          <div class="roi-out-row">
+            <span class="roi-out-label">Annual savings</span>
+            <span class="roi-out-value" id="roi-out-save-year">—</span>
+          </div>
+          <div class="roi-out-row">
+            <span class="roi-out-label">% saved vs current</span>
+            <span class="roi-out-value" id="roi-out-pct">—</span>
+          </div>
+          <div class="roi-out-row">
+            <span class="roi-out-label">Payback period</span>
+            <span class="roi-out-value" id="roi-out-payback">—</span>
+          </div>
+
+          <div class="roi-cta-row">
+            <button type="button" id="roi-cta">Get a tailored proposal →</button>
+          </div>
+          <div class="roi-disclaimer">
+            Estimate uses 12 USD/EUR rate of 1:1 for simplicity. Actual savings depend on your country, taxes, BPO markups, and SLA requirements. The Legendary Feather subscription is billed in USD for Business tiers.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Plans grid ── -->
+  <div class="plans-grid" id="grid-business">
+    {% for p in business_plans %}
+    <div class="plan-card {{ 'highlight' if p.get('highlight') else '' }}" data-plan="{{ p.id }}">
+      <div class="plan-name">{{ p.name }}</div>
+      <div class="plan-tagline">{{ p.tagline }}</div>
+      <div class="plan-price">
+        {% if p.prices.usd is none %}
+          <span class="plan-price-custom">Talk to Sales</span>
+        {% else %}
+          <span class="plan-price-currency" data-cur-symbol>$</span>
+          <span class="plan-price-amount" data-price-eur="{{ p.prices.eur }}" data-price-usd="{{ p.prices.usd }}">{{ '%.0f'|format(p.prices.usd) }}</span>
+          <span class="plan-price-period">/ {% if p.per_seat %}agent ·{% endif %} month</span>
+        {% endif %}
+      </div>
+      <div class="plan-meta">
+        {% if p.min_seats and p.min_seats > 1 %}Min {{ p.min_seats }} agents · {% endif %}
+        {% if p.minutes_openai == -1 %}Unlimited minutes
+        {% elif p.minutes_openai > 0 %}{{ "{:,}".format(p.minutes_openai) }} min / agent / mo
+        {% endif %}
+      </div>
+      <ul class="plan-features">
+        {% for f in p.features %}<li>{{ f }}</li>{% endfor %}
+      </ul>
+      {% if p.id == 'enterprise' %}
+        <button type="button" class="plan-cta plan-cta-primary"
+                onclick="openSalesModal('enterprise')">Talk to Sales</button>
+      {% elif p.id == 'scale' %}
+        <button type="button" class="plan-cta plan-cta-primary"
+                onclick="openSalesModal('scale')">Request demo</button>
+      {% else %}
+        <a href="/checkout?plan={{ p.id }}" class="plan-cta plan-cta-primary">Start with {{ p.name }}</a>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- ─────────── USE CASES ─────────── -->
+<section class="use-cases">
+  <h2>Who's already <em>using it</em></h2>
+  <p class="use-cases-sub">From a tourist in Tokyo to a 200-agent BPO in Manila serving US customers — the same engine, tuned for the job.</p>
+
+  <div class="use-cases-grid">
+    <div class="use-case">
+      <div class="use-case-icon">📞</div>
+      <div class="use-case-title">Contact centers (BPO)</div>
+      <div class="use-case-desc">Filipino, Indian, Mexican agents serving US customers. Cuts CSAT-killing accents and scales global hiring.</div>
+    </div>
+    <div class="use-case">
+      <div class="use-case-icon">🛒</div>
+      <div class="use-case-title">Mercado Libre & Amazon sellers</div>
+      <div class="use-case-desc">Reply to international buyers in their language. Open new markets without hiring native speakers.</div>
+    </div>
+    <div class="use-case">
+      <div class="use-case-icon">💼</div>
+      <div class="use-case-title">B2B sales & recruiters</div>
+      <div class="use-case-desc">Discovery calls in Spanish, demos in English, technical interviews with LATAM talent — all in one tool.</div>
+    </div>
+    <div class="use-case">
+      <div class="use-case-icon">🩺</div>
+      <div class="use-case-title">Telemedicine</div>
+      <div class="use-case-desc">Doctors in LATAM serving Hispanic patients in the US, multilingual triage in real time.</div>
+    </div>
+    <div class="use-case">
+      <div class="use-case-icon">✈️</div>
+      <div class="use-case-title">Travelers & expats</div>
+      <div class="use-case-desc">Order food in Tokyo, see a doctor in Bangkok, settle into a new country before you speak the language.</div>
+    </div>
+    <div class="use-case">
+      <div class="use-case-icon">🏨</div>
+      <div class="use-case-title">Hospitality & tourism</div>
+      <div class="use-case-desc">Hoteliers, guides, drivers in tourist hubs — talk to every guest, not just the ones who speak your language.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────── FAQ ─────────── -->
+<section class="faq">
+  <h2>Frequently asked questions</h2>
+
+  <details class="faq-item">
+    <summary class="faq-q">How does Legendary Feather work for phone calls?</summary>
+    <div class="faq-a">For travelers, the app translates between two people standing face-to-face — you speak, the other person hears the translation through your phone's speaker. For business / contact centers, our Virtual Audio Driver (Windows / Mac) creates a virtual microphone that any softphone — Zoom, Teams, Twilio Flex, Five9, RingCentral — can use, so the customer hears your voice in their language in real time.</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">Can I use the app to translate a regular phone call?</summary>
+    <div class="faq-a">PWAs and mobile apps cannot intercept native phone calls — that's a hard limitation imposed by iOS and Android. For real call translation you need either our Virtual Audio Driver (for desktop softphones) or our upcoming Twilio bridge (for inbound numbers).</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">What's the difference between standard and premium voice minutes?</summary>
+    <div class="faq-a">Standard voice (OpenAI TTS) is fast, low-latency, sounds natural in 100+ languages. Premium voice (ElevenLabs) is hyper-realistic, supports voice cloning so the translation sounds like YOUR voice. Premium minutes are limited per plan because they cost ~5× more — most plans give you a generous quota for the moments that matter (sales demos, important customer calls).</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">Do you offer custom contracts for large BPOs?</summary>
+    <div class="faq-a">Yes — the Enterprise tier covers everything: dedicated deployment in your cloud or an isolated Railway instance, SOC 2 / HIPAA / PCI compliance, custom voice models trained on your audio, integration with your PBX (Twilio Flex, Five9, Genesys), 24/7 phone support, and SLA penalties in contract. Click "Talk to Sales" above and we'll set up a call within 1 business day.</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">Can I cancel anytime?</summary>
+    <div class="faq-a">Yes. Monthly subscriptions cancel at the end of the current billing period — no penalties. The Travel Pass is a one-time purchase that simply expires after 7 days. Enterprise contracts have annual terms with discounted pricing.</div>
+  </details>
+
+  <details class="faq-item">
+    <summary class="faq-q">What if I exceed my monthly minutes?</summary>
+    <div class="faq-a">You can either upgrade your plan or buy add-on minute packs at your plan's overage rate. We never auto-charge or suspend your account without warning — you'll get a notification at 80% usage.</div>
+  </details>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div style="margin-bottom:14px;">
+    <a href="/">Home</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/faq">FAQ</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="mailto:sales@legendaryfeather.com">Contact</a>
+  </div>
+  <div>© Legendary Feather — Real-time AI translation</div>
+</footer>
+
+<!-- ─────────── Talk-to-Sales Modal ─────────── -->
+<div class="modal-overlay" id="salesModal" role="dialog" aria-modal="true" aria-labelledby="salesModalTitle">
+  <div class="modal">
+    <button class="modal-close" type="button" aria-label="Close" onclick="closeSalesModal()">&times;</button>
+    <h3 id="salesModalTitle">Let's <em>talk</em></h3>
+    <p class="modal-sub">Tell us about your team. We'll reach out within 1 business day with a tailored proposal.</p>
+
+    <form id="salesForm" novalidate>
+      <input type="hidden" name="source_plan" id="sf-source" value="enterprise">
+
+      <div class="form-row">
+        <label>Full name *</label>
+        <input type="text" name="name" id="sf-name" required maxlength="200" autocomplete="name">
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label>Work email *</label>
+          <input type="email" name="email" id="sf-email" required maxlength="320" autocomplete="email">
+        </div>
+        <div class="form-row">
+          <label>Company *</label>
+          <input type="text" name="company" id="sf-company" required maxlength="200" autocomplete="organization">
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label>Job title</label>
+          <input type="text" name="job_title" id="sf-title" maxlength="150" placeholder="e.g. VP of Operations">
+        </div>
+        <div class="form-row">
+          <label># of agents / users</label>
+          <input type="text" name="num_agents" id="sf-agents" maxlength="10" placeholder="e.g. 25 or 100+" inputmode="numeric">
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-row">
+          <label>Phone (optional)</label>
+          <input type="tel" name="phone" id="sf-phone" maxlength="50" autocomplete="tel">
+        </div>
+        <div class="form-row">
+          <label>Country</label>
+          <input type="text" name="country" id="sf-country" maxlength="100" autocomplete="country-name">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Tell us about your use case</label>
+        <textarea name="use_case" id="sf-use-case" maxlength="5000"
+          placeholder="What languages? Any softphone we should integrate with (Twilio Flex, Five9, Zoom)? Any compliance needs?"></textarea>
+      </div>
+
+      <button type="submit" class="form-submit" id="sf-submit">Request a tailored proposal</button>
+      <div class="form-status" id="sf-status"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ─────────── Scripts ─────────── -->
+<script>
+(function () {
+  // ── Section toggle ──
+  const sections = {
+    travelers: document.getElementById('section-travelers'),
+    business:  document.getElementById('section-business'),
+  };
+  document.querySelectorAll('.toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.toggle-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      const target = btn.dataset.section;
+      Object.entries(sections).forEach(([key, el]) => el.classList.toggle('active', key === target));
+      // Persist
+      try { localStorage.setItem('lf_pricing_section', target); } catch (e) {}
+    });
+  });
+
+  // Restore last selection
+  try {
+    const saved = localStorage.getItem('lf_pricing_section');
+    if (saved && document.querySelector(`.toggle-btn[data-section="${saved}"]`)) {
+      document.querySelector(`.toggle-btn[data-section="${saved}"]`).click();
+    }
+  } catch (e) {}
+
+  // ── Currency switcher ──
+  const defaultCurrency = '{{ default_currency }}'.toLowerCase();
+  function setCurrency(cur) {
+    document.querySelectorAll('.currency-pill').forEach(p =>
+      p.classList.toggle('active', p.dataset.currency === cur));
+    const symbol = cur === 'usd' ? '$' : '€';
+    document.querySelectorAll('.plan-price-amount').forEach(el => {
+      const v = el.dataset['price' + cur.charAt(0).toUpperCase() + cur.slice(1)];
+      if (v && v !== 'None') {
+        const num = parseFloat(v);
+        el.textContent = num.toFixed(num < 10 ? 2 : 0);
+      }
+    });
+    document.querySelectorAll('[data-cur-symbol]').forEach(el => el.textContent = symbol);
+    try { localStorage.setItem('lf_currency', cur); } catch (e) {}
+  }
+
+  document.querySelectorAll('.currency-pill').forEach(p => {
+    p.addEventListener('click', () => setCurrency(p.dataset.currency));
+  });
+
+  let initialCur = defaultCurrency;
+  try {
+    const saved = localStorage.getItem('lf_currency');
+    if (saved === 'eur' || saved === 'usd') initialCur = saved;
+  } catch (e) {}
+  setCurrency(initialCur);
+
+  // ── Sales modal ──
+  const modal = document.getElementById('salesModal');
+  const form = document.getElementById('salesForm');
+  const status = document.getElementById('sf-status');
+  const submitBtn = document.getElementById('sf-submit');
+
+  window.openSalesModal = function (sourcePlan) {
+    document.getElementById('sf-source').value = sourcePlan || 'enterprise';
+    status.className = 'form-status';
+    status.textContent = '';
+    form.reset();
+    document.getElementById('sf-source').value = sourcePlan || 'enterprise';
+    modal.classList.add('open');
+    setTimeout(() => document.getElementById('sf-name').focus(), 100);
+  };
+  window.closeSalesModal = function () { modal.classList.remove('open'); };
+  modal.addEventListener('click', e => { if (e.target === modal) closeSalesModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSalesModal(); });
+
+  // ── ROI Calculator ──
+  const roi = {
+    agents:    document.getElementById('roi-agents'),
+    agentsVal: document.getElementById('roi-agents-val'),
+    current:   document.getElementById('roi-current'),
+    offshore:  document.getElementById('roi-offshore'),
+    hours:     document.getElementById('roi-hours'),
+    plan:      document.getElementById('roi-plan'),
+    outCurrent:    document.getElementById('roi-out-current'),
+    outNew:        document.getElementById('roi-out-new'),
+    outSaveMonth:  document.getElementById('roi-out-save-month'),
+    outSaveYear:   document.getElementById('roi-out-save-year'),
+    outPct:        document.getElementById('roi-out-pct'),
+    outPayback:    document.getElementById('roi-out-payback'),
+    cta:           document.getElementById('roi-cta'),
+  };
+
+  // Use this for compact USD formatting ($1,234,567 / $1.5M)
+  const fmtUSD = (n) => {
+    if (!isFinite(n)) return '—';
+    if (Math.abs(n) >= 1_000_000) return '$' + (n / 1_000_000).toFixed(2) + 'M';
+    return '$' + Math.round(n).toLocaleString('en-US');
+  };
+
+  function recalcROI() {
+    const agents   = parseInt(roi.agents.value, 10) || 0;
+    const usaRate  = parseFloat(roi.current.value);
+    const offRate  = parseFloat(roi.offshore.value);
+    const hours    = parseInt(roi.hours.value, 10) || 160;
+    const lfFee    = parseFloat(roi.plan.value);
+
+    roi.agentsVal.textContent = agents;
+
+    // Costs
+    const currentMonthly  = agents * usaRate * hours;
+    const offshoreMonthly = agents * offRate * hours;
+    const lfMonthly       = agents * lfFee;
+    const newMonthly      = offshoreMonthly + lfMonthly;
+    const saveMonthly     = currentMonthly - newMonthly;
+    const saveYearly      = saveMonthly * 12;
+    const pct = currentMonthly > 0 ? (saveMonthly / currentMonthly) * 100 : 0;
+
+    // Payback period: how many months until LF subscription pays for itself
+    // Investment = LF monthly cost; return = labor savings (current - offshore)
+    const laborSaving = currentMonthly - offshoreMonthly;
+    const paybackMonths = laborSaving > 0 ? lfMonthly / laborSaving : Infinity;
+
+    roi.outCurrent.textContent   = fmtUSD(currentMonthly);
+    roi.outNew.textContent       = fmtUSD(newMonthly);
+    roi.outSaveMonth.textContent = saveMonthly > 0 ? fmtUSD(saveMonthly) : '$0';
+    roi.outSaveYear.textContent  = saveYearly > 0 ? fmtUSD(saveYearly) : '$0';
+    roi.outPct.textContent       = pct > 0 ? pct.toFixed(0) + '%' : '0%';
+
+    if (!isFinite(paybackMonths) || paybackMonths <= 0) {
+      roi.outPayback.textContent = 'Immediate';
+    } else if (paybackMonths < 1) {
+      roi.outPayback.textContent = '< 1 month';
+    } else {
+      roi.outPayback.textContent = paybackMonths.toFixed(1) + ' months';
+    }
+
+    // Recommend the right tier when agents go up — only if user hasn't manually changed
+    if (!roi.plan.dataset.userTouched) {
+      const recommended = agents >= 10 ? '249'
+                        : agents >= 3  ? '89'
+                        :                '29';
+      if (roi.plan.value !== recommended) {
+        roi.plan.value = recommended;
+        // re-run with new plan once
+        return recalcROI();
+      }
+    }
+  }
+
+  ['input','change'].forEach(ev => {
+    roi.agents.addEventListener(ev, recalcROI);
+    roi.current.addEventListener(ev, recalcROI);
+    roi.offshore.addEventListener(ev, recalcROI);
+    roi.hours.addEventListener(ev, recalcROI);
+  });
+  roi.plan.addEventListener('change', () => {
+    roi.plan.dataset.userTouched = '1';
+    recalcROI();
+  });
+
+  // CTA opens the sales modal pre-loaded with the calculator context
+  roi.cta.addEventListener('click', () => {
+    openSalesModal('pricing_page');
+    // Pre-fill the use_case textarea with the calculator snapshot
+    const planName = roi.plan.options[roi.plan.selectedIndex].dataset.name || 'Scale';
+    const summary = `[ROI Calculator request]
+Agents: ${roi.agents.value}
+Current cost/agent/hr: $${roi.current.value}
+Offshore region: ${roi.offshore.options[roi.offshore.selectedIndex].text}
+Hours/agent/month: ${roi.hours.value}
+Interested in: ${planName} plan
+Estimated monthly savings: ${roi.outSaveMonth.textContent}
+Estimated annual savings: ${roi.outSaveYear.textContent}
+`;
+    const useCaseEl = document.getElementById('sf-use-case');
+    if (useCaseEl) useCaseEl.value = summary;
+    const agentsEl = document.getElementById('sf-agents');
+    if (agentsEl && !agentsEl.value) agentsEl.value = roi.agents.value;
+  });
+
+  recalcROI();
+
+  // ── Form submit ──
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(form).entries());
+    if (!data.name || !data.email || !data.company) {
+      status.className = 'form-status error';
+      status.textContent = 'Please fill in your name, email, and company.';
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending…';
+    try {
+      const resp = await fetch('/api/enterprise-leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const json = await resp.json();
+      if (resp.ok && json.ok) {
+        status.className = 'form-status success';
+        status.textContent = json.message || 'Thanks! We will be in touch.';
+        form.reset();
+        setTimeout(closeSalesModal, 2500);
+      } else {
+        throw new Error(json.error || 'Something went wrong');
+      }
+    } catch (err) {
+      status.className = 'form-status error';
+      status.textContent = err.message + ' — Or email sales@legendaryfeather.com';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Request a tailored proposal';
+    }
+  });
+})();
+</script>
+
+</body>
+</html>

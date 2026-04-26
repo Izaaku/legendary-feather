@@ -7,3 +7,4 @@ from .user import User
 from .subscription import Subscription
 from .conversation import Conversation
 from .voice_profile import VoiceProfile
+from .enterprise_lead import EnterpriseLead
