@@ -63,8 +63,7 @@ PRICING = {
         'languages': 100,
         'per_seat': False,
         'visible': False,
-        'stripe_price_id_eur': None,
-        'stripe_price_id_usd': None,
+        'stripe_price_id': None,  # multi-currency Price ID handles EUR/USD/MXN automatically
         'features': [
             'Unlimited everything',
             'All AI models',
@@ -91,8 +90,7 @@ PRICING = {
         'languages': 100,
         'per_seat': False,
         'visible': True,
-        'stripe_price_id_eur': None,
-        'stripe_price_id_usd': None,
+        'stripe_price_id': None,  # multi-currency Price ID handles EUR/USD/MXN automatically
         'features': [
             '5 minutes / month',
             '100+ languages',
@@ -115,8 +113,7 @@ PRICING = {
         'per_seat': False,
         'visible': True,
         'highlight': True,  # most popular for travelers
-        'stripe_price_id_eur': os.getenv('STRIPE_PRICE_TRAVEL_PASS_EUR'),
-        'stripe_price_id_usd': os.getenv('STRIPE_PRICE_TRAVEL_PASS_USD'),
+        'stripe_price_id': os.getenv('STRIPE_PRICE_TRAVEL_PASS'),
         'features': [
             '100 minutes for 7 days',
             '100+ languages',
@@ -138,8 +135,7 @@ PRICING = {
         'languages': 100,
         'per_seat': False,
         'visible': True,
-        'stripe_price_id_eur': os.getenv('STRIPE_PRICE_TOURIST_EUR'),
-        'stripe_price_id_usd': os.getenv('STRIPE_PRICE_TOURIST_USD'),
+        'stripe_price_id': os.getenv('STRIPE_PRICE_TOURIST'),
         'features': [
             '60 minutes / month',
             '100+ languages',
@@ -161,8 +157,7 @@ PRICING = {
         'languages': 100,
         'per_seat': False,
         'visible': True,
-        'stripe_price_id_eur': os.getenv('STRIPE_PRICE_TOURIST_PRO_EUR'),
-        'stripe_price_id_usd': os.getenv('STRIPE_PRICE_TOURIST_PRO_USD'),
+        'stripe_price_id': os.getenv('STRIPE_PRICE_TOURIST_PRO'),
         'features': [
             '150 standard min + 30 premium min / month',
             '100+ languages with regional dialects',
@@ -190,8 +185,7 @@ PRICING = {
             {'eur': 25, 'usd': 27, 'minutes': 110},
             {'eur': 50, 'usd': 55, 'minutes': 230},
         ],
-        'stripe_price_id_eur': os.getenv('STRIPE_PRICE_PAYG_EUR'),
-        'stripe_price_id_usd': os.getenv('STRIPE_PRICE_PAYG_USD'),
+        'stripe_price_id': os.getenv('STRIPE_PRICE_PAYG'),
         'features': [
             '€0.25 / $0.27 per minute',
             'Buy credits in packs (€10 = 40 min)',
@@ -219,8 +213,7 @@ PRICING = {
         'voice_cloning_profiles': 3,
         'languages': 16,
         'visible': True,
-        'stripe_price_id_usd': os.getenv('STRIPE_PRICE_SOLO_USD'),
-        'stripe_price_id_eur': os.getenv('STRIPE_PRICE_SOLO_EUR'),
+        'stripe_price_id': os.getenv('STRIPE_PRICE_SOLO'),
         'features': [
             '600 minutes / month',
             'Virtual Audio Driver (Windows / Mac)',
@@ -245,8 +238,7 @@ PRICING = {
         'languages': 30,
         'visible': True,
         'highlight': True,  # most popular for business
-        'stripe_price_id_usd': os.getenv('STRIPE_PRICE_TEAM_USD'),
-        'stripe_price_id_eur': os.getenv('STRIPE_PRICE_TEAM_EUR'),
+        'stripe_price_id': os.getenv('STRIPE_PRICE_TEAM'),
         'features': [
             '1,500 standard min + 50 premium min per agent',
             'Virtual Audio Driver (Windows / Mac)',
@@ -272,8 +264,7 @@ PRICING = {
         'voice_cloning_profiles': -1,
         'languages': 50,
         'visible': True,
-        'stripe_price_id_usd': os.getenv('STRIPE_PRICE_SCALE_USD'),
-        'stripe_price_id_eur': os.getenv('STRIPE_PRICE_SCALE_EUR'),
+        'stripe_price_id': os.getenv('STRIPE_PRICE_SCALE'),
         'features': [
             '6,000 standard min + 200 premium min per agent',
             'Voice cloning of agent (premium quality)',
@@ -300,8 +291,7 @@ PRICING = {
         'voice_cloning_profiles': -1,
         'languages': 100,
         'visible': True,
-        'stripe_price_id_usd': None,
-        'stripe_price_id_eur': None,
+        'stripe_price_id': None,  # Enterprise = custom contract, no Stripe Price ID
         'features': [
             'Custom pricing for 50+ agents',
             'Dedicated deployment (your cloud or isolated Railway)',
@@ -337,13 +327,17 @@ def get_plan_price(plan_id, currency='eur'):
     return plan.get('prices', {}).get(currency)
 
 
-def get_stripe_price_id(plan_id, currency='eur'):
-    """Get the Stripe Price ID for a plan in the requested currency."""
+def get_stripe_price_id(plan_id, currency=None):
+    """Get the Stripe Price ID for a plan.
+
+    Stripe MX uses multi-currency Prices: a single Price ID handles MXN/EUR/USD
+    automatically based on the customer's location. The `currency` argument is
+    accepted for backward compatibility but ignored.
+    """
     plan = PRICING.get(plan_id)
     if not plan:
         return None
-    key = f'stripe_price_id_{currency}'
-    return plan.get(key)
+    return plan.get('stripe_price_id')
 
 
 # ─── Backward-compatibility shims ───────────────────────────────────────────
@@ -365,9 +359,10 @@ def _inject_legacy_keys(plans):
             plan['currency'] = 'eur' if prices.get('eur') is not None else 'usd'
         if 'extra_rate' not in plan:
             plan['extra_rate'] = 0.15  # default overage rate (legacy default)
+        # stripe_price_id is now set per-plan as a single multi-currency ID
+        # (no longer split by currency suffix)
         if 'stripe_price_id' not in plan:
-            plan['stripe_price_id'] = (plan.get('stripe_price_id_eur')
-                                        or plan.get('stripe_price_id_usd'))
+            plan['stripe_price_id'] = None
 
 
 _inject_legacy_keys(PRICING)
