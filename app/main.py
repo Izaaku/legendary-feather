@@ -1,6 +1,20 @@
 """Legendary Feather Universal Translator - Main Entry Point."""
-import sys
+# ─────────────────────────────────────────────────────────────────────────
+# CRITICAL: eventlet monkey-patch MUST run before importing anything that
+# uses sockets, ssl, threading or DNS — otherwise outbound calls (Stripe,
+# OpenAI, ElevenLabs, etc.) fail with "Failed to resolve api.stripe.com".
+# Gunicorn launches us with --worker-class eventlet, so without this patch
+# eventlet's green threads bypass the standard library DNS resolver.
+# ─────────────────────────────────────────────────────────────────────────
 import os
+if os.name != 'nt':  # only patch on Linux/Mac (Railway), not on Windows dev
+    try:
+        import eventlet
+        eventlet.monkey_patch()
+    except ImportError:
+        pass
+
+import sys
 import re
 import time
 from collections import defaultdict
