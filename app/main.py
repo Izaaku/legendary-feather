@@ -1,17 +1,18 @@
 """Legendary Feather Universal Translator - Main Entry Point."""
 # ─────────────────────────────────────────────────────────────────────────
-# CRITICAL: eventlet monkey-patch MUST run before importing anything that
-# uses sockets, ssl, threading or DNS — otherwise outbound calls (Stripe,
-# OpenAI, ElevenLabs, etc.) fail with "Failed to resolve api.stripe.com".
-# Gunicorn launches us with --worker-class eventlet, so without this patch
-# eventlet's green threads bypass the standard library DNS resolver.
+# CRITICAL: gevent monkey-patch MUST run before any other import that uses
+# sockets / SSL / threading / DNS — otherwise outbound HTTPS calls (Stripe,
+# OpenAI, ElevenLabs) fail with "Failed to resolve api.stripe.com".
+# We use gevent (not eventlet) because gevent's DNS resolver is more
+# reliable in production (uses dnspython, no green-thread DNS races).
 # ─────────────────────────────────────────────────────────────────────────
 import os
-if os.name != 'nt':  # only patch on Linux/Mac (Railway), not on Windows dev
+if os.name != 'nt':  # only patch on Linux (Railway). Skip on Windows dev.
     try:
-        import eventlet
-        eventlet.monkey_patch()
+        from gevent import monkey
+        monkey.patch_all()
     except ImportError:
+        # gevent not installed locally — fall back silently (dev mode)
         pass
 
 import sys
@@ -52,7 +53,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 # ── CORS — restrict to allowed origins ──────────────
 ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', '*').split(',')
 CORS(app, resources={r"/api/*": {"origins": ALLOWED_ORIGINS}})
-async_mode = 'eventlet' if os.name != 'nt' else 'threading'
+async_mode = 'gevent' if os.name != 'nt' else 'threading'
 socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS, async_mode=async_mode)
 
 # Register route blueprints
