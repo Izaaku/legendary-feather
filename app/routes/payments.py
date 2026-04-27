@@ -16,7 +16,7 @@ stripe_svc = StripeService()
 @payments_bp.route('/create-checkout-session', methods=['POST'])
 def create_checkout_session():
     """Create a Stripe Checkout Session."""
-    data = request.get_json()
+    data = request.get_json() or {}
     plan = data.get('plan', 'basic')
     email = data.get('email')
     name = data.get('name', '')
@@ -25,20 +25,35 @@ def create_checkout_session():
         return jsonify({'error': 'Email is required'}), 400
 
     if plan not in PRICING:
-        return jsonify({'error': 'Invalid plan'}), 400
+        return jsonify({'error': f'Invalid plan: {plan}'}), 400
+
+    plan_obj = PRICING[plan]
+    if not plan_obj.get('stripe_price_id'):
+        # Most common cause: env var STRIPE_PRICE_<PLAN> not set in Railway
+        env_var_name = f'STRIPE_PRICE_{plan.upper()}'
+        return jsonify({
+            'error': f'Plan "{plan}" has no Stripe Price ID configured. '
+                     f'Set the env var {env_var_name} in Railway.'
+        }), 500
 
     app_url = os.getenv('APP_URL', 'http://localhost:5000')
 
-    session = stripe_svc.create_checkout_session(
-        plan_name=plan,
-        customer_email=email,
-        success_url=f'{app_url}/success',
-        cancel_url=f'{app_url}/pricing'
-    )
+    try:
+        session = stripe_svc.create_checkout_session(
+            plan_name=plan,
+            customer_email=email,
+            success_url=f'{app_url}/success',
+            cancel_url=f'{app_url}/pricing'
+        )
+    except Exception as e:
+        # Surface the real Stripe error to the client so we can debug fast
+        return jsonify({'error': f'Stripe error: {str(e)}'}), 500
 
     if session:
         return jsonify({'url': session.url, 'session_id': session.id})
-    return jsonify({'error': 'Failed to create checkout session'}), 500
+    return jsonify({
+        'error': 'Stripe session was not created. Check Railway logs for [Stripe] error lines.'
+    }), 500
 
 
 @payments_bp.route('/webhook', methods=['POST'])

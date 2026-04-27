@@ -71,8 +71,9 @@ class StripeService:
             session = self.stripe.checkout.Session.create(**params)
             return session
         except Exception as e:
+            # Log AND re-raise so the route handler can surface the real cause
             print(f"[Stripe] Error creating checkout session for '{plan_name}': {e}")
-            return None
+            raise
 
     def create_payment_intent(self, amount_cents, currency='eur', customer_id=None):
         """Create a payment intent for one-time charges (pay-as-you-go)."""
