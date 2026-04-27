@@ -10,10 +10,44 @@ class Config:
     DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///legendary_feather.db')
     APP_URL = os.getenv('APP_URL', 'http://localhost:5000')
 
-    # Stripe
-    STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
-    STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY')
-    STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET')
+    # Stripe — supports test/live toggle via STRIPE_MODE.
+    # If you set STRIPE_MODE=test, the code reads STRIPE_*_TEST vars.
+    # If you set STRIPE_MODE=live, the code reads STRIPE_*_LIVE vars.
+    # Both sets of keys can live in Railway at the same time — just flip
+    # STRIPE_MODE to alternate without re-entering keys.
+    # Backwards-compat: if STRIPE_MODE is not set, fall back to the un-suffixed
+    # STRIPE_SECRET_KEY / STRIPE_PUBLISHABLE_KEY / STRIPE_WEBHOOK_SECRET.
+    STRIPE_MODE = os.getenv('STRIPE_MODE', '').lower()
+    _SM = STRIPE_MODE.upper() if STRIPE_MODE in ('test', 'live') else None
+    STRIPE_SECRET_KEY = (
+        os.getenv(f'STRIPE_SECRET_KEY_{_SM}') if _SM
+        else os.getenv('STRIPE_SECRET_KEY')
+    )
+    STRIPE_PUBLISHABLE_KEY = (
+        os.getenv(f'STRIPE_PUBLISHABLE_KEY_{_SM}') if _SM
+        else os.getenv('STRIPE_PUBLISHABLE_KEY')
+    )
+    STRIPE_WEBHOOK_SECRET = (
+        os.getenv(f'STRIPE_WEBHOOK_SECRET_{_SM}') if _SM
+        else os.getenv('STRIPE_WEBHOOK_SECRET')
+    )
+
+
+def stripe_price(plan_slug):
+    """Read a Stripe Price ID for a plan, respecting STRIPE_MODE.
+
+    Looks up env vars in this order:
+      1. STRIPE_PRICE_<PLAN>_TEST   (when STRIPE_MODE=test)
+      2. STRIPE_PRICE_<PLAN>_LIVE   (when STRIPE_MODE=live)
+      3. STRIPE_PRICE_<PLAN>        (fallback for legacy single-set deployments)
+    """
+    plan_upper = plan_slug.upper()
+    mode = os.getenv('STRIPE_MODE', '').lower()
+    if mode in ('test', 'live'):
+        suffixed = os.getenv(f'STRIPE_PRICE_{plan_upper}_{mode.upper()}')
+        if suffixed:
+            return suffixed
+    return os.getenv(f'STRIPE_PRICE_{plan_upper}')
 
     # AI Services
     OLLAMA_URL = os.getenv('OLLAMA_URL', 'http://localhost:11434')
@@ -113,7 +147,7 @@ PRICING = {
         'per_seat': False,
         'visible': True,
         'highlight': True,  # most popular for travelers
-        'stripe_price_id': os.getenv('STRIPE_PRICE_TRAVEL_PASS'),
+        'stripe_price_id': stripe_price('travel_pass'),
         'features': [
             '100 minutes for 7 days',
             '100+ languages',
@@ -135,7 +169,7 @@ PRICING = {
         'languages': 100,
         'per_seat': False,
         'visible': True,
-        'stripe_price_id': os.getenv('STRIPE_PRICE_TOURIST'),
+        'stripe_price_id': stripe_price('tourist'),
         'features': [
             '60 minutes / month',
             '100+ languages',
@@ -157,7 +191,7 @@ PRICING = {
         'languages': 100,
         'per_seat': False,
         'visible': True,
-        'stripe_price_id': os.getenv('STRIPE_PRICE_TOURIST_PRO'),
+        'stripe_price_id': stripe_price('tourist_pro'),
         'features': [
             '150 standard min + 30 premium min / month',
             '100+ languages with regional dialects',
@@ -185,7 +219,7 @@ PRICING = {
             {'eur': 25, 'usd': 27, 'minutes': 110},
             {'eur': 50, 'usd': 55, 'minutes': 230},
         ],
-        'stripe_price_id': os.getenv('STRIPE_PRICE_PAYG'),
+        'stripe_price_id': stripe_price('payg'),
         'features': [
             '€0.25 / $0.27 per minute',
             'Buy credits in packs (€10 = 40 min)',
@@ -213,7 +247,7 @@ PRICING = {
         'voice_cloning_profiles': 3,
         'languages': 16,
         'visible': True,
-        'stripe_price_id': os.getenv('STRIPE_PRICE_SOLO'),
+        'stripe_price_id': stripe_price('solo'),
         'features': [
             '600 minutes / month',
             'Virtual Audio Driver (Windows / Mac)',
@@ -238,7 +272,7 @@ PRICING = {
         'languages': 30,
         'visible': True,
         'highlight': True,  # most popular for business
-        'stripe_price_id': os.getenv('STRIPE_PRICE_TEAM'),
+        'stripe_price_id': stripe_price('team'),
         'features': [
             '1,500 standard min + 50 premium min per agent',
             'Virtual Audio Driver (Windows / Mac)',
@@ -264,7 +298,7 @@ PRICING = {
         'voice_cloning_profiles': -1,
         'languages': 50,
         'visible': True,
-        'stripe_price_id': os.getenv('STRIPE_PRICE_SCALE'),
+        'stripe_price_id': stripe_price('scale'),
         'features': [
             '6,000 standard min + 200 premium min per agent',
             'Voice cloning of agent (premium quality)',
