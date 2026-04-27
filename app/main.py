@@ -299,6 +299,18 @@ def success():
                            show_success=True)
 
 
+@app.route('/checkout')
+def checkout_redirect_page():
+    """Bridge page that auth-gates and then creates a Stripe Checkout Session.
+
+    Reads ?plan=xxx from the URL. If user has no token, sends them to /auth
+    (with a next= back here). Otherwise calls /api/create-checkout-session
+    via JS and redirects to the Stripe-hosted checkout URL.
+    """
+    return render_template('checkout_redirect.html',
+                           stripe_key=Config.STRIPE_PUBLISHABLE_KEY)
+
+
 @app.route('/auth')
 def auth():
     """Authentication page — login / signup."""

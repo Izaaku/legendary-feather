@@ -26,29 +26,52 @@ class StripeService:
             return None
 
     def create_checkout_session(self, plan_name, customer_email, success_url, cancel_url):
-        """Create a Stripe Checkout Session for subscription."""
+        """Create a Stripe Checkout Session.
+
+        Uses `mode='payment'` for one-time products (Travel Pass) and
+        `mode='subscription'` for recurring plans (Tourist, Pro, Solo, Team, Scale).
+        Stripe MX uses multi-currency Prices: a single Price ID handles MXN/EUR/USD
+        automatically based on the customer's location.
+        """
         plan = PRICING.get(plan_name)
         if not plan or not plan.get('stripe_price_id'):
+            print(f"[Stripe] Plan '{plan_name}' has no stripe_price_id configured")
+            return None
+
+        # Decide checkout mode based on the plan's billing type
+        billing = plan.get('billing', 'monthly')
+        if billing == 'one_time':
+            mode = 'payment'
+        elif billing in ('monthly', 'yearly'):
+            mode = 'subscription'
+        else:
+            # Free / custom / usage — should not reach Stripe Checkout
+            print(f"[Stripe] Plan '{plan_name}' has billing='{billing}' which doesn't use Checkout")
             return None
 
         try:
-            session = self.stripe.checkout.Session.create(
-                payment_method_types=['card'],
-                mode='subscription',
-                customer_email=customer_email,
-                line_items=[{
+            params = {
+                'payment_method_types': ['card'],
+                'mode': mode,
+                'customer_email': customer_email,
+                'line_items': [{
                     'price': plan['stripe_price_id'],
                     'quantity': 1,
                 }],
-                success_url=success_url + '?session_id={CHECKOUT_SESSION_ID}',
-                cancel_url=cancel_url,
-                metadata={
+                'success_url': success_url + '?session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url': cancel_url,
+                'metadata': {
                     'plan': plan_name,
-                }
-            )
+                },
+            }
+            # Allow promo codes on subscription flows (good for retention/discounts)
+            if mode == 'subscription':
+                params['allow_promotion_codes'] = True
+
+            session = self.stripe.checkout.Session.create(**params)
             return session
         except Exception as e:
-            print(f"[Stripe] Error creating checkout session: {e}")
+            print(f"[Stripe] Error creating checkout session for '{plan_name}': {e}")
             return None
 
     def create_payment_intent(self, amount_cents, currency='eur', customer_id=None):

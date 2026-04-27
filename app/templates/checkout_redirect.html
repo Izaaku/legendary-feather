@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redirecting to checkout — Legendary Feather</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #D4A843;
+  --gold-l: #EEC96A;
+  --gold-glow: rgba(212,168,67,0.35);
+  --bg: #000000;
+  --bg2: #0A0A0A;
+  --text: #EAE4D8;
+  --text-sub: #A0A0A0;
+  --red: #FF6B6B;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.card {
+  background: var(--bg2);
+  border: 1px solid rgba(212,168,67,0.2);
+  border-radius: 18px;
+  padding: 48px 40px;
+  text-align: center;
+  max-width: 440px; width: 100%;
+}
+.spinner {
+  width: 48px; height: 48px; margin: 0 auto 24px;
+  border: 3px solid rgba(212,168,67,0.15);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px; font-weight: 500;
+  margin-bottom: 8px;
+}
+h1 em { font-style: italic; color: var(--gold); }
+p { color: var(--text-sub); font-size: 14px; line-height: 1.5; }
+.error {
+  color: var(--red);
+  margin-top: 16px; font-size: 13px;
+}
+.btn-back {
+  display: inline-block; margin-top: 18px;
+  padding: 10px 22px; border-radius: 100px;
+  background: transparent; color: var(--gold);
+  border: 1px solid var(--gold);
+  text-decoration: none; font-size: 13px; font-weight: 500;
+}
+.btn-back:hover { background: rgba(212,168,67,0.1); }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="spinner" id="spinner"></div>
+  <h1>Redirecting to <em>checkout</em></h1>
+  <p id="msg">Setting up your purchase securely...</p>
+  <div id="error-box" style="display:none;">
+    <p class="error" id="error-msg"></p>
+    <a href="/pricing" class="btn-back">← Back to plans</a>
+  </div>
+</div>
+
+<script>
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  const plan = params.get('plan');
+  const msgEl = document.getElementById('msg');
+  const spinner = document.getElementById('spinner');
+  const errorBox = document.getElementById('error-box');
+  const errorMsg = document.getElementById('error-msg');
+
+  function showError(text) {
+    spinner.style.display = 'none';
+    msgEl.style.display = 'none';
+    errorMsg.textContent = text;
+    errorBox.style.display = 'block';
+  }
+
+  if (!plan) {
+    return showError('No plan specified. Please go back to /pricing and pick one.');
+  }
+
+  // Auth gate: send anonymous users to signup with a return path back here
+  const token = sessionStorage.getItem('lf_token');
+  if (!token) {
+    const returnTo = '/checkout?plan=' + encodeURIComponent(plan);
+    window.location.replace('/auth?signup=1&plan=' + encodeURIComponent(plan)
+                            + '&next=' + encodeURIComponent(returnTo));
+    return;
+  }
+
+  // Already authed → ask the backend to mint a Stripe Checkout Session
+  let user = null;
+  try { user = JSON.parse(sessionStorage.getItem('lf_session')); } catch (e) {}
+
+  if (!user || !user.email) {
+    return showError('Could not read your account info. Please sign in again.');
+  }
+
+  fetch('/api/create-checkout-session', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    },
+    body: JSON.stringify({
+      plan: plan,
+      email: user.email,
+      name: user.name || ''
+    })
+  })
+  .then(async (res) => {
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Could not create checkout session');
+    if (!data.url) throw new Error('No checkout URL returned');
+    window.location.replace(data.url);
+  })
+  .catch((err) => {
+    showError(err.message + '. If this persists, contact sales@legendaryfeather.com');
+  });
+})();
+</script>
+
+</body>
+</html>
