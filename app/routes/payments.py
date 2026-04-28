@@ -1,8 +1,9 @@
 """Stripe payment endpoints."""
 import os
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from app.services.stripe_service import StripeService
 from app.utils.database import db_session
+from app.utils.auth import token_required
 from app.models.user import User
 from app.models.subscription import Subscription
 from app.config import PRICING
@@ -114,6 +115,106 @@ def subscription_status():
             'subscription': sub.to_dict() if sub else None,
             'plan_details': PRICING.get(user.plan, PRICING['basic'])
         })
+    finally:
+        db.close()
+
+
+@payments_bp.route('/sync-checkout-session', methods=['POST'])
+@token_required
+def sync_checkout_session():
+    """Sync the user's plan after a successful Stripe Checkout.
+
+    Called by the /success page (or any client) with a Checkout session_id.
+    Retrieves the session from Stripe directly, verifies it's paid, and
+    updates the authenticated user's plan/minutes accordingly. This avoids
+    depending on webhooks for the critical path of "user just paid →
+    immediately reflect their new plan".
+    """
+    import stripe as stripe_lib
+    stripe_lib.api_key = os.getenv('STRIPE_SECRET_KEY') or os.getenv(
+        f'STRIPE_SECRET_KEY_{(os.getenv("STRIPE_MODE", "") or "test").upper()}'
+    )
+
+    data = request.get_json() or {}
+    session_id = data.get('session_id', '').strip()
+    if not session_id:
+        return jsonify({'error': 'session_id is required'}), 400
+
+    try:
+        session = stripe_lib.checkout.Session.retrieve(session_id)
+    except Exception as e:
+        return jsonify({'error': f'Could not retrieve checkout session: {str(e)[:200]}'}), 400
+
+    # Verify the session is actually paid
+    payment_status = session.get('payment_status') if isinstance(session, dict) else getattr(session, 'payment_status', None)
+    if payment_status not in ('paid', 'no_payment_required'):
+        return jsonify({
+            'error': f'Checkout session is not paid yet (status: {payment_status})',
+            'payment_status': payment_status,
+        }), 400
+
+    # Verify the email on the session matches the authenticated user
+    auth_email = (g.current_user.get('email') or '').lower()
+    session_email = (
+        (session.get('customer_email') if isinstance(session, dict) else getattr(session, 'customer_email', None))
+        or (session.get('customer_details', {}) if isinstance(session, dict) else getattr(session, 'customer_details', {}) or {}).get('email', '')
+        or ''
+    ).lower()
+    if session_email and session_email != auth_email:
+        return jsonify({'error': 'Session email does not match authenticated user'}), 403
+
+    # Get the plan from session metadata
+    metadata = session.get('metadata') if isinstance(session, dict) else getattr(session, 'metadata', None)
+    plan = (metadata or {}).get('plan')
+    if not plan or plan not in PRICING:
+        return jsonify({'error': f'Invalid or missing plan in session metadata (got: {plan})'}), 400
+
+    plan_details = PRICING[plan]
+    customer_id = session.get('customer') if isinstance(session, dict) else getattr(session, 'customer', None)
+    subscription_id = session.get('subscription') if isinstance(session, dict) else getattr(session, 'subscription', None)
+
+    db = db_session()
+    try:
+        user = db.query(User).filter_by(user_id=g.current_user['user_id']).first()
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        already_synced = user.plan == plan
+        user.stripe_customer_id = customer_id or user.stripe_customer_id
+        user.plan = plan
+        user.minutes_total = plan_details.get('minutes', 0)
+        # Reset minutes_used only on a NEW plan (not on duplicate sync calls)
+        if not already_synced:
+            user.minutes_used = 0
+
+        # Upsert subscription record for recurring plans
+        if subscription_id:
+            existing = db.query(Subscription).filter_by(
+                stripe_subscription_id=subscription_id
+            ).first()
+            if not existing:
+                sub = Subscription(
+                    user_id=user.user_id,
+                    stripe_subscription_id=subscription_id,
+                    plan=plan,
+                    status='active',
+                )
+                db.add(sub)
+
+        db.commit()
+        print(f"[Sync] Plan updated via /success: {user.email} -> {plan}")
+
+        return jsonify({
+            'ok': True,
+            'plan': user.plan,
+            'minutes_total': user.minutes_total,
+            'minutes_used': user.minutes_used,
+            'user': user.to_dict(),
+            'already_synced': already_synced,
+        })
+    except Exception as e:
+        db.rollback()
+        return jsonify({'error': f'DB update failed: {str(e)[:200]}'}), 500
     finally:
         db.close()
 

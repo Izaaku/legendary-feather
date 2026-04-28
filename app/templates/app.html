@@ -2400,6 +2400,50 @@ function showStatus(msg,type='info'){
 }
 
 // ══════════════════════════════════════════════════════
+// POST-CHECKOUT SYNC
+// ══════════════════════════════════════════════════════
+// When the user lands on /success?session_id=... after a successful Stripe
+// checkout, immediately sync their plan with the backend. This bypasses any
+// webhook configuration issues and gives instant feedback ("you're on
+// Tourist Pro now!") instead of leaving them stuck on Free until the
+// webhook eventually fires.
+async function syncCheckoutSessionIfPresent(){
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    if(!sessionId) return;
+    if(!getToken()){ console.warn('[Sync] No auth token, cannot sync plan'); return; }
+    try{
+        const r = await fetch('/api/sync-checkout-session', {
+            method:'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ session_id: sessionId })
+        });
+        const data = await r.json();
+        if(r.ok){
+            // Update local session so subsequent feature checks see the new plan
+            try{
+                const sess = JSON.parse(sessionStorage.getItem('lf_session') || '{}');
+                if(data.user){
+                    sess.plan = data.user.plan;
+                    sess.minutes_total = data.user.minutes_total;
+                    sess.minutes_used = data.user.minutes_used;
+                    sessionStorage.setItem('lf_session', JSON.stringify(sess));
+                }
+            }catch(e){}
+            const planName = (data.plan || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            showStatus(`Welcome to ${planName}! Your plan is active.`, 'success');
+            // Clean up the URL so a refresh doesn't try to sync again
+            try{ history.replaceState({}, '', window.location.pathname); }catch(e){}
+        } else {
+            console.warn('[Sync] Failed:', data.error);
+            // Don't show error toast — webhook may still process. Just log.
+        }
+    }catch(e){
+        console.warn('[Sync] Error:', e);
+    }
+}
+
+// ══════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded',()=>{
@@ -2408,6 +2452,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     initPricing();
     loadVoiceProfiles();
     showGuidePhrase();
+    syncCheckoutSessionIfPresent();
 });
 </script>
 </body>
