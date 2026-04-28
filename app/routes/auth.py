@@ -102,8 +102,18 @@ def signup():
         return jsonify({'error': pwd_err}), 400
     if not name:
         return jsonify({'error': 'Name is required'}), 400
-    if plan not in ('basic', 'premium', 'business'):
-        plan = 'basic'
+
+    # Accept all real plan slugs from PRICING (free, travel_pass, tourist,
+    # tourist_pro, payg, solo, team, scale) plus legacy aliases (basic, premium,
+    # business) which config.py maps to (tourist, tourist_pro, team).
+    # Account is created with the chosen tier; for paid plans the actual charge
+    # happens via Stripe Checkout after signup, and the webhook upgrades the
+    # user's plan field on payment success.
+    from app.config import PRICING
+    valid_plans = {pid for pid, p in PRICING.items() if p.get('visible', False)}
+    valid_plans.update({'basic', 'premium', 'business'})  # legacy aliases
+    if plan not in valid_plans:
+        plan = 'free'
 
     db = db_session()
     try:
@@ -111,8 +121,7 @@ def signup():
         if db.query(User).filter_by(email=email).first():
             return jsonify({'error': 'An account with this email already exists'}), 409
 
-        from app.config import PRICING
-        plan_details = PRICING.get(plan, PRICING['basic'])
+        plan_details = PRICING.get(plan, PRICING['free'])
 
         user = User(
             user_id=str(uuid.uuid4()),

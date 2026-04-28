@@ -363,34 +363,69 @@ canvas#stars {
       </div>
 
       <!-- Plan Selection -->
-      <div class="form-group">
+      <div class="form-group" id="planSelectorGroup">
         <label class="form-label">Choose Your Plan</label>
         <div class="plan-selector visible" id="planSelector">
-          <div class="plan-option" data-plan="personal" onclick="selectPlan(this)">
+          <div class="plan-option selected" data-plan="free" onclick="selectPlan(this)">
             <div class="plan-radio"></div>
             <div class="plan-info">
-              <div class="plan-name">Personal</div>
-              <div class="plan-desc">60 min/month — Perfect for travelers</div>
+              <div class="plan-name">Free</div>
+              <div class="plan-desc">5 min/month — Try before you buy</div>
             </div>
-            <div class="plan-price">&euro;9.99<span>/mo</span></div>
+            <div class="plan-price">&euro;0<span>/mo</span></div>
           </div>
-          <div class="plan-option popular selected" data-plan="premium" onclick="selectPlan(this)">
+          <div class="plan-option" data-plan="travel_pass" onclick="selectPlan(this)">
             <div class="plan-radio"></div>
             <div class="plan-info">
-              <div class="plan-name">Premium</div>
-              <div class="plan-desc">200 min + Voice Cloning</div>
+              <div class="plan-name">Travel Pass</div>
+              <div class="plan-desc">100 min for 7 days — Perfect for trips</div>
             </div>
-            <div class="plan-price">&euro;24.99<span>/mo</span></div>
+            <div class="plan-price">&euro;9.99<span>/once</span></div>
           </div>
-          <div class="plan-option" data-plan="business" onclick="selectPlan(this)">
+          <div class="plan-option" data-plan="tourist" onclick="selectPlan(this)">
             <div class="plan-radio"></div>
             <div class="plan-info">
-              <div class="plan-name">Business</div>
-              <div class="plan-desc">1,000 min + Teams + Meetings</div>
+              <div class="plan-name">Tourist</div>
+              <div class="plan-desc">60 min/month — For frequent travelers</div>
             </div>
-            <div class="plan-price">&euro;89.99<span>/mo</span></div>
+            <div class="plan-price">&euro;4.99<span>/mo</span></div>
+          </div>
+          <div class="plan-option popular" data-plan="tourist_pro" onclick="selectPlan(this)">
+            <div class="plan-radio"></div>
+            <div class="plan-info">
+              <div class="plan-name">Tourist Pro</div>
+              <div class="plan-desc">150 min + 30 premium + Voice Cloning</div>
+            </div>
+            <div class="plan-price">&euro;14.99<span>/mo</span></div>
+          </div>
+          <div class="plan-option" data-plan="solo" onclick="selectPlan(this)">
+            <div class="plan-radio"></div>
+            <div class="plan-info">
+              <div class="plan-name">Solo</div>
+              <div class="plan-desc">600 min — Freelancers &amp; sellers</div>
+            </div>
+            <div class="plan-price">&euro;26.99<span>/mo</span></div>
+          </div>
+          <div class="plan-option" data-plan="team" onclick="selectPlan(this)">
+            <div class="plan-radio"></div>
+            <div class="plan-info">
+              <div class="plan-name">Team</div>
+              <div class="plan-desc">1,500 min/agent — Small teams (3+ agents)</div>
+            </div>
+            <div class="plan-price">&euro;79.99<span>/agent/mo</span></div>
+          </div>
+          <div class="plan-option" data-plan="scale" onclick="selectPlan(this)">
+            <div class="plan-radio"></div>
+            <div class="plan-info">
+              <div class="plan-name">Scale</div>
+              <div class="plan-desc">6,000 min/agent — BPOs (10+ agents)</div>
+            </div>
+            <div class="plan-price">&euro;224.99<span>/agent/mo</span></div>
           </div>
         </div>
+        <p id="preselectedPlanNote" style="display:none; font-size:13px; color:var(--text-dim); margin-top:8px;">
+          You'll be charged after creating your account.
+        </p>
       </div>
 
       <button class="btn-auth" type="submit">Create Account</button>
@@ -502,19 +537,35 @@ document.getElementById('switchToSignup').addEventListener('click', e => { e.pre
 // Check URL params for default tab
 const params = new URLSearchParams(location.search);
 if (params.get('tab') === 'signup' || params.get('signup') === '1') switchTab('signup');
-if (params.get('plan')) {
-  switchTab('signup');
-  const planEl = document.querySelector(`.plan-option[data-plan="${params.get('plan')}"]`);
-  if (planEl) selectPlan(planEl);
-}
 
 // ── Plan Selection ──
-let selectedPlan = 'premium';
+let selectedPlan = 'free';
 
 function selectPlan(el) {
   document.querySelectorAll('.plan-option').forEach(o => o.classList.remove('selected'));
   el.classList.add('selected');
   selectedPlan = el.dataset.plan;
+}
+
+// If user came from /pricing with a specific plan, auto-select it AND hide the
+// other options so they don't get confused — they already chose. Stripe
+// Checkout will charge them for the selected plan after signup.
+if (params.get('plan')) {
+  switchTab('signup');
+  const requestedPlan = params.get('plan');
+  const planEl = document.querySelector(`.plan-option[data-plan="${requestedPlan}"]`);
+  if (planEl) {
+    selectPlan(planEl);
+    // Hide all the other plan options — keep only the chosen one visible
+    document.querySelectorAll('.plan-option').forEach(o => {
+      if (o.dataset.plan !== requestedPlan) o.style.display = 'none';
+    });
+    // Show the "you'll be charged after signup" note for paid plans
+    if (requestedPlan !== 'free') {
+      const note = document.getElementById('preselectedPlanNote');
+      if (note) note.style.display = 'block';
+    }
+  }
 }
 
 // ── Password Strength ──
