@@ -118,6 +118,66 @@ def subscription_status():
         db.close()
 
 
+@payments_bp.route('/debug/stripe-check', methods=['GET'])
+def debug_stripe_check():
+    """Temporary diagnostic endpoint — lists what the current Stripe API key
+    can actually see. Used to debug the 'No such price' error.
+
+    Returns: account info, mode, count of products visible, first 6 prices.
+    Remove this endpoint once Stripe is fully wired.
+    """
+    try:
+        import stripe as stripe_lib
+        # Account info — confirms which account the key belongs to
+        try:
+            acct = stripe_lib.Account.retrieve()
+            account_info = {
+                'id': acct.id,
+                'country': acct.country,
+                'default_currency': acct.default_currency,
+                'business_name': acct.business_profile.get('name') if acct.business_profile else None,
+                'email': acct.email,
+            }
+        except Exception as e:
+            account_info = {'error': f'Could not retrieve account: {e}'}
+
+        # Detect mode from the key prefix
+        key = stripe_lib.api_key or ''
+        mode = 'live' if key.startswith('sk_live_') else ('test' if key.startswith('sk_test_') else 'unknown')
+
+        # List visible prices (first 12)
+        try:
+            prices = stripe_lib.Price.list(limit=12, active=True)
+            visible_prices = [{
+                'id': p.id,
+                'product': p.product,
+                'unit_amount': p.unit_amount,
+                'currency': p.currency,
+                'type': p.type,
+                'recurring': p.recurring.interval if p.recurring else None,
+            } for p in prices.data]
+        except Exception as e:
+            visible_prices = [{'error': f'Could not list prices: {e}'}]
+
+        # Check the env vars our app cares about
+        from app.config import PRICING
+        configured_prices = {}
+        for plan_id in ['travel_pass', 'tourist', 'tourist_pro', 'solo', 'team', 'scale']:
+            plan = PRICING.get(plan_id)
+            configured_prices[plan_id] = plan.get('stripe_price_id') if plan else None
+
+        return jsonify({
+            'mode_from_key': mode,
+            'stripe_mode_env': os.getenv('STRIPE_MODE'),
+            'account': account_info,
+            'configured_prices_in_app': configured_prices,
+            'prices_visible_to_key': visible_prices,
+            'visible_count': len(visible_prices),
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @payments_bp.route('/pricing', methods=['GET'])
 def get_pricing():
     """Get all pricing plans."""
