@@ -122,60 +122,86 @@ def subscription_status():
 def debug_stripe_check():
     """Temporary diagnostic endpoint — lists what the current Stripe API key
     can actually see. Used to debug the 'No such price' error.
-
-    Returns: account info, mode, count of products visible, first 6 prices.
-    Remove this endpoint once Stripe is fully wired.
     """
+    import stripe as stripe_lib
+
+    out = {
+        'mode_from_key': None,
+        'stripe_mode_env': os.getenv('STRIPE_MODE'),
+        'account_id': None,
+        'account_country': None,
+        'account_email': None,
+        'account_charges_enabled': None,
+        'account_details_submitted': None,
+        'product_count_visible': None,
+        'price_count_visible': None,
+        'visible_products': [],
+        'visible_prices': [],
+        'configured_prices_in_app': {},
+        'errors': [],
+    }
+
+    # Detect mode from the key prefix
+    key = stripe_lib.api_key or ''
+    if key.startswith('sk_live_'):
+        out['mode_from_key'] = 'live'
+    elif key.startswith('sk_test_'):
+        out['mode_from_key'] = 'test'
+    elif key:
+        out['mode_from_key'] = 'unknown_prefix'
+    else:
+        out['mode_from_key'] = 'KEY_NOT_SET'
+        out['errors'].append('STRIPE secret key is empty/missing')
+        return jsonify(out), 500
+
+    # Account ID — the most diagnostic field
     try:
-        import stripe as stripe_lib
-        # Account info — confirms which account the key belongs to
-        try:
-            acct = stripe_lib.Account.retrieve()
-            account_info = {
-                'id': acct.id,
-                'country': acct.country,
-                'default_currency': acct.default_currency,
-                'business_name': acct.business_profile.get('name') if acct.business_profile else None,
-                'email': acct.email,
-            }
-        except Exception as e:
-            account_info = {'error': f'Could not retrieve account: {e}'}
-
-        # Detect mode from the key prefix
-        key = stripe_lib.api_key or ''
-        mode = 'live' if key.startswith('sk_live_') else ('test' if key.startswith('sk_test_') else 'unknown')
-
-        # List visible prices (first 12)
-        try:
-            prices = stripe_lib.Price.list(limit=12, active=True)
-            visible_prices = [{
-                'id': p.id,
-                'product': p.product,
-                'unit_amount': p.unit_amount,
-                'currency': p.currency,
-                'type': p.type,
-                'recurring': p.recurring.interval if p.recurring else None,
-            } for p in prices.data]
-        except Exception as e:
-            visible_prices = [{'error': f'Could not list prices: {e}'}]
-
-        # Check the env vars our app cares about
-        from app.config import PRICING
-        configured_prices = {}
-        for plan_id in ['travel_pass', 'tourist', 'tourist_pro', 'solo', 'team', 'scale']:
-            plan = PRICING.get(plan_id)
-            configured_prices[plan_id] = plan.get('stripe_price_id') if plan else None
-
-        return jsonify({
-            'mode_from_key': mode,
-            'stripe_mode_env': os.getenv('STRIPE_MODE'),
-            'account': account_info,
-            'configured_prices_in_app': configured_prices,
-            'prices_visible_to_key': visible_prices,
-            'visible_count': len(visible_prices),
-        })
+        acct = stripe_lib.Account.retrieve()
+        out['account_id'] = acct.get('id')
+        out['account_country'] = acct.get('country')
+        out['account_email'] = acct.get('email')
+        out['account_charges_enabled'] = acct.get('charges_enabled')
+        out['account_details_submitted'] = acct.get('details_submitted')
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        out['errors'].append(f'Account.retrieve failed: {type(e).__name__}: {str(e)[:200]}')
+
+    # List products
+    try:
+        products = stripe_lib.Product.list(limit=15, active=True)
+        out['product_count_visible'] = len(products.data)
+        out['visible_products'] = [{'id': p.id, 'name': p.name} for p in products.data]
+    except Exception as e:
+        out['errors'].append(f'Product.list failed: {str(e)[:200]}')
+
+    # List prices
+    try:
+        prices = stripe_lib.Price.list(limit=15, active=True)
+        out['price_count_visible'] = len(prices.data)
+        out['visible_prices'] = [{
+            'id': p.id,
+            'product': p.product,
+            'amount': p.unit_amount,
+            'currency': p.currency,
+        } for p in prices.data]
+    except Exception as e:
+        out['errors'].append(f'Price.list failed: {str(e)[:200]}')
+
+    # Configured prices in our app
+    from app.config import PRICING
+    for plan_id in ['travel_pass', 'tourist', 'tourist_pro', 'solo', 'team', 'scale']:
+        plan = PRICING.get(plan_id)
+        out['configured_prices_in_app'][plan_id] = plan.get('stripe_price_id') if plan else None
+
+    # If a specific Price ID is requested, retrieve it directly
+    test_id = request.args.get('price_id')
+    if test_id:
+        try:
+            price = stripe_lib.Price.retrieve(test_id)
+            out['retrieve_test'] = {'id': price.id, 'product': price.product, 'amount': price.unit_amount}
+        except Exception as e:
+            out['retrieve_test'] = {'error': str(e)[:300]}
+
+    return jsonify(out)
 
 
 @payments_bp.route('/pricing', methods=['GET'])
