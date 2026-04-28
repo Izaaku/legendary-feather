@@ -933,6 +933,12 @@ footer {
 <body>
     <canvas id="starCanvas"></canvas>
 
+    <!-- Top-left logo (links to dashboard when logged in, landing when not) -->
+    <a id="appTopLogo" href="/" style="position:fixed;top:16px;left:16px;z-index:1000;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-sub);font-family:'Cormorant Garamond',serif;font-size:16px;letter-spacing:1px;text-transform:uppercase;font-weight:400;transition:color 0.3s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--text-sub)'">
+      <img src="/static/images/golden-feather-nav.png" alt="" style="width:18px;height:auto;filter:drop-shadow(0 0 6px rgba(212,168,67,0.4));">
+      <span>Legendary Feather</span>
+    </a>
+
     <!-- User nav (top-right) -->
     <div id="userNav" style="position:fixed;top:16px;right:16px;z-index:1000;display:flex;gap:10px;align-items:center;">
       <span id="welcomeText" style="display:none;font-family:'Cormorant Garamond',serif;font-size:14px;color:var(--text-sub);letter-spacing:0.3px;"></span>
@@ -941,7 +947,9 @@ footer {
       </a>
     </div>
     <script>
-    // Show dashboard button + welcome text if logged in
+    // Show dashboard button + welcome text if logged in. Also point the
+    // top-left logo at /dashboard so users always have a clear way back to
+    // the main menu from the translation app.
     (function() {
       const session = sessionStorage.getItem('lf_session');
       if (session) {
@@ -956,6 +964,9 @@ footer {
           btn.style.background = 'var(--gold-dim)';
           btn.style.color = 'var(--gold)';
           btn.style.borderColor = 'var(--border)';
+          // Top-left logo → dashboard when logged in
+          const topLogo = document.getElementById('appTopLogo');
+          if (topLogo) topLogo.href = '/dashboard';
         } catch(e) {}
       }
     })();

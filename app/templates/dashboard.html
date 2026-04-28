@@ -1492,7 +1492,26 @@ function showLanguagesView() {
     </div>`;
 }
 
+// Plans that include voice cloning (matches PRICING in app/config.py:
+// voice_cloning_profiles > 0 or unlimited).
+const VOICE_CLONING_PLANS = ['tourist_pro', 'solo', 'team', 'scale', 'enterprise', 'owner', 'premium', 'business'];
+
+function userHasVoiceCloning() {
+  const plan = (currentSession && currentSession.plan) || 'free';
+  if (currentSession && currentSession.is_owner) return true;
+  return VOICE_CLONING_PLANS.includes(plan);
+}
+
 function showVoiceProfilesView() {
+  const canClone = userHasVoiceCloning();
+  const recordingButton = canClone
+    ? `<button class="quick-btn primary" onclick="window.location.href='/app#voice-register'">Start Recording</button>`
+    : `<button class="quick-btn primary" onclick="showVoiceCloningUpsell()">Unlock Voice Cloning</button>`;
+
+  const subhead = canClone
+    ? 'Record 10-30 seconds of speech to create a voice profile.'
+    : 'Voice cloning is available on Tourist Pro and higher. Upgrade to translate in your own voice.';
+
   document.getElementById('main-content').innerHTML = `
     <div class="welcome-header animate-in">
       <div><div class="welcome-name">Voice Profiles</div>
@@ -1500,24 +1519,76 @@ function showVoiceProfilesView() {
     </div>
     <div class="card animate-in delay-1">
       <div class="card-header"><div class="card-title">Your Voice Profiles</div></div>
-      <div id="voiceProfilesList" style="color:var(--text-sub);font-size:13px;">Loading...</div>
+      <div id="voiceProfilesList" style="color:var(--text-sub);font-size:13px;">${canClone ? 'Loading...' : 'No voice profiles yet — voice cloning is a premium feature.'}</div>
     </div>
     <div class="card animate-in delay-2">
       <div class="card-header"><div class="card-title">Register New Voice</div></div>
-      <p style="font-size:13px;color:var(--text-sub);margin-bottom:16px;">Record 10-30 seconds of speech to create a voice profile.</p>
-      <button class="quick-btn primary" onclick="alert('Voice registration coming soon!')">Start Recording</button>
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:16px;">${subhead}</p>
+      ${recordingButton}
     </div>`;
-  // Load profiles
-  authFetch('/api/voice/profiles?user_id=' + currentSession.user_id)
-    .then(r => r.json())
-    .then(data => {
-      const el = document.getElementById('voiceProfilesList');
-      if (data.profiles && data.profiles.length > 0) {
-        el.innerHTML = data.profiles.map(p => '<div style="padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;"><strong style="color:var(--gold);">' + p.profile_name + '</strong> — ' + (p.duration_seconds||0).toFixed(1) + 's</div>').join('');
-      } else {
-        el.textContent = 'No voice profiles yet. Record one below!';
-      }
-    }).catch(() => { document.getElementById('voiceProfilesList').textContent = 'Could not load profiles.'; });
+
+  // Only fetch profiles if the user has voice cloning enabled — otherwise the
+  // backend would just return an empty list, and we already show a friendlier
+  // "premium feature" message above.
+  if (canClone) {
+    authFetch('/api/voice/profiles?user_id=' + currentSession.user_id)
+      .then(r => r.json())
+      .then(data => {
+        const el = document.getElementById('voiceProfilesList');
+        if (data.profiles && data.profiles.length > 0) {
+          el.innerHTML = data.profiles.map(p => '<div style="padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;"><strong style="color:var(--gold);">' + p.profile_name + '</strong> — ' + (p.duration_seconds||0).toFixed(1) + 's</div>').join('');
+        } else {
+          el.textContent = 'No voice profiles yet. Record one below!';
+        }
+      }).catch(() => { document.getElementById('voiceProfilesList').textContent = 'Could not load profiles.'; });
+  }
+}
+
+// Shows the gold upsell modal listing plans that include voice cloning. Same
+// UX as the modal in /app — keeps the upgrade flow consistent across pages.
+function showVoiceCloningUpsell() {
+  const plans = [
+    {id:'tourist_pro', name:'Tourist Pro', price:'€14.99', cycle:'/mo', perk:'1 voice profile + 30 premium min', recommended:true},
+    {id:'solo',        name:'Solo',        price:'€26.99', cycle:'/mo', perk:'3 voice profiles + 600 min'},
+    {id:'team',        name:'Team',        price:'€79.99', cycle:'/agent/mo', perk:'Unlimited voice profiles per agent (min 3)'},
+    {id:'scale',       name:'Scale',       price:'€224.99', cycle:'/agent/mo', perk:'Unlimited + premium clone quality (min 10)'},
+  ];
+  const existing = document.getElementById('voiceUpsellModal'); if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'voiceUpsellModal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--gold-dim);border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 40px rgba(212,168,67,0.15);">
+      <div style="padding:28px 28px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
+        <div>
+          <div style="font-size:11px;color:var(--gold);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">✨ Available on these plans</div>
+          <h2 style="margin:0;font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;color:var(--text);line-height:1.2;">Voice cloning is a premium feature</h2>
+          <p style="margin:8px 0 0;font-size:13px;color:var(--text-sub);">Translate in your own voice with our premium tier.</p>
+        </div>
+        <button onclick="document.getElementById('voiceUpsellModal').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:24px;line-height:1;padding:0;">&times;</button>
+      </div>
+      <div style="padding:20px 28px;display:flex;flex-direction:column;gap:10px;">
+        ${plans.map(p => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--bg3);border:1px solid ${p.recommended ? 'var(--gold)' : 'var(--border)'};border-radius:12px;position:relative;">
+            ${p.recommended ? '<div style="position:absolute;top:-9px;left:14px;background:var(--gold);color:#000;font-size:9px;font-weight:600;letter-spacing:1px;padding:2px 8px;border-radius:6px;text-transform:uppercase;">Recommended</div>' : ''}
+            <div>
+              <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);">${p.name}</div>
+              <div style="font-size:12px;color:var(--text-sub);margin-top:2px;">${p.perk}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:16px;color:var(--text);font-weight:500;">${p.price}<span style="font-size:11px;color:var(--text-muted);">${p.cycle}</span></div>
+              <a href="/checkout?plan=${p.id}" style="display:inline-block;margin-top:6px;padding:6px 12px;background:${p.recommended ? 'var(--gold)' : 'transparent'};color:${p.recommended ? '#000' : 'var(--gold)'};border:1px solid var(--gold);border-radius:20px;font-size:11px;font-weight:500;text-decoration:none;letter-spacing:0.5px;">Upgrade</a>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="padding:0 28px 24px;text-align:center;">
+        <a href="/pricing" style="font-size:12px;color:var(--text-muted);text-decoration:none;">Compare all plans →</a>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
 }
 
 function showHistoryView() {
