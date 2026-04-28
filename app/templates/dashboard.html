@@ -1046,8 +1046,38 @@ const plans = {
   }
 };
 
+// Map real plan slugs (free, travel_pass, tourist, tourist_pro, payg, solo,
+// team, scale, owner) to one of the 3 mockup categories used by this dashboard
+// (personal, premium, business). The dashboard's mockup data is a placeholder
+// until we wire it to live data — this mapping prevents JS crashes when a user
+// with a new-style plan slug logs in.
+function mapPlanToMockKey(slug) {
+  if (!slug) return 'personal';
+  const map = {
+    owner: 'business',
+    free: 'personal',
+    travel_pass: 'personal',
+    tourist: 'personal',
+    tourist_pro: 'premium',
+    payg: 'personal',
+    solo: 'premium',
+    team: 'business',
+    scale: 'business',
+    enterprise: 'business',
+    // Legacy aliases that already match
+    basic: 'personal',
+    personal: 'personal',
+    premium: 'premium',
+    business: 'business',
+  };
+  return map[slug] || 'personal';
+}
+
 function showPlan(planKey) {
-  const plan = plans[planKey];
+  // Defensive: ensure planKey resolves to a valid mockup entry. If a caller
+  // passes a real plan slug like 'free', map it to 'personal'.
+  const resolvedKey = plans[planKey] ? planKey : mapPlanToMockKey(planKey);
+  const plan = plans[resolvedKey] || plans.personal;
   const pct = Math.round((plan.used / plan.minutes) * 100);
   const remaining = plan.minutes - plan.used;
   const circumference = 2 * Math.PI * 58;
@@ -1057,9 +1087,9 @@ function showPlan(planKey) {
   const userName = currentSession ? currentSession.name.split(' ')[0] : 'User';
   const userInitial = userName.charAt(0).toUpperCase();
 
-  // Show/hide sidebar items
-  document.getElementById('nav-meetings').style.display = planKey === 'business' ? '' : 'none';
-  document.getElementById('nav-team').style.display = planKey === 'business' ? '' : 'none';
+  // Show/hide sidebar items — use resolvedKey so 'team' and 'scale' also unlock these
+  document.getElementById('nav-meetings').style.display = resolvedKey === 'business' ? '' : 'none';
+  document.getElementById('nav-team').style.display = resolvedKey === 'business' ? '' : 'none';
   document.getElementById('history-badge').textContent = plan.history.length;
 
   // Sidebar plan card
@@ -1374,15 +1404,15 @@ function showPlan(planKey) {
 }
 
 // Init — load user's actual plan from session
-const userPlan = currentSession ? currentSession.plan : 'personal';
-showPlan(userPlan === 'owner' ? 'personal' : userPlan);
+const userPlan = currentSession ? currentSession.plan : 'free';
+showPlan(mapPlanToMockKey(userPlan));
 
 // Highlight the correct switcher button for owners
 if (currentSession && currentSession.is_owner) {
   const planBtns = document.querySelectorAll('.plan-switcher button');
   planBtns.forEach(b => b.classList.remove('active'));
   const planIndex = { personal: 0, premium: 1, business: 2 };
-  const viewPlan = userPlan === 'owner' ? 'personal' : userPlan;
+  const viewPlan = mapPlanToMockKey(userPlan);
   if (planBtns[planIndex[viewPlan]]) planBtns[planIndex[viewPlan]].classList.add('active');
 }
 
@@ -1417,7 +1447,7 @@ sidebarItems.forEach(item => {
     const globe = svg ? svg.querySelector('circle[cx="12"][cy="12"][r="10"]') : null;
     const gear = svg ? svg.querySelector('circle[cx="12"][cy="12"][r="3"]') : null;
 
-    if (rect) { showPlan(userPlan === 'owner' ? 'personal' : userPlan); }
+    if (rect) { showPlan(mapPlanToMockKey(userPlan)); }
     else if (mic) { toggleMiniPlayer(); }
     else if (globe) { showLanguagesView(); }
     else if (gear) { showSettingsView(); }
@@ -1440,7 +1470,7 @@ function closeSidebar() {
 
 // ── SIDEBAR VIEW FUNCTIONS ──
 function showLanguagesView() {
-  const plan = plans[userPlan === 'owner' ? 'personal' : userPlan] || plans.personal;
+  const plan = plans[mapPlanToMockKey(userPlan)] || plans.personal;
   document.getElementById('main-content').innerHTML = `
     <div class="welcome-header animate-in">
       <div><div class="welcome-name">Languages</div>
@@ -1547,7 +1577,7 @@ async function changePassword() {
 
 // ── MEETINGS VIEW (Business) ──
 function showMeetingsView() {
-  const plan = plans[userPlan === 'owner' ? 'personal' : userPlan] || plans.personal;
+  const plan = plans[mapPlanToMockKey(userPlan)] || plans.personal;
   if (!plan.meetings) {
     document.getElementById('main-content').innerHTML = `
       <div class="welcome-header animate-in"><div><div class="welcome-name">Meetings</div>
@@ -1571,7 +1601,7 @@ function showMeetingsView() {
 
 // ── TEAM VIEW (Business) ──
 function showTeamView() {
-  const plan = plans[userPlan === 'owner' ? 'personal' : userPlan] || plans.personal;
+  const plan = plans[mapPlanToMockKey(userPlan)] || plans.personal;
   if (!plan.team) {
     document.getElementById('main-content').innerHTML = `
       <div class="welcome-header animate-in"><div><div class="welcome-name">Team</div>
@@ -2239,7 +2269,7 @@ function updateTranslationResult(original, translated) {
 }
 
 // Update credits in mini player (handle 'owner' plan)
-const mpPlan = plans[userPlan === 'owner' ? 'personal' : userPlan] || plans.personal;
+const mpPlan = plans[mapPlanToMockKey(userPlan)] || plans.personal;
 const mpPct = Math.round(((mpPlan.minutes - mpPlan.used) / mpPlan.minutes) * 100);
 document.getElementById('mpCreditsFill').style.width = mpPct + '%';
 document.getElementById('mpCreditsText').textContent = (mpPlan.minutes - mpPlan.used) + ' min left';

@@ -49,7 +49,15 @@ def start_session():
             return jsonify({'error': 'User not found'}), 404
 
         if not has_minutes_available(user):
-            return jsonify({'error': 'Account inactive'}), 403
+            if not user.is_active:
+                return jsonify({'error': 'Account inactive'}), 403
+            return jsonify({
+                'error': 'You have used all your translation minutes for this period. Upgrade your plan to keep translating.',
+                'minutes_used': user.minutes_used,
+                'minutes_total': user.minutes_total,
+                'plan': user.plan,
+                'upgrade_required': True,
+            }), 402  # 402 Payment Required
 
         conversation = Conversation(
             conversation_id=str(uuid.uuid4()),
@@ -241,17 +249,52 @@ def get_tts_modes():
 @api_bp.route('/voice/register', methods=['POST'])
 @token_required
 def register_voice():
-    """Register a voice profile from audio recording."""
+    """Register a voice profile from audio recording.
+
+    Voice cloning is gated by plan: only plans with `voice_cloning_profiles`
+    > 0 (or unlimited = -1) can register a voice. Free, Travel Pass, Tourist,
+    and Pay-as-you-go users get a 403.
+    """
     data = request.get_json()
-    user_id = data.get('user_id')
+    # SECURITY: use the authenticated user from the token, not the client body.
+    # Allowing the client to specify user_id would let any authenticated user
+    # register a voice profile against any other user's account.
+    user_id = g.current_user['user_id']
     audio_b64 = data.get('audio')
     profile_name = data.get('profile_name', 'default')
     language = data.get('language')
 
-    if not user_id:
-        return jsonify({'error': 'user_id is required'}), 400
     if not audio_b64:
         return jsonify({'error': 'audio is required'}), 400
+
+    # Plan gate: check the user's voice_cloning_profiles allowance and existing count
+    from app.config import PRICING
+    plan_check_db = db_session()
+    try:
+        user_for_plan = plan_check_db.query(User).filter_by(user_id=user_id).first()
+        if not user_for_plan:
+            return jsonify({'error': 'User not found'}), 404
+        is_owner = getattr(user_for_plan, 'is_owner', False) or user_for_plan.plan == 'owner'
+        if not is_owner:
+            plan_obj = PRICING.get(user_for_plan.plan, PRICING['free'])
+            allowance = plan_obj.get('voice_cloning_profiles', 0)
+            if allowance == 0:
+                return jsonify({
+                    'error': 'Voice cloning is not included in your plan. Upgrade to Tourist Pro or higher to clone voices.',
+                    'plan': user_for_plan.plan,
+                    'upgrade_required': True,
+                }), 403
+            if allowance != -1:  # not unlimited
+                existing = plan_check_db.query(VoiceProfile).filter_by(user_id=user_id).count()
+                if existing >= allowance:
+                    return jsonify({
+                        'error': f'You have reached your voice profile limit ({allowance}). Delete an existing profile or upgrade your plan.',
+                        'plan': user_for_plan.plan,
+                        'limit': allowance,
+                        'current': existing,
+                    }), 403
+    finally:
+        plan_check_db.close()
 
     try:
         # Decode audio from base64
