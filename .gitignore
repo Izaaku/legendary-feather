@@ -6,3 +6,5 @@ data/
 *.db
 *.sqlite
 .DS_Store
+# sed -i.bak backup files
+*.bak
