@@ -1475,9 +1475,22 @@ function sendF2FAudioToWhisper(blob){
         const b64 = reader.result.split(',')[1];
         const reqId = 'f2f_'+Date.now();
         socket.emit('transcribe', {audio:b64, request_id:reqId});
+
+        // Safety timeout — if the server doesn't respond in 15s, reset the
+        // button so the user isn't stuck on "Transcribing..." forever.
+        let resetTimer = setTimeout(() => {
+            f2fStatusLabel.textContent = 'No response from server — try again';
+            setTimeout(() => resetF2FButton(), 1500);
+        }, 15000);
+
         socket.once('transcription', (data)=>{
+            clearTimeout(resetTimer);
             if(data.text && data.text.trim()){
+                // Send the text for translation (async, updates bubble in background)
                 processF2FUtterance(data.text.trim());
+                // Reset the mic button immediately so the user can speak again
+                // while the translation arrives. The chat bubble updates on its own.
+                resetF2FButton();
             } else {
                 f2fStatusLabel.textContent = 'No speech detected — try again';
                 setTimeout(()=>resetF2FButton(), 1500);
@@ -1553,7 +1566,19 @@ function processF2FUtterance(text){
     bubble.scrollIntoView({behavior:'smooth'});
 
     socket.emit('translate_f2f', {text, lang1, lang2});
+
+    // Safety timeout — if translation doesn't come back in 15s, mark the
+    // bubble as failed instead of leaving it stuck on "Translating...".
+    const translateTimer = setTimeout(() => {
+        const el = document.getElementById(bubbleId);
+        if(el && el.querySelector('.cb-translated').textContent === 'Translating...') {
+            el.querySelector('.cb-translated').textContent = '(translation failed — try again)';
+            el.querySelector('.cb-translated').style.color = 'var(--error)';
+        }
+    }, 15000);
+
     socket.once('f2f_translation', (data)=>{
+        clearTimeout(translateTimer);
         const el = document.getElementById(bubbleId);
         if(!el) return;
 
