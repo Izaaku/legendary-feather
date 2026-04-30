@@ -325,7 +325,7 @@ canvas#stars {
         <label class="form-label">Password</label>
         <input class="form-input" type="password" placeholder="Enter your password" required autocomplete="current-password">
       </div>
-      <div class="forgot-link"><a href="#">Forgot password?</a></div>
+      <div class="forgot-link"><a href="#" id="forgotPwLink">Forgot password?</a></div>
       <button class="btn-auth" type="submit">Sign In</button>
 
       <div class="auth-divider"><span>or</span></div>
@@ -442,6 +442,31 @@ canvas#stars {
         </button>
       </div>
     </form>
+
+    <!-- ═══════ FORGOT PASSWORD FORM ═══════ -->
+    <form class="auth-form" id="forgotForm" style="display:none;">
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:16px;">Enter your account email and we'll send you a link to reset your password.</p>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input class="form-input" type="email" id="forgotEmail" placeholder="your@email.com" required autocomplete="email">
+      </div>
+      <button class="btn-auth" type="submit">Send reset link</button>
+      <div class="forgot-link" style="margin-top:12px;"><a href="#" id="backToLogin">← Back to sign in</a></div>
+    </form>
+
+    <!-- ═══════ RESET PASSWORD FORM (after clicking email link) ═══════ -->
+    <form class="auth-form" id="resetForm" style="display:none;">
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:16px;">Choose a new password for your account.</p>
+      <div class="form-group">
+        <label class="form-label">New Password</label>
+        <input class="form-input" type="password" id="resetNewPw" placeholder="Min 8 characters" required minlength="8" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm Password</label>
+        <input class="form-input" type="password" id="resetConfirmPw" placeholder="Repeat your new password" required minlength="8" autocomplete="new-password">
+      </div>
+      <button class="btn-auth" type="submit">Update password</button>
+    </form>
   </div>
 
   <div class="auth-footer" id="authFooter">
@@ -516,27 +541,50 @@ const authMsg = document.getElementById('authMsg');
 
 let currentTab = 'login';
 
+const forgotForm = document.getElementById('forgotForm');
+const resetForm = document.getElementById('resetForm');
+const tabsContainer = document.querySelector('.tabs');
+
 function switchTab(tab) {
   currentTab = tab;
   tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
   loginForm.style.display = tab === 'login' ? 'flex' : 'none';
   signupForm.style.display = tab === 'signup' ? 'flex' : 'none';
+  if (forgotForm) forgotForm.style.display = tab === 'forgot' ? 'flex' : 'none';
+  if (resetForm)  resetForm.style.display  = tab === 'reset'  ? 'flex' : 'none';
+  if (tabsContainer) tabsContainer.style.display = (tab === 'forgot' || tab === 'reset') ? 'none' : '';
   authMsg.className = 'msg';
   authMsg.textContent = '';
 
   if (tab === 'login') {
     authFooter.innerHTML = 'Don\'t have an account? <a href="#" onclick="switchTab(\'signup\'); return false;">Create one</a>';
-  } else {
+  } else if (tab === 'signup') {
     authFooter.innerHTML = 'Already have an account? <a href="#" onclick="switchTab(\'login\'); return false;">Sign in</a>';
+  } else if (tab === 'forgot' || tab === 'reset') {
+    authFooter.innerHTML = '';
   }
 }
 
 tabs.forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
 document.getElementById('switchToSignup').addEventListener('click', e => { e.preventDefault(); switchTab('signup'); });
 
+// Forgot password link → forgot form
+const forgotLink = document.getElementById('forgotPwLink');
+if (forgotLink) forgotLink.addEventListener('click', e => { e.preventDefault(); switchTab('forgot'); });
+
+// Back to login link from forgot form
+const backToLogin = document.getElementById('backToLogin');
+if (backToLogin) backToLogin.addEventListener('click', e => { e.preventDefault(); switchTab('login'); });
+
 // Check URL params for default tab
 const params = new URLSearchParams(location.search);
 if (params.get('tab') === 'signup' || params.get('signup') === '1') switchTab('signup');
+
+// If we landed on /reset-password?token=... show the reset form
+const resetTokenFromUrl = (location.pathname === '/reset-password') ? params.get('token') : null;
+if (resetTokenFromUrl) {
+  switchTab('reset');
+}
 
 // ── Plan Selection ──
 let selectedPlan = 'free';
@@ -686,6 +734,56 @@ signupForm.addEventListener('submit', async function(e){
     setLoading(btn, false);
   }
 });
+
+// ── Forgot Password submit ──
+if (forgotForm) {
+  forgotForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    const btn = forgotForm.querySelector('button[type="submit"]');
+    const email = document.getElementById('forgotEmail').value.trim();
+    if (!email) { showMsg('Please enter your email', 'error'); return; }
+    setLoading(btn, true);
+    try {
+      const data = await apiCall('forgot-password', { email });
+      // Backend always returns success (anti-enumeration). Show a generic
+      // helpful message regardless of whether the email exists.
+      showMsg(data.message || 'If an account exists for that email, we just sent a reset link.', 'success');
+      forgotForm.querySelector('input').value = '';
+    } catch (err) {
+      // Backend doesn't 4xx normally, but in case of validation errors:
+      showMsg(err.message || 'Could not send reset link. Try again.', 'error');
+    }
+    setLoading(btn, false);
+  });
+}
+
+// ── Reset Password submit ──
+if (resetForm) {
+  resetForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    const btn = resetForm.querySelector('button[type="submit"]');
+    const newPw = document.getElementById('resetNewPw').value;
+    const confirm = document.getElementById('resetConfirmPw').value;
+    if (newPw.length < 8) { showMsg('Password must be at least 8 characters', 'error'); return; }
+    if (newPw !== confirm) { showMsg('Passwords do not match', 'error'); return; }
+
+    const tokenFromUrl = new URLSearchParams(location.search).get('token');
+    if (!tokenFromUrl) {
+      showMsg('Reset token is missing. Use the link from your email.', 'error');
+      return;
+    }
+
+    setLoading(btn, true);
+    try {
+      await apiCall('reset-password', { token: tokenFromUrl, new_password: newPw });
+      showMsg('Password updated! Redirecting to sign in...', 'success');
+      setTimeout(() => { window.location.href = '/auth'; }, 1500);
+    } catch (err) {
+      showMsg(err.message || 'Failed to reset password.', 'error');
+      setLoading(btn, false);
+    }
+  });
+}
 </script>
 </body>
 </html>

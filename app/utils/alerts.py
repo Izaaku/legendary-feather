@@ -79,6 +79,46 @@ def _timestamp():
     return datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
 
 
+def send_user_email(recipient: str, subject: str, body_html: str) -> bool:
+    """Send an email to an arbitrary user (not the admin alert inbox).
+
+    Used for password resets, signup welcome, etc. Returns True if the send
+    was queued, False if email is not configured (caller can use this to
+    decide whether to surface a "check your email" message vs an error).
+    """
+    if not (EMAIL_FROM and EMAIL_PASSWORD):
+        print(f'[EMAIL] Not configured — would send to {recipient}: {subject}')
+        return False
+    if not recipient:
+        return False
+
+    def _send():
+        try:
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = f'Legendary Feather <{EMAIL_FROM}>'
+            msg['To'] = recipient
+
+            import re
+            plain = body_html.replace('<br>', '\n').replace('</p>', '\n')
+            plain = re.sub(r'<[^>]+>', '', plain)
+
+            msg.attach(MIMEText(plain, 'plain'))
+            msg.attach(MIMEText(body_html, 'html'))
+
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+                server.starttls()
+                server.login(EMAIL_FROM, EMAIL_PASSWORD)
+                server.send_message(msg)
+
+            print(f'[EMAIL] Sent to {recipient}: {subject}')
+        except Exception as e:
+            print(f'[EMAIL] Failed to send to {recipient}: {e}')
+
+    threading.Thread(target=_send, daemon=True).start()
+    return True
+
+
 # ── Alert Types ─────────────────────────────────────
 
 def alert_waf_block(ip, attack_type, path):

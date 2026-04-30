@@ -332,6 +332,18 @@ def auth():
     return render_template('auth.html')
 
 
+@app.route('/reset-password')
+def reset_password_page():
+    """Password reset page — user lands here from the email link.
+
+    The token comes via ?token=... in the URL. The page is just the auth
+    template with a special mode that hides login/signup and shows the
+    reset form instead. The token validation happens server-side when the
+    user submits the new password.
+    """
+    return render_template('auth.html')
+
+
 @app.route('/dashboard')
 def dashboard():
     """User dashboard — adapts to membership plan."""

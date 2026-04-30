@@ -56,6 +56,47 @@ def create_token(user_id: str, email: str, is_owner: bool = False, hours: int = 
     return f"{payload_str}.{signature}"
 
 
+def create_reset_token(user_id: str, email: str, minutes: int = 30) -> str:
+    """Create a short-lived password-reset token. Stateless — signed with the
+    same SECRET_KEY as auth tokens but with a 'purpose' field that prevents
+    it from being mistaken for a session token. Expires after `minutes`.
+    """
+    import json
+    exp = datetime.now(timezone.utc) + timedelta(minutes=minutes)
+    payload = {
+        'user_id': user_id,
+        'email': email,
+        'purpose': 'password_reset',
+        'exp': exp.isoformat(),
+    }
+    payload_str = _b64url_encode(json.dumps(payload).encode())
+    signature = _sign(payload_str)
+    return f"{payload_str}.{signature}"
+
+
+def decode_reset_token(token: str) -> dict | None:
+    """Decode and verify a password-reset token. Returns payload dict or None
+    if invalid / expired / not a reset token."""
+    import json
+    try:
+        parts = token.split('.')
+        if len(parts) != 2:
+            return None
+        payload_str, signature = parts
+        expected_sig = _sign(payload_str)
+        if not hmac.compare_digest(signature, expected_sig):
+            return None
+        payload = json.loads(_b64url_decode(payload_str))
+        if payload.get('purpose') != 'password_reset':
+            return None
+        exp = datetime.fromisoformat(payload['exp'])
+        if datetime.now(timezone.utc) > exp:
+            return None
+        return payload
+    except Exception:
+        return None
+
+
 def decode_token(token: str) -> dict | None:
     """Decode and verify a token. Returns payload dict or None."""
     import json

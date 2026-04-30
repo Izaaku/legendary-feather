@@ -822,7 +822,7 @@ footer {
                         <option value="">Standard voice</option>
                         <!-- Voice profiles populated by JS -->
                     </select>
-                    <span style="font-size:11px;color:var(--text-muted);">Pick a voice profile to clone — translation will sound like you.</span>
+                    <span id="f2fVoiceSelectorHint" style="font-size:11px;color:var(--text-muted);flex:1;min-width:200px;">Pick a voice profile to clone — translation will sound like you.</span>
                 </div>
             </div>
 
@@ -888,7 +888,7 @@ footer {
                     <div style="background:rgba(212,168,67,0.05);border:1px solid var(--gold-dim);border-radius:12px;padding:14px;margin-bottom:12px;">
                         <div style="font-size:11px;color:var(--gold);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">⚖️ Ethical Use Agreement</div>
                         <ul style="list-style:none;padding:0;margin:0 0 12px 0;font-size:12px;color:var(--text-sub);line-height:1.6;">
-                            <li style="margin-bottom:6px;"><span style="color:var(--gold);">✓</span> I am cloning <strong style="color:var(--text);">my own voice</strong>, or I have explicit written consent from the person whose voice I am cloning.</li>
+                            <li style="margin-bottom:6px;"><span style="color:var(--gold);">✓</span> The voice I am about to record is <strong style="color:var(--text);">my own voice</strong>. I am not cloning anyone else's voice for any reason.</li>
                             <li style="margin-bottom:6px;"><span style="color:var(--gold);">✓</span> I understand all generated audio includes an <strong style="color:var(--text);">invisible watermark</strong> linking it to my account for traceability.</li>
                             <li style="margin-bottom:6px;"><span style="color:var(--gold);">✓</span> I will <strong style="color:var(--text);">not impersonate</strong> public figures, commit fraud, or use this voice for harassment, deception, or any unlawful purpose.</li>
                             <li><span style="color:var(--gold);">✓</span> I understand that misuse results in <strong style="color:var(--text);">immediate account termination</strong> and may lead to legal action.</li>
@@ -2114,14 +2114,39 @@ async function loadVoiceProfiles(){
         if(!profiles.length){list.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px;">No voice profiles yet</div>';}
         else { list.innerHTML=profiles.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;"><span style="color:var(--text);font-weight:500;font-size:14px;">${p.name}</span><button onclick="deleteVoiceProfile('${p.id}')" style="padding:6px 12px;background:rgba(200,96,96,0.1);color:var(--error);border:1px solid rgba(200,96,96,0.25);border-radius:20px;font-size:11px;cursor:pointer;font-family:'Outfit',sans-serif;">Delete</button></div>`).join(''); }
 
-        // ── Populate the F2F voice selector if user has voice cloning + at least one profile ──
+        // ── Populate the F2F voice selector ──
+        // Three states:
+        //   (a) profiles exist → ALWAYS show selector (proof of cloning access)
+        //   (b) no profiles + plan supports cloning → show disabled selector
+        //       with helper pointing to registration panel
+        //   (c) no profiles + plan does not support cloning → hide selector
+        //
+        // We check profiles first because they are the source of truth: the
+        // /api/voice/profiles endpoint only returns profiles that were
+        // successfully registered — if there's at least one, the user has
+        // cloning access regardless of what sessionStorage says (in case
+        // session was stale after a recent plan upgrade).
         const selectorWrap = document.getElementById('f2fVoiceSelector');
         const selectorEl = document.getElementById('f2fVoiceProfile');
+        const selectorHint = document.getElementById('f2fVoiceSelectorHint');
         if(selectorWrap && selectorEl){
-            if(userHasVoiceCloningPlan() && profiles.length > 0){
+            const hasProfiles = profiles.length > 0;
+            const planAllowsCloning = userHasVoiceCloningPlan();
+            console.log('[F2F voice selector]', {
+                hasProfiles, planAllowsCloning, profileCount: profiles.length,
+                sessionPlan: (getUser() || {}).plan,
+            });
+            if(hasProfiles){
+                selectorWrap.style.display = 'block';
+                selectorEl.disabled = false;
                 selectorEl.innerHTML = '<option value="">Standard voice</option>' +
                     profiles.map(p => `<option value="${p.id}">${p.name} (your voice)</option>`).join('');
+                if(selectorHint) selectorHint.textContent = 'Pick a voice profile to clone — translation will sound like you.';
+            } else if(planAllowsCloning){
                 selectorWrap.style.display = 'block';
+                selectorEl.disabled = true;
+                selectorEl.innerHTML = '<option value="">Standard voice (no voice profiles registered)</option>';
+                if(selectorHint) selectorHint.innerHTML = '⬇ Register your voice in the <strong>Register Your Voice</strong> panel below to enable voice cloning.';
             } else {
                 selectorWrap.style.display = 'none';
             }
