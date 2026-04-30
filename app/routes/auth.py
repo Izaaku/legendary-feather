@@ -343,7 +343,56 @@ def reset_password():
         db.close()
 
 
-@auth_bp.route('/change-password', methods=['POST'])
+@auth_bp.route('/debug/admin-check', methods=['GET'])
+def debug_admin_check():
+    """Diagnostic endpoint — does NOT expose passwords or secrets.
+
+    Tells us whether the env vars are set, whether the seed found and
+    updated the owner accounts, and whether the password hashes exist.
+    Use to debug why a login is failing after a RESET_ADMIN_PASSWORD push.
+
+    Remove this endpoint after debugging is done.
+    """
+    import os
+    from app.utils.auth import verify_password
+    out = {
+        'env_vars': {
+            'ADMIN_PASSWORD_set': bool(os.getenv('ADMIN_PASSWORD')),
+            'ADMIN_PASSWORD_length': len(os.getenv('ADMIN_PASSWORD', '')),
+            'RESET_ADMIN_PASSWORD_raw': repr(os.getenv('RESET_ADMIN_PASSWORD', '')),
+            'RESET_ADMIN_PASSWORD_evaluated': os.getenv('RESET_ADMIN_PASSWORD', '').lower() in ('true', '1', 'yes'),
+        },
+        'admin_accounts': [],
+    }
+    db = db_session()
+    try:
+        for email in ['uribeisaakgogo@gmail.com', 'izaaku16@gmail.com']:
+            user = db.query(User).filter_by(email=email).first()
+            if not user:
+                out['admin_accounts'].append({'email': email, 'exists': False})
+                continue
+
+            # Test if the current ADMIN_PASSWORD env var would actually
+            # authenticate against the stored hash. This is what tells us
+            # whether the seed reset worked.
+            admin_pw = os.getenv('ADMIN_PASSWORD', '')
+            password_matches_env = (
+                bool(admin_pw) and bool(user.password_hash)
+                and verify_password(admin_pw, user.password_hash)
+            )
+            out['admin_accounts'].append({
+                'email': email,
+                'exists': True,
+                'is_owner': bool(user.is_owner),
+                'plan': user.plan,
+                'is_active': user.is_active,
+                'has_password_hash': bool(user.password_hash),
+                'password_hash_starts_with': (user.password_hash or '')[:8] + '...' if user.password_hash else None,
+                'password_matches_ADMIN_PASSWORD_env': password_matches_env,
+            })
+        return jsonify(out)
+    finally:
+        db.close()
 @token_required
 def change_password():
     """Change the current user's password."""
