@@ -283,6 +283,101 @@ def get_security():
         return jsonify({'error': str(e)}), 500
 
 
+# ── 5b. Voice Audit Log (anti-fraud / anti-extortion) ──
+
+@admin_bp.route('/api/voice-audit')
+@owner_required
+def get_voice_audit():
+    """Get the most recent voice-cloning / TTS audit log entries.
+
+    Optional query params:
+        - user_id: filter by a specific user
+        - event_type: filter by 'register', 'tts_clone', 'tts_standard', etc.
+        - audio_hash: search by exact SHA-256 hash (forensic lookup)
+        - limit: max rows (default 100, max 500)
+    """
+    from app.utils.supabase_client import supabase as _sb_default
+    from app.utils.audit_log import _supabase as audit_sb
+
+    sb = audit_sb if audit_sb.is_ready() else _sb_default
+    if not sb.is_ready():
+        return jsonify({
+            'enabled': False,
+            'reason': 'Supabase not configured. Set SUPABASE_URL and SUPABASE_KEY env vars.',
+            'rows': [],
+        })
+
+    user_id = request.args.get('user_id')
+    event_type = request.args.get('event_type')
+    audio_hash = request.args.get('audio_hash')
+    try:
+        limit = min(int(request.args.get('limit', 100)), 500)
+    except ValueError:
+        limit = 100
+
+    filters = {}
+    if user_id:    filters['user_id'] = user_id
+    if event_type: filters['event_type'] = event_type
+    if audio_hash: filters['audio_hash'] = audio_hash
+
+    try:
+        rows = sb.select(
+            'voice_audit_log',
+            filters=filters if filters else None,
+            order='created_at.desc',
+            limit=limit,
+        ) or []
+        return jsonify({
+            'enabled': True,
+            'count': len(rows),
+            'rows': rows,
+        })
+    except Exception as e:
+        return jsonify({'enabled': True, 'error': str(e), 'rows': []}), 500
+
+
+@admin_bp.route('/api/voice-audit/stats')
+@owner_required
+def get_voice_audit_stats():
+    """Aggregate voice audit log — counts by event_type for the last 30 days."""
+    from app.utils.audit_log import _supabase as audit_sb
+    if not audit_sb.is_ready():
+        return jsonify({'enabled': False})
+
+    try:
+        # Pull recent entries and aggregate in Python (Supabase REST has no
+        # GROUP BY without a stored procedure; for our scale this is fine)
+        rows = audit_sb.select(
+            'voice_audit_log',
+            order='created_at.desc',
+            limit=500,
+        ) or []
+        by_event = {}
+        by_user = {}
+        total_chars = 0
+        total_clones = 0
+        for r in rows:
+            by_event[r.get('event_type', 'unknown')] = by_event.get(r.get('event_type', 'unknown'), 0) + 1
+            by_user[r.get('user_id', 'unknown')] = by_user.get(r.get('user_id', 'unknown'), 0) + 1
+            total_chars += int(r.get('char_count') or 0)
+            if r.get('event_type') == 'tts_clone':
+                total_clones += 1
+
+        # Top 10 most active users
+        top_users = sorted(by_user.items(), key=lambda kv: -kv[1])[:10]
+
+        return jsonify({
+            'enabled': True,
+            'total_events': len(rows),
+            'total_clone_calls': total_clones,
+            'total_chars_synthesized': total_chars,
+            'events_by_type': by_event,
+            'top_users_by_activity': [{'user_id': u, 'count': c} for u, c in top_users],
+        })
+    except Exception as e:
+        return jsonify({'enabled': True, 'error': str(e)}), 500
+
+
 # ── 6. API Metrics ─────────────────────────────────
 
 # Simple in-memory request counter

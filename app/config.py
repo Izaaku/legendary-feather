@@ -78,7 +78,7 @@ def stripe_price(plan_slug):
 #   billing:            'free' | 'monthly' | 'one_time' | 'usage' | 'custom'
 #   prices:             {'eur': X, 'usd': Y}  — None means "Custom / Talk to Sales"
 #   minutes_openai:     standard-quality TTS minutes/month (-1 = unlimited)
-#   minutes_elevenlabs: premium-quality TTS minutes/month (caps protect margin)
+#   minutes_elevenlabs: premium-quality TTS minutes/month (internal key — caps protect margin)
 #   per_seat:           True for business plans charged per agent
 #   min_seats:          minimum number of seats for business plans
 #   stripe_price_id_*:  Stripe Price IDs per currency (set via env vars)
@@ -128,7 +128,7 @@ PRICING = {
         'features': [
             '5 minutes / month',
             '100+ languages',
-            'Standard voice (OpenAI TTS)',
+            'Standard voice',
             'Mobile PWA',
             'No credit card required',
         ],
@@ -151,7 +151,7 @@ PRICING = {
         'features': [
             '100 minutes for 7 days',
             '100+ languages',
-            'Natural voice (OpenAI TTS)',
+            'Natural voice',
             'Face-to-face mode',
             'Mobile PWA',
             'No subscription — buy once',
@@ -173,7 +173,7 @@ PRICING = {
         'features': [
             '60 minutes / month',
             '100+ languages',
-            'Natural voice (OpenAI TTS)',
+            'Natural voice',
             'Face-to-face mode',
             'Mobile PWA',
             'For expats and frequent travelers',
@@ -195,7 +195,7 @@ PRICING = {
         'features': [
             '150 standard min + 30 premium min / month',
             '100+ languages with regional dialects',
-            'Premium voice (ElevenLabs) for key conversations',
+            'Premium studio-quality voice for key conversations',
             'Voice cloning (1 profile)',
             'Offline mode (basic)',
             'Priority support',

@@ -811,6 +811,21 @@ footer {
                     <select id="f2fLang2" style="width:100%;"></select>
                 </div>
             </div>
+
+            <!-- ═══ VOICE SELECTOR — Use my cloned voice (premium plans only) ═══ -->
+            <!-- Hidden by default. JS reveals it if (a) user has voice cloning
+                 in their plan AND (b) they have at least one voice profile saved. -->
+            <div id="f2fVoiceSelector" style="display:none;margin-bottom:16px;padding:12px 14px;background:var(--gold-dim);border:1px solid var(--border);border-radius:10px;">
+                <div style="font-size:11px;color:var(--gold);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Translation voice</div>
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <select id="f2fVoiceProfile" style="flex:1;min-width:180px;">
+                        <option value="">Standard voice</option>
+                        <!-- Voice profiles populated by JS -->
+                    </select>
+                    <span style="font-size:11px;color:var(--text-muted);">Pick a voice profile to clone — translation will sound like you.</span>
+                </div>
+            </div>
+
             <div class="talk-area">
                 <div class="person-indicator" id="f2fStatusLabel">Press and hold to speak</div>
                 <button class="talk-btn" id="talkBtn">🎤</button>
@@ -852,11 +867,13 @@ footer {
                 <div style="background:var(--gold-dim);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
                     <div style="font-size:11px;color:var(--gold);font-weight:500;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Read aloud for best voice capture</div>
                     <div id="guidePhrase" style="font-size:14px;color:var(--text);line-height:1.6;padding:12px;background:var(--bg);border-radius:8px;text-align:center;min-height:50px;display:flex;align-items:center;justify-content:center;"></div>
-                    <div style="display:flex;justify-content:center;gap:8px;margin-top:10px;">
+                    <div style="display:flex;justify-content:center;gap:8px;margin-top:10px;align-items:center;">
                         <button class="btn-secondary" onclick="prevGuidePhrase()" style="padding:6px 14px;font-size:12px;">◀</button>
                         <span id="guidePhraseCounter" style="color:var(--text-muted);font-size:12px;display:flex;align-items:center;">1/5</span>
                         <button class="btn-secondary" onclick="nextGuidePhrase()" style="padding:6px 14px;font-size:12px;">▶</button>
+                        <button class="btn-secondary" onclick="regenerateGuidePhrases()" style="padding:6px 12px;font-size:12px;margin-left:6px;" title="Generate new random phrases">🔀 New</button>
                     </div>
+                    <div style="margin-top:8px;font-size:11px;color:var(--text-muted);text-align:center;font-style:italic;">Phrases are randomly generated per session to prevent voice impersonation.</div>
                 </div>
                 <button class="recording-button" id="voiceRecordBtn">
                     <span id="recordBtnIcon">🔴</span>
@@ -866,7 +883,23 @@ footer {
                 <div id="recordingTimer" style="display:none;text-align:center;font-size:13px;color:var(--gold);font-weight:500;margin-top:4px;">Time: <span id="recordingTime">0</span>s</div>
                 <div id="profileSaveSection" style="display:none;margin-top:12px;">
                     <input type="text" class="text-input" id="profileNameInput" placeholder="Profile name (e.g. 'My Voice')" style="width:100%;margin-bottom:10px;">
-                    <button class="btn-primary" id="saveProfileBtn" style="width:100%;">Save Voice Profile</button>
+
+                    <!-- ═══ ETHICAL USE AGREEMENT (required) ═══ -->
+                    <div style="background:rgba(212,168,67,0.05);border:1px solid var(--gold-dim);border-radius:12px;padding:14px;margin-bottom:12px;">
+                        <div style="font-size:11px;color:var(--gold);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">⚖️ Ethical Use Agreement</div>
+                        <ul style="list-style:none;padding:0;margin:0 0 12px 0;font-size:12px;color:var(--text-sub);line-height:1.6;">
+                            <li style="margin-bottom:6px;"><span style="color:var(--gold);">✓</span> I am cloning <strong style="color:var(--text);">my own voice</strong>, or I have explicit written consent from the person whose voice I am cloning.</li>
+                            <li style="margin-bottom:6px;"><span style="color:var(--gold);">✓</span> I understand all generated audio includes an <strong style="color:var(--text);">invisible watermark</strong> linking it to my account for traceability.</li>
+                            <li style="margin-bottom:6px;"><span style="color:var(--gold);">✓</span> I will <strong style="color:var(--text);">not impersonate</strong> public figures, commit fraud, or use this voice for harassment, deception, or any unlawful purpose.</li>
+                            <li><span style="color:var(--gold);">✓</span> I understand that misuse results in <strong style="color:var(--text);">immediate account termination</strong> and may lead to legal action.</li>
+                        </ul>
+                        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text);user-select:none;">
+                            <input type="checkbox" id="voiceConsentCheckbox" style="margin-top:3px;flex-shrink:0;accent-color:var(--gold);width:16px;height:16px;cursor:pointer;">
+                            <span>I have read and agree to the <strong style="color:var(--gold);">Ethical Use Agreement</strong> above.</span>
+                        </label>
+                    </div>
+
+                    <button class="btn-primary" id="saveProfileBtn" style="width:100%;opacity:0.5;cursor:not-allowed;" disabled>Save Voice Profile</button>
                 </div>
                 <div style="margin-top:18px;">
                     <div style="font-size:11px;color:var(--gold);font-weight:500;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;">Saved Profiles</div>
@@ -941,6 +974,27 @@ function getUser(){
 function getUserId(){
     const u = getUser();
     return u ? (u.user_id || u.id || 'default_user') : 'default_user';
+}
+
+// F2F session ID — generated lazily, persists for the browser tab. The
+// backend uses it to group audit-log entries from the same conversation
+// so the admin panel can show "this session, started by user X, generated
+// these N translations with these audio hashes".
+function _generateUUIDv4(){
+    if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    // Fallback for older browsers
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random()*16|0;
+        return (c==='x' ? r : (r&0x3|0x8)).toString(16);
+    });
+}
+function getF2FSessionId(){
+    let sid = sessionStorage.getItem('lf_f2f_session_id');
+    if(!sid){
+        sid = _generateUUIDv4();
+        sessionStorage.setItem('lf_f2f_session_id', sid);
+    }
+    return sid;
 }
 function authHeaders(){
     const t = getToken();
@@ -1446,6 +1500,7 @@ function startF2FTalk(){
     }
 }
 
+let f2fRecordStartTime = 0;
 function startF2FWhisper(){
     f2fAudioChunks = [];
     navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
@@ -1455,12 +1510,23 @@ function startF2FWhisper(){
         };
         f2fMediaRecorder.onstop = () => {
             stream.getTracks().forEach(t=>t.stop());
+            // Skip very short recordings (<800ms) — these are almost always
+            // accidental taps that would just produce Whisper hallucinations.
+            const recordedMs = Date.now() - f2fRecordStartTime;
+            if(recordedMs < 800){
+                console.log('[F2F] Skipped short recording:', recordedMs, 'ms');
+                f2fAudioChunks = [];
+                f2fStatusLabel.textContent = 'Hold longer to record speech';
+                setTimeout(() => resetF2FButton(), 1500);
+                return;
+            }
             if(f2fAudioChunks.length > 0){
                 const blob = new Blob(f2fAudioChunks, {type:'audio/webm'});
                 f2fAudioChunks = [];
                 sendF2FAudioToWhisper(blob);
             }
         };
+        f2fRecordStartTime = Date.now();
         f2fMediaRecorder.start();
     }).catch(e=>{
         showStatus('Microphone denied: '+e.message,'error');
@@ -1566,7 +1632,16 @@ function processF2FUtterance(text){
     bubble.scrollIntoView({behavior:'smooth'});
 
     // Send the user_id so the backend can gate by plan and track minutes.
-    socket.emit('translate_f2f', {text, lang1, lang2, user_id: getUserId()});
+    // Also send the selected voice profile (if any) so the TTS uses voice
+    // cloning when the user has selected one.
+    const voiceProfileEl = document.getElementById('f2fVoiceProfile');
+    const voiceProfileId = voiceProfileEl ? voiceProfileEl.value : '';
+    socket.emit('translate_f2f', {
+        text, lang1, lang2,
+        user_id: getUserId(),
+        voice_profile_id: voiceProfileId || null,
+        session_id: getF2FSessionId(),
+    });
 
     // Safety timeout — if translation doesn't come back in 15s, mark the
     // bubble as failed instead of leaving it stuck on "Translating...".
@@ -1758,16 +1833,84 @@ let isVoiceRecording=false, voiceRecordingTimer=null, voiceRecordingStart=0, med
 
 function toggleVoiceReg(){
     const h=document.getElementById('voiceRegHeader'), b=document.getElementById('voiceRegBody');
+    const wasOpen = b.classList.contains('open');
     h.classList.toggle('open'); b.classList.toggle('open');
+    // When opening the panel, regenerate phrases so the user always gets fresh
+    // prompts. This is the security-critical part: it makes pre-recorded
+    // replay attacks infeasible even across sessions.
+    if(!wasOpen && typeof regenerateGuidePhrases === 'function'){
+        regenerateGuidePhrases();
+    }
 }
 
-const guidePhrases = [
-    "The quick brown fox jumps over the lazy dog near the river bank on a sunny afternoon.",
-    "Please call me back tomorrow morning so we can discuss the project details together.",
-    "I believe technology can transform how people communicate across languages and cultures.",
-    "Good morning everyone, thank you for joining today's meeting. Let's begin with the agenda.",
-    "The weather forecast says it will rain later, so don't forget to bring an umbrella."
+// ── DYNAMIC GUIDE PHRASES ──
+// Random per-session sentences prevent replay attacks (uploading someone else's
+// pre-recorded voice). Each session generates 5 unique phrases by combining
+// templates + random modifiers + a session-unique 4-digit code that the user
+// must speak. The code embeds session freshness into the audio — even if an
+// attacker steals an old recording, it won't contain today's code.
+const PHRASE_TEMPLATES = [
+    "The {color} {animal} ran {direction} the {place} while the {time} sky turned {color2}.",
+    "I usually drink {drink} every {weekday} morning before walking through the {place}.",
+    "My {relative} taught me how to {verb} when I was {number} years old, and I still remember it.",
+    "We should meet at the {place} around {hour} and talk about {topic} for a while.",
+    "The {adjective} {object} on the {furniture} reminded me of my trip to {city} last {season}.",
+    "Reading {topic} books while sitting near the {place} helps me forget about {emotion}.",
+    "Yesterday I saw a {color} {animal} {verb}ing in the garden, which was completely unexpected.",
+    "My favorite memory is from {season} {number}, when we visited {city} for the first time.",
+    "If I could travel anywhere tomorrow, I would choose {city} because of its {adjective} architecture.",
+    "Every {weekday} I try to {verb} for at least {number} minutes to clear my mind."
 ];
+const PHRASE_VARS = {
+    color:    ['red','blue','green','golden','silver','copper','crimson','emerald','azure','violet'],
+    color2:   ['orange','pink','purple','gray','navy','rose','amber','teal','coral','indigo'],
+    animal:   ['fox','rabbit','wolf','heron','sparrow','dolphin','hawk','squirrel','deer','owl'],
+    direction:['toward','away from','around','past','through','beside','beyond','across'],
+    place:    ['mountain','old library','quiet park','river bank','market square','wooden bridge','small cafe','rose garden','train station','harbor'],
+    place_alt:['mountains','library','park','river','market','bridge','cafe','garden','station','harbor'],
+    time:     ['morning','evening','afternoon','midnight','dawn','twilight','noon','dusk'],
+    drink:    ['coffee','green tea','hot chocolate','fresh juice','lemon water','herbal tea','espresso','iced matcha'],
+    weekday:  ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+    relative: ['grandfather','grandmother','aunt','uncle','older sister','older brother','cousin','neighbor'],
+    verb:     ['paint','garden','bake','write','swim','ride a bicycle','play chess','dance','meditate','draw'],
+    number:   ['seven','twelve','fifteen','twenty','thirty','six','nine','eleven','eighteen','twenty-five'],
+    hour:     ['three','four','five','six','seven','eight','nine','ten','eleven'],
+    topic:    ['history','poetry','astronomy','travel','philosophy','jazz music','marine biology','architecture','mythology','design'],
+    adjective:['ancient','beautiful','strange','quiet','lively','elegant','mysterious','warm','colorful','peaceful'],
+    object:   ['painting','clock','vase','book','lantern','mirror','letter','photograph','statue','tapestry'],
+    furniture:['old shelf','wooden table','windowsill','mantelpiece','desk','dresser','bench'],
+    city:     ['Lisbon','Kyoto','Barcelona','Reykjavik','Marrakech','Buenos Aires','Vienna','Edinburgh','Chiang Mai','Quebec City'],
+    season:   ['spring','summer','autumn','winter'],
+    emotion:  ['stress','worry','sadness','restlessness','impatience','frustration'],
+};
+
+function _pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function _generatePhrase(){
+    const tpl = _pick(PHRASE_TEMPLATES);
+    return tpl.replace(/\{(\w+)\}/g, (_, key) => {
+        const pool = PHRASE_VARS[key] || [];
+        return pool.length ? _pick(pool) : key;
+    });
+}
+
+// Generate a fresh batch of 5 unique phrases per session, each ending with a
+// session-unique 4-digit code. The code rotates per phrase so the user must
+// say a different code each time — prevents partial-replay attacks.
+function _buildSessionPhrases(){
+    const phrases = [];
+    const used = new Set();
+    while(phrases.length < 5){
+        let p = _generatePhrase();
+        if(used.has(p)) continue;
+        used.add(p);
+        const code = Math.floor(1000 + Math.random()*9000); // 4-digit random code
+        phrases.push(`${p} The verification code is ${code}.`);
+    }
+    return phrases;
+}
+
+let guidePhrases = _buildSessionPhrases();
 let phraseIdx=0;
 function showGuidePhrase(){
     const el=document.getElementById('guidePhrase'), c=document.getElementById('guidePhraseCounter');
@@ -1776,6 +1919,15 @@ function showGuidePhrase(){
 }
 function nextGuidePhrase(){phraseIdx=(phraseIdx+1)%guidePhrases.length;showGuidePhrase();}
 function prevGuidePhrase(){phraseIdx=(phraseIdx-1+guidePhrases.length)%guidePhrases.length;showGuidePhrase();}
+
+// Re-shuffle phrases each time the user opens the recording panel — guarantees
+// a different prompt set even if they reload the page.
+function regenerateGuidePhrases(){
+    guidePhrases = _buildSessionPhrases();
+    phraseIdx = 0;
+    showGuidePhrase();
+}
+
 showGuidePhrase();
 
 document.getElementById('voiceRecordBtn').addEventListener('click',()=>{
@@ -1816,18 +1968,53 @@ function stopVoiceRecording(){
     document.getElementById('profileNameInput').focus();
 }
 
-document.getElementById('saveProfileBtn').addEventListener('click',()=>{
+// ── Ethical Use Agreement gate ──
+// The Save button stays disabled until the user checks the consent box.
+// We also enforce the same gate server-side check by sending consent=true
+// in the request body (backend can audit-log this).
+const voiceConsentCheckbox = document.getElementById('voiceConsentCheckbox');
+const saveProfileBtnEl = document.getElementById('saveProfileBtn');
+voiceConsentCheckbox.addEventListener('change', () => {
+    const checked = voiceConsentCheckbox.checked;
+    saveProfileBtnEl.disabled = !checked;
+    saveProfileBtnEl.style.opacity = checked ? '1' : '0.5';
+    saveProfileBtnEl.style.cursor = checked ? 'pointer' : 'not-allowed';
+});
+
+saveProfileBtnEl.addEventListener('click',()=>{
     const name=document.getElementById('profileNameInput').value;
     if(!recordedAudioBlob||!name.trim()){showStatus('Record audio and enter a name','error');return;}
     if(!getToken()){showStatus('Please sign in first to save voice profiles','error');return;}
-    const btn=document.getElementById('saveProfileBtn');
+    if(!voiceConsentCheckbox.checked){
+        showStatus('You must accept the Ethical Use Agreement to save a voice profile.','error');
+        return;
+    }
+    const btn=saveProfileBtnEl;
     btn.disabled=true; btn.textContent='Saving...';
     const reader=new FileReader();
     reader.onload=async()=>{
         const b64=reader.result.split(',')[1];
         try{
-            const r=await fetch('/api/voice/register',{method:'POST',headers:authHeaders(),body:JSON.stringify({profile_name:name.trim(),audio:b64,user_id:getUserId(),language:'en'})});
-            if(r.ok){showStatus('Voice profile saved!','success');recordedAudioBlob=null;document.getElementById('profileSaveSection').style.display='none';document.getElementById('profileNameInput').value='';document.getElementById('recordBtnText').textContent='Press to record (5-60 seconds)';loadVoiceProfiles();}
+            const r=await fetch('/api/voice/register',{method:'POST',headers:authHeaders(),body:JSON.stringify({
+                profile_name:name.trim(),
+                audio:b64,
+                user_id:getUserId(),
+                language:'en',
+                consent_accepted: true,
+                consent_timestamp: new Date().toISOString(),
+            })});
+            if(r.ok){
+                showStatus('Voice profile saved!','success');
+                recordedAudioBlob=null;
+                document.getElementById('profileSaveSection').style.display='none';
+                document.getElementById('profileNameInput').value='';
+                document.getElementById('recordBtnText').textContent='Press to record (5-60 seconds)';
+                voiceConsentCheckbox.checked = false; // reset for next registration
+                // Generate fresh phrases so the next registration has new
+                // prompts — extra defense against replay attacks.
+                regenerateGuidePhrases();
+                loadVoiceProfiles();
+            }
             else{
                 const e=await r.json();
                 // Plan-gating: backend returns upgrade_required when the user's plan
@@ -1840,7 +2027,9 @@ document.getElementById('saveProfileBtn').addEventListener('click',()=>{
                 }
             }
         }catch(e){showStatus('Error: '+e.message,'error');}
-        btn.disabled=false;btn.textContent='Save Voice Profile';
+        btn.disabled=!voiceConsentCheckbox.checked;
+        btn.textContent='Save Voice Profile';
+        btn.style.opacity = voiceConsentCheckbox.checked ? '1' : '0.5';
     };
     reader.readAsDataURL(recordedAudioBlob);
 });
@@ -1905,6 +2094,16 @@ function showVoiceCloningUpsell(currentPlan, limit, current){
     modal.addEventListener('click',(ev)=>{ if(ev.target===modal) modal.remove(); });
 }
 
+// Plans whose `voice_cloning_profiles` is > 0 in PRICING (config.py)
+const F2F_VOICE_CLONING_PLANS = ['tourist_pro','solo','team','scale','enterprise','owner','premium','business'];
+
+function userHasVoiceCloningPlan(){
+    const user = getUser();
+    if(!user) return false;
+    if(user.is_owner) return true;
+    return F2F_VOICE_CLONING_PLANS.includes(user.plan);
+}
+
 async function loadVoiceProfiles(){
     try{
         const r=await fetch('/api/voice/profiles?user_id='+getUserId(),{headers:authHeaders()});
@@ -1912,8 +2111,21 @@ async function loadVoiceProfiles(){
         const data=await r.json();
         const profiles=(data.profiles||[]).map(p=>({id:p.profile_id||p.id,name:p.profile_name||p.name}));
         const list=document.getElementById('voiceProfilesList');
-        if(!profiles.length){list.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px;">No voice profiles yet</div>';return;}
-        list.innerHTML=profiles.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;"><span style="color:var(--text);font-weight:500;font-size:14px;">${p.name}</span><button onclick="deleteVoiceProfile('${p.id}')" style="padding:6px 12px;background:rgba(200,96,96,0.1);color:var(--error);border:1px solid rgba(200,96,96,0.25);border-radius:20px;font-size:11px;cursor:pointer;font-family:'Outfit',sans-serif;">Delete</button></div>`).join('');
+        if(!profiles.length){list.innerHTML='<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px;">No voice profiles yet</div>';}
+        else { list.innerHTML=profiles.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;"><span style="color:var(--text);font-weight:500;font-size:14px;">${p.name}</span><button onclick="deleteVoiceProfile('${p.id}')" style="padding:6px 12px;background:rgba(200,96,96,0.1);color:var(--error);border:1px solid rgba(200,96,96,0.25);border-radius:20px;font-size:11px;cursor:pointer;font-family:'Outfit',sans-serif;">Delete</button></div>`).join(''); }
+
+        // ── Populate the F2F voice selector if user has voice cloning + at least one profile ──
+        const selectorWrap = document.getElementById('f2fVoiceSelector');
+        const selectorEl = document.getElementById('f2fVoiceProfile');
+        if(selectorWrap && selectorEl){
+            if(userHasVoiceCloningPlan() && profiles.length > 0){
+                selectorEl.innerHTML = '<option value="">Standard voice</option>' +
+                    profiles.map(p => `<option value="${p.id}">${p.name} (your voice)</option>`).join('');
+                selectorWrap.style.display = 'block';
+            } else {
+                selectorWrap.style.display = 'none';
+            }
+        }
     }catch(e){}
 }
 

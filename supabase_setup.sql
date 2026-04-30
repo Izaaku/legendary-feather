@@ -145,3 +145,64 @@ INSERT INTO response_templates (title, body, keywords, category) VALUES
 ('Positive feedback response', 'Thank you so much for the kind words! We''re thrilled that you''re enjoying Legendary Feather. Your feedback means a lot to our team. Is there anything else we can help you with?', ARRAY['great', 'awesome', 'love', 'amazing', 'excellent', 'good', 'thank'], 'general'),
 ('Translation accuracy', 'Our translations are powered by DeepL, one of the most accurate translation engines available. If you notice any specific translation that seems off, please share the original text and the translation so we can investigate.', ARRAY['wrong translation', 'incorrect', 'accuracy', 'bad translation', 'mistranslation'], 'technical'),
 ('Escalation notice', 'I want to make sure this gets the attention it deserves. I''m escalating your case to our senior support team. You should hear back within 24 hours. Is there anything else I can help with in the meantime?', ARRAY['escalate', 'manager', 'supervisor', 'urgent', 'serious', 'unresolved'], 'escalation');
+
+
+-- ══════════════════════════════════════════════════════
+-- VOICE AUDIT & TRACEABILITY (anti-fraud / anti-extortion)
+-- ══════════════════════════════════════════════════════
+-- Every voice operation (registration, cloning, deletion) creates a row
+-- here. Combined with the audio_hash (SHA-256 of the generated MP3) and
+-- session_id, we can trace any audio back to the user that generated it
+-- and the exact session it came from. Used for:
+--   - Legal / law enforcement requests
+--   - Account suspension on misuse reports
+--   - Internal abuse investigations
+-- IMPORTANT: we DO NOT store the translated text or IPs to keep this
+-- minimal and privacy-friendly. Only metadata.
+
+CREATE TABLE IF NOT EXISTS voice_audit_log (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    session_id TEXT,
+    voice_profile_id TEXT,
+    event_type TEXT NOT NULL CHECK (event_type IN ('register', 'tts_clone', 'tts_standard', 'delete', 'consent_accepted')),
+    target_language TEXT,
+    source_language TEXT,
+    char_count INT DEFAULT 0,
+    audio_hash TEXT,                  -- SHA-256 hex of the generated audio (for replay-detection / forensic match)
+    consent_timestamp TIMESTAMPTZ,    -- only set on 'register' / 'consent_accepted' events
+    user_plan TEXT,                   -- snapshot of the user's plan at the time of the event
+    error TEXT,                       -- if the event failed (TTS error, etc.), we still log it
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Indexes for fast queries from the admin panel
+CREATE INDEX IF NOT EXISTS idx_voice_audit_user
+    ON voice_audit_log(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_voice_audit_session
+    ON voice_audit_log(session_id);
+CREATE INDEX IF NOT EXISTS idx_voice_audit_hash
+    ON voice_audit_log(audio_hash);
+CREATE INDEX IF NOT EXISTS idx_voice_audit_event
+    ON voice_audit_log(event_type, created_at DESC);
+
+
+-- Each F2F translation session generates ONE row. Each individual
+-- translation in that session creates a voice_audit_log row referring back
+-- via session_id. This gives us a clean parent-child relationship and lets
+-- us answer "who initiated this session and what voice did they use?".
+
+CREATE TABLE IF NOT EXISTS translation_sessions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    started_at TIMESTAMPTZ DEFAULT now(),
+    ended_at TIMESTAMPTZ,
+    total_translations INT DEFAULT 0,
+    total_chars INT DEFAULT 0,
+    voice_profile_used TEXT,
+    primary_languages TEXT,           -- e.g. "en,es" — which lang pair was active
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_translation_sessions_user
+    ON translation_sessions(user_id, created_at DESC);

@@ -264,8 +264,24 @@ def register_voice():
     profile_name = data.get('profile_name', 'default')
     language = data.get('language')
 
+    # ─── Ethical Use Agreement enforcement ───
+    # The frontend shows a consent form with watermark + traceability disclosure
+    # and a checkbox the user must tick. Backend enforces the same gate so a
+    # client that bypasses the UI still can't register a voice without consent.
+    consent_accepted = bool(data.get('consent_accepted', False))
+    consent_timestamp = data.get('consent_timestamp', '')
+    if not consent_accepted:
+        return jsonify({
+            'error': 'You must accept the Ethical Use Agreement (watermark, identity-verification consent, no impersonation) to register a voice profile.',
+            'consent_required': True,
+        }), 400
+
     if not audio_b64:
         return jsonify({'error': 'audio is required'}), 400
+
+    # Audit log — important for traceability if the voice is later misused
+    print(f'[VoiceRegister] consent accepted by user_id={user_id} '
+          f'profile={profile_name!r} at={consent_timestamp}')
 
     # Plan gate: check the user's voice_cloning_profiles allowance and existing count
     from app.config import PRICING
@@ -334,6 +350,25 @@ def register_voice():
         except Exception as db_err:
             print(f"[VoiceRegister] DB save skipped: {db_err}")
             # Profile is still saved on disk, continue without DB
+
+        # ── Audit log: voice profile registered ──
+        # Records consent acceptance, profile_id, audio hash, plan snapshot.
+        # This is the legal traceability anchor — if the voice is ever
+        # misused, we can prove who registered it and when.
+        try:
+            from app.utils.audit_log import log_voice_event, compute_audio_hash
+            log_voice_event(
+                event_type='register',
+                user_id=user_id,
+                voice_profile_id=profile['profile_id'],
+                source_language=language,
+                char_count=0,
+                audio_hash=compute_audio_hash(audio_bytes),
+                consent_timestamp=consent_timestamp,
+                user_plan=getattr(user_for_plan, 'plan', None),
+            )
+        except Exception as audit_err:
+            print(f'[VoiceRegister] audit log failed (non-fatal): {audit_err}')
 
         return jsonify({
             'profile_id': profile['profile_id'],

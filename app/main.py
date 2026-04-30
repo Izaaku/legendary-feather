@@ -458,6 +458,8 @@ def handle_f2f_translate(data):
     lang1 = data.get('lang1', 'en')
     lang2 = data.get('lang2', 'es')
     user_id = data.get('user_id', '')  # Optional — used for minute tracking
+    voice_profile_id = data.get('voice_profile_id') or None  # Optional — voice cloning
+    session_id = data.get('session_id') or None  # Optional — F2F session tracking
 
     if not text.strip():
         emit('error', {'message': 'No text provided'})
@@ -510,10 +512,21 @@ def handle_f2f_translate(data):
         audio_b64 = None
         try:
             tts = CloudTTSEngine()
+            # Voice-cloning gate: only allow voice_profile_id when the user's
+            # plan actually supports voice cloning. Strip it otherwise so
+            # paying for a Free plan can't sneak past the gate by sending an
+            # arbitrary profile_id from the client.
+            effective_profile = None
+            if voice_profile_id and user_plan_obj:
+                allowance = user_plan_obj.get('voice_cloning_profiles', 0)
+                if allowance == -1 or allowance > 0:
+                    effective_profile = voice_profile_id
+
             audio_b64 = tts.synthesize(
                 text=translated,
                 language=target,
                 mode='face_to_face',
+                voice_profile_id=effective_profile,
             )
         except Exception as tts_err:
             # TTS failure shouldn't block the text translation — degrade gracefully
@@ -523,20 +536,50 @@ def handle_f2f_translate(data):
         # Estimate from char count: ~750 chars/minute (~150 wpm * 5 chars/word).
         # We use the char count of the TRANSLATED text since that's what the
         # TTS actually synthesizes.
+        user_plan_snapshot = None
         if user_id and audio_b64:
             try:
                 db = db_session()
                 user = db.query(User).filter_by(user_id=user_id).first()
-                if user and not is_unlimited_user(user):
-                    chars = len(translated or '')
-                    # Round up so even short utterances count as at least 1 minute
-                    # of usage — prevents free abuse via tiny chunks.
-                    minutes_used = max(1, round(chars / 750.0 + 0.5))
-                    user.minutes_used = (user.minutes_used or 0) + minutes_used
-                    db.commit()
+                if user:
+                    user_plan_snapshot = user.plan
+                    if not is_unlimited_user(user):
+                        chars = len(translated or '')
+                        # Round up so even short utterances count as at least 1 minute
+                        # of usage — prevents free abuse via tiny chunks.
+                        minutes_used = max(1, round(chars / 750.0 + 0.5))
+                        user.minutes_used = (user.minutes_used or 0) + minutes_used
+                        db.commit()
                 db.close()
             except Exception as e:
                 print(f'[F2F] minute-tracking DB update failed: {e}')
+
+        # ── Audit log + audio watermark hash (anti-fraud traceability) ──
+        # Every TTS-generated audio gets a SHA-256 hash that's stored in
+        # voice_audit_log. If a victim later reports a malicious recording,
+        # the admin panel can hash the reported file and find the user_id +
+        # session_id that produced it.
+        audio_hash = ''
+        try:
+            from app.utils.audit_log import log_voice_event, compute_audio_hash, update_session_counters
+            if audio_b64:
+                import base64 as _b64
+                audio_hash = compute_audio_hash(_b64.b64decode(audio_b64))
+            log_voice_event(
+                event_type='tts_clone' if effective_profile else 'tts_standard',
+                user_id=user_id or 'anonymous',
+                session_id=session_id,
+                voice_profile_id=effective_profile,
+                target_language=target,
+                source_language=source,
+                char_count=len(translated or ''),
+                audio_hash=audio_hash,
+                user_plan=user_plan_snapshot,
+            )
+            if session_id:
+                update_session_counters(session_id, len(translated or ''))
+        except Exception as audit_err:
+            print(f'[F2F] audit log failed (non-fatal): {audit_err}')
 
         emit('f2f_translation', {
             'original': text,
@@ -546,6 +589,8 @@ def handle_f2f_translate(data):
             'source_language': source,
             'target_language': target,
             'audio': audio_b64,  # base64 mp3, or null if TTS failed
+            'audio_hash': audio_hash,  # SHA-256 — clients can show this for traceability
+            'session_id': session_id,
         })
 
     except Exception as e:
@@ -586,9 +631,39 @@ def handle_transcribe(data):
         audio_bytes = base64.b64decode(audio_b64)
         result = whisper.transcribe(audio_bytes, language=language_hint)
 
+        # ── Filter Whisper hallucinations on short / silent audio ──
+        # OpenAI Whisper consistently hallucinates these phrases when given
+        # very short clips, near-silence, or noise-only audio (mic click,
+        # the "pop" when MediaRecorder starts/stops, etc.). Returning empty
+        # text tells the frontend to show "No speech detected" rather than
+        # treating the hallucination as a real utterance.
+        WHISPER_HALLUCINATIONS = {
+            'you', 'You', 'YOU',
+            'thank you', 'Thank you', 'Thank you.',
+            'thanks for watching', 'Thanks for watching', 'Thanks for watching!',
+            'thanks for watching.', 'Thanks for watching.',
+            'bye', 'Bye', 'Bye!', 'Bye.',
+            'goodbye', 'Goodbye', 'Goodbye.',
+            '.', '...', '!', '?',
+            'okay', 'Okay', 'Okay.',
+            'uh', 'um', 'mm', 'mhm',
+            'ありがとうございました',  # Japanese "thank you" — common Whisper hallucination
+            'Gracias por ver el video',  # Spanish hallucination
+            'Gracias por ver',
+            'Subtítulos por la comunidad de Amara.org',
+            'Subtitles by the Amara.org community',
+        }
+        text = (result.get('text') or '').strip()
+        # Reject if exact match to a known hallucination, OR if very short
+        # (≤3 chars) — short results from short audio are almost always
+        # garbage from Whisper.
+        if text in WHISPER_HALLUCINATIONS or len(text) <= 3:
+            print(f'[Whisper] Filtered hallucination/short text: {text!r}')
+            text = ''
+
         emit('transcription', {
-            'text': result['text'],
-            'detected_language': result['detected_language'],
+            'text': text,
+            'detected_language': result['detected_language'] if text else '',
             'confidence': result['confidence'],
             'segments': result.get('segments', []),
             'request_id': request_id
