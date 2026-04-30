@@ -436,20 +436,53 @@ def handle_translate(data):
 
 @socketio.on('translate_f2f')
 def handle_f2f_translate(data):
-    """Handle Face to Face translation with auto-detect.
+    """Handle Face to Face translation with auto-detect + TTS audio.
 
-    Receives both languages, detects which one was spoken,
-    and translates to the opposite language automatically.
+    Flow: detect spoken language → translate to other → synthesize speech
+    in target language. Returns text + base64 mp3 audio so the client can
+    play it back immediately. This is what makes it "interpretation" instead
+    of just "transcription".
+
+    Minute tracking: each TTS call increments the user's minutes_used. Free
+    and Travel-Pass tiers hard-stop when minutes hit 0; subscription tiers
+    bill overage.
     """
     from app.services.cloud_translation import CloudTranslationService
+    from app.services.cloud_tts import CloudTTSEngine
+    from app.utils.pricing import has_minutes_available, is_unlimited_user
+    from app.utils.database import db_session
+    from app.models.user import User
+    from app.config import PRICING
 
     text = data.get('text', '')
     lang1 = data.get('lang1', 'en')
     lang2 = data.get('lang2', 'es')
+    user_id = data.get('user_id', '')  # Optional — used for minute tracking
 
     if not text.strip():
         emit('error', {'message': 'No text provided'})
         return
+
+    # Minute gate: block if the user is out of minutes (Free / Travel Pass)
+    db_user = None
+    user_plan_obj = None
+    if user_id:
+        try:
+            db = db_session()
+            db_user = db.query(User).filter_by(user_id=user_id).first()
+            if db_user and not has_minutes_available(db_user):
+                emit('f2f_translation', {
+                    'error': 'You have used all your translation minutes. Upgrade your plan to keep translating.',
+                    'upgrade_required': True,
+                    'plan': db_user.plan,
+                })
+                db.close()
+                return
+            if db_user:
+                user_plan_obj = PRICING.get(db_user.plan, PRICING.get('free', {}))
+            db.close()
+        except Exception as e:
+            print(f'[F2F] minute-gate DB check failed: {e}')
 
     try:
         translator = CloudTranslationService()
@@ -470,13 +503,49 @@ def handle_f2f_translate(data):
 
         translated = translator.translate(text, source, target)
 
+        # ── Synthesize TTS audio for the translation ──
+        # Routing: face_to_face mode picks ElevenLabs (premium) for plans
+        # with elevenlabs minutes; OpenAI TTS otherwise. The CloudTTSEngine
+        # handles the actual selection internally.
+        audio_b64 = None
+        try:
+            tts = CloudTTSEngine()
+            audio_b64 = tts.synthesize(
+                text=translated,
+                language=target,
+                mode='face_to_face',
+            )
+        except Exception as tts_err:
+            # TTS failure shouldn't block the text translation — degrade gracefully
+            print(f'[F2F] TTS failed (returning text only): {tts_err}')
+
+        # ── Track minutes used ──
+        # Estimate from char count: ~750 chars/minute (~150 wpm * 5 chars/word).
+        # We use the char count of the TRANSLATED text since that's what the
+        # TTS actually synthesizes.
+        if user_id and audio_b64:
+            try:
+                db = db_session()
+                user = db.query(User).filter_by(user_id=user_id).first()
+                if user and not is_unlimited_user(user):
+                    chars = len(translated or '')
+                    # Round up so even short utterances count as at least 1 minute
+                    # of usage — prevents free abuse via tiny chunks.
+                    minutes_used = max(1, round(chars / 750.0 + 0.5))
+                    user.minutes_used = (user.minutes_used or 0) + minutes_used
+                    db.commit()
+                db.close()
+            except Exception as e:
+                print(f'[F2F] minute-tracking DB update failed: {e}')
+
         emit('f2f_translation', {
             'original': text,
             'translated': translated,
             'detected_language': detected,
             'speaker': speaker,
             'source_language': source,
-            'target_language': target
+            'target_language': target,
+            'audio': audio_b64,  # base64 mp3, or null if TTS failed
         })
 
     except Exception as e:
