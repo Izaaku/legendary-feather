@@ -1604,26 +1604,40 @@ function processF2FUtterance(text){
         el.querySelector('.cb-translated').textContent = data.translated || text;
 
         // ── Play TTS audio + add 🔊 replay button ──
+        // We convert the base64 to a Blob URL instead of a data: URI because
+        // CSP `media-src` is more permissive with `blob:` than `data:` across
+        // browsers, and Blob URLs are more memory-efficient for large audio.
         if(data.audio){
-            const audioSrc = 'data:audio/mp3;base64,' + data.audio;
+            let audioUrl = null;
+            try {
+                const binary = atob(data.audio);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                const blob = new Blob([bytes], { type: 'audio/mpeg' });
+                audioUrl = URL.createObjectURL(blob);
+            } catch(e) {
+                console.warn('[F2F] Failed to decode audio blob:', e);
+            }
 
-            // Auto-play the translation immediately
-            const player = new Audio(audioSrc);
-            player.play().catch(err => {
-                // Autoplay blocked by browser — silent fail, replay button still works
-                console.warn('[F2F] Audio autoplay blocked:', err);
-            });
+            if(audioUrl){
+                // Auto-play the translation immediately
+                const player = new Audio(audioUrl);
+                player.play().catch(err => {
+                    // Autoplay blocked by browser — silent fail, replay button still works
+                    console.warn('[F2F] Audio autoplay blocked:', err);
+                });
 
-            // Add a 🔊 replay button to this bubble
-            const replayBtn = document.createElement('button');
-            replayBtn.className = 'cb-replay';
-            replayBtn.textContent = '🔊';
-            replayBtn.title = 'Replay translation';
-            replayBtn.style.cssText = 'background:none;border:none;color:var(--gold);font-size:14px;cursor:pointer;padding:4px 8px;margin-top:6px;border-radius:6px;transition:background 0.2s;';
-            replayBtn.addEventListener('mouseenter', () => { replayBtn.style.background = 'var(--gold-dim)'; });
-            replayBtn.addEventListener('mouseleave', () => { replayBtn.style.background = 'none'; });
-            replayBtn.addEventListener('click', () => { new Audio(audioSrc).play(); });
-            el.appendChild(replayBtn);
+                // Add a 🔊 replay button to this bubble
+                const replayBtn = document.createElement('button');
+                replayBtn.className = 'cb-replay';
+                replayBtn.textContent = '🔊';
+                replayBtn.title = 'Replay translation';
+                replayBtn.style.cssText = 'background:none;border:none;color:var(--gold);font-size:14px;cursor:pointer;padding:4px 8px;margin-top:6px;border-radius:6px;transition:background 0.2s;';
+                replayBtn.addEventListener('mouseenter', () => { replayBtn.style.background = 'var(--gold-dim)'; });
+                replayBtn.addEventListener('mouseleave', () => { replayBtn.style.background = 'none'; });
+                replayBtn.addEventListener('click', () => { new Audio(audioUrl).play(); });
+                el.appendChild(replayBtn);
+            }
         }
     });
 }

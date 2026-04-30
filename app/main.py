@@ -221,7 +221,7 @@ def add_security_headers(response):
         "connect-src 'self' data: https://api.stripe.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://tessdata.projectnaptha.com wss: ws:",
         "worker-src 'self' blob: https://cdn.jsdelivr.net https://unpkg.com",
         "frame-src https://js.stripe.com",
-        "media-src 'self' blob:",
+        "media-src 'self' blob: data:",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'",
