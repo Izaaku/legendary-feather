@@ -387,11 +387,13 @@ def register_voice():
 @api_bp.route('/voice/profiles', methods=['GET'])
 @token_required
 def list_voice_profiles():
-    """List all voice profiles for a user."""
-    user_id = request.args.get('user_id')
+    """List all voice profiles for the authenticated user.
 
-    if not user_id:
-        return jsonify({'error': 'user_id is required'}), 400
+    SECURITY: user_id always comes from the JWT, never from query args.
+    Previously this endpoint accepted ?user_id=... which let any
+    authenticated user enumerate another user's voice profiles.
+    """
+    user_id = g.current_user['user_id']
 
     # Try DB first, fallback to file-based listing
     try:
@@ -429,28 +431,45 @@ def list_voice_profiles():
 @api_bp.route('/voice/profiles/<profile_id>', methods=['DELETE'])
 @token_required
 def delete_voice_profile(profile_id):
-    """Delete a voice profile."""
-    user_id = request.args.get('user_id')
+    """Delete a voice profile owned by the authenticated user.
 
-    if not user_id:
-        return jsonify({'error': 'user_id is required'}), 400
+    SECURITY: user_id always comes from the JWT. The query filter
+    requires (profile_id == X AND user_id == authenticated user), so
+    even if a user guesses a profile_id belonging to another account
+    they cannot delete it — the WHERE clause won't match.
+    """
+    user_id = g.current_user['user_id']
 
     db = db_session()
     try:
         profile = db.query(VoiceProfile).filter_by(
             profile_id=profile_id,
-            user_id=user_id
+            user_id=user_id,
+            is_active=True
         ).first()
 
         if not profile:
+            # Same response whether the profile doesn't exist or belongs to
+            # another user — don't leak existence info.
             return jsonify({'error': 'Profile not found'}), 404
 
         # Soft delete in DB
         profile.is_active = False
         db.commit()
 
-        # Delete files
+        # Delete files (file_path is per-user so this is also safe)
         voice_cloner.delete_profile(user_id, profile_id)
+
+        # Audit log: voice profile deletion
+        try:
+            from app.utils.audit_log import log_voice_event
+            log_voice_event(
+                event_type='delete',
+                user_id=user_id,
+                voice_profile_id=profile_id,
+            )
+        except Exception as audit_err:
+            print(f'[VoiceDelete] audit log failed (non-fatal): {audit_err}')
 
         return jsonify({'message': 'Voice profile deleted successfully'})
     except Exception as e:

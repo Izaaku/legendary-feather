@@ -94,11 +94,15 @@ def stripe_webhook():
 
 
 @payments_bp.route('/subscription-status', methods=['GET'])
+@token_required
 def subscription_status():
-    """Get user's subscription status."""
-    user_id = request.args.get('user_id')
-    if not user_id:
-        return jsonify({'error': 'user_id is required'}), 400
+    """Get the authenticated user's subscription status.
+
+    SECURITY: user_id always comes from the JWT, never from query args.
+    Previously this endpoint was unauthenticated and accepted ?user_id=X,
+    which let anyone read another user's plan/email/name.
+    """
+    user_id = g.current_user['user_id']
 
     db = db_session()
     try:
@@ -113,7 +117,7 @@ def subscription_status():
         return jsonify({
             'user': user.to_dict(),
             'subscription': sub.to_dict() if sub else None,
-            'plan_details': PRICING.get(user.plan, PRICING['basic'])
+            'plan_details': PRICING.get(user.plan, PRICING.get('free', PRICING['basic']))
         })
     finally:
         db.close()

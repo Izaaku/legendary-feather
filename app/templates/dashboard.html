@@ -1222,7 +1222,7 @@ function showVoiceProfilesView() {
   // backend would just return an empty list, and we already show a friendlier
   // "premium feature" message above.
   if (canClone) {
-    authFetch('/api/voice/profiles?user_id=' + currentSession.user_id)
+    authFetch('/api/voice/profiles')
       .then(r => r.json())
       .then(data => {
         const el = document.getElementById('voiceProfilesList');

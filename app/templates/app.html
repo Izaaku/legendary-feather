@@ -2106,7 +2106,7 @@ function userHasVoiceCloningPlan(){
 
 async function loadVoiceProfiles(){
     try{
-        const r=await fetch('/api/voice/profiles?user_id='+getUserId(),{headers:authHeaders()});
+        const r=await fetch('/api/voice/profiles',{headers:authHeaders()});
         if(!r.ok)return;
         const data=await r.json();
         const profiles=(data.profiles||[]).map(p=>({id:p.profile_id||p.id,name:p.profile_name||p.name}));
@@ -2156,7 +2156,7 @@ async function loadVoiceProfiles(){
 
 async function deleteVoiceProfile(id){
     if(!confirm('Delete this profile?'))return;
-    try{await fetch(`/api/voice/profiles/${id}?user_id=${getUserId()}`,{method:'DELETE',headers:authHeaders()});loadVoiceProfiles();showStatus('Profile deleted','success');}catch(e){}
+    try{await fetch(`/api/voice/profiles/${id}`,{method:'DELETE',headers:authHeaders()});loadVoiceProfiles();showStatus('Profile deleted','success');}catch(e){}
 }
 
 // ══════════════════════════════════════════════════════
