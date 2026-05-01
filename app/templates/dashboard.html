@@ -566,15 +566,6 @@ body {
     History
     <span class="sidebar-badge" id="history-badge">3</span>
   </a>
-  <a class="sidebar-item" href="#" id="nav-meetings" style="display:none;">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-    Meetings
-    <span class="sidebar-badge">10</span>
-  </a>
-  <a class="sidebar-item" href="#" id="nav-team" style="display:none;">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-    Team
-  </a>
   <a class="sidebar-item" href="#" id="nav-support">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     Support
@@ -779,8 +770,6 @@ function showPlan(planKey) {
   const userInitial = userName.charAt(0).toUpperCase();
 
   // Show/hide sidebar items — use resolvedKey so 'team' and 'scale' also unlock these
-  document.getElementById('nav-meetings').style.display = resolvedKey === 'business' ? '' : 'none';
-  document.getElementById('nav-team').style.display = resolvedKey === 'business' ? '' : 'none';
   document.getElementById('history-badge').textContent = plan.history.length;
 
   // Sidebar plan card
@@ -852,18 +841,6 @@ function showPlan(planKey) {
       <div class="stat-sub">this month</div>
     </div>`;
 
-  // Team members (Business only)
-  if (planKey === 'business') {
-    html += `
-    <div class="stat-card">
-      <div class="stat-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      </div>
-      <div class="stat-label">Team Members</div>
-      <div class="stat-value">${plan.team.length}</div>
-      <div class="stat-sub">${plan.team.filter(t => t.online).length} online now</div>
-    </div>`;
-  }
 
   html += `</div>`;
 
@@ -884,16 +861,6 @@ function showPlan(planKey) {
     html += `<button class="quick-btn">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
         Manage Voices
-      </button>`;
-  }
-  if (planKey === 'business') {
-    html += `<button class="quick-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-        Invite Team Member
-      </button>
-      <button class="quick-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
-        Schedule Meeting
       </button>`;
   }
 
@@ -1125,8 +1092,6 @@ sidebarItems.forEach(item => {
     // Handle navigation by id or fallback to position
     const id = this.id;
     if (id === 'nav-history') { showHistoryView(); return; }
-    if (id === 'nav-meetings') { showMeetingsView(); return; }
-    if (id === 'nav-team') { showTeamView(); return; }
     if (id === 'nav-voice') { showVoiceProfilesView(); return; }
     if (id === 'nav-support') { showSupportChat(); return; }
     if (id === 'nav-faq') { showFAQView(); return; }
@@ -1337,51 +1302,6 @@ async function changePassword() {
   } catch { msg.style.color = 'var(--red)'; msg.textContent = 'Failed to update password.'; }
 }
 
-// ── MEETINGS VIEW (Business) ──
-function showMeetingsView() {
-  const plan = plans[mapPlanToMockKey(userPlan)] || plans.personal;
-  if (!plan.meetings) {
-    document.getElementById('main-content').innerHTML = `
-      <div class="welcome-header animate-in"><div><div class="welcome-name">Meetings</div>
-      <div class="welcome-date">Available on Business plan</div></div></div>
-      <div class="card animate-in delay-1"><div style="color:var(--text-sub);font-size:13px;padding:20px;">Upgrade to Business to access meeting history and AI summaries.</div></div>`;
-    return;
-  }
-  let html = `<div class="welcome-header animate-in"><div><div class="welcome-name" style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;">Meeting <em style="color:var(--gold);font-style:italic;">History</em></div>
-    <div class="welcome-date" style="font-size:13px;color:var(--text-muted);">${plan.meetings.length} meetings recorded</div></div></div>
-    <div class="card animate-in delay-1">`;
-  plan.meetings.forEach(m => {
-    html += `<div class="meeting-item"><div class="meeting-header"><div class="meeting-title">${m.title}</div><div class="meeting-date">${m.date}</div></div>
-      <div class="meeting-meta"><div class="meeting-meta-item"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${m.duration}</div>
-      <div class="meeting-meta-item"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>${m.langs}</div>
-      <div class="meeting-meta-item"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>${m.participants}</div></div>
-      <div class="meeting-summary">${m.summary}</div></div>`;
-  });
-  html += `</div>`;
-  document.getElementById('main-content').innerHTML = html;
-}
-
-// ── TEAM VIEW (Business) ──
-function showTeamView() {
-  const plan = plans[mapPlanToMockKey(userPlan)] || plans.personal;
-  if (!plan.team) {
-    document.getElementById('main-content').innerHTML = `
-      <div class="welcome-header animate-in"><div><div class="welcome-name">Team</div>
-      <div class="welcome-date">Available on Business plan</div></div></div>
-      <div class="card animate-in delay-1"><div style="color:var(--text-sub);font-size:13px;padding:20px;">Upgrade to Business to manage your translation team.</div></div>`;
-    return;
-  }
-  let html = `<div class="welcome-header animate-in"><div><div class="welcome-name" style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;">Team <em style="color:var(--gold);font-style:italic;">Members</em></div>
-    <div class="welcome-date" style="font-size:13px;color:var(--text-muted);">${plan.team.length} members · ${plan.team.filter(t=>t.online).length} online</div></div></div>
-    <div class="card animate-in delay-1">`;
-  plan.team.forEach(t => {
-    html += `<div class="team-member"><div class="team-avatar">${t.initials}</div><div class="team-info"><div class="team-name">${t.name}</div><div class="team-role">${t.role}</div></div>
-      <div class="team-minutes">${t.minutes} min</div><div class="team-status" style="background:${t.online?'var(--green)':'var(--text-muted)'}"></div></div>`;
-  });
-  html += `</div>`;
-  document.getElementById('main-content').innerHTML = html;
-}
-
 // Quick action buttons — re-wire after each render
 const mainContent = document.getElementById('main-content');
 const observer = new MutationObserver(() => {
@@ -1391,8 +1311,6 @@ const observer = new MutationObserver(() => {
       if (text === 'Start Translation') window.location.href = '/app';
       else if (text === 'Change Languages') showLanguagesView();
       else if (text === 'Manage Voices') showVoiceProfilesView();
-      else if (text === 'Invite Team Member') showTeamView();
-      else if (text === 'Schedule Meeting') showMeetingsView();
       else if (text === 'Create Room') alert('Live Translation Rooms coming soon!');
     });
   });
@@ -1405,8 +1323,6 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
     if (text === 'Start Translation') window.location.href = '/app';
     else if (text === 'Change Languages') showLanguagesView();
     else if (text === 'Manage Voices') showVoiceProfilesView();
-    else if (text === 'Invite Team Member') showTeamView();
-    else if (text === 'Schedule Meeting') showMeetingsView();
   });
 });
 

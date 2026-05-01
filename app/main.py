@@ -529,16 +529,40 @@ def handle_f2f_translate(data):
             # paying for a Free plan can't sneak past the gate by sending an
             # arbitrary profile_id from the client.
             effective_profile = None
+            reference_audio_path = None
+            reference_text = ''
             if voice_profile_id and user_plan_obj:
                 allowance = user_plan_obj.get('voice_cloning_profiles', 0)
                 if allowance == -1 or allowance > 0:
                     effective_profile = voice_profile_id
+                    # Look up the reference audio file path from VoiceProfile.
+                    # Fish Speech needs the actual audio bytes (zero-shot
+                    # cloning), not just the profile ID.
+                    try:
+                        from app.models.voice_profile import VoiceProfile
+                        vp_db = db_session()
+                        vp = vp_db.query(VoiceProfile).filter_by(
+                            profile_id=voice_profile_id,
+                            user_id=user_id,
+                            is_active=True,
+                        ).first()
+                        if vp:
+                            reference_audio_path = vp.file_path
+                            # Use the registered language as the reference
+                            # text language. We don't have the actual transcript
+                            # but Fish Speech works fine without it.
+                            reference_text = ''
+                        vp_db.close()
+                    except Exception as e:
+                        print(f'[F2F] Could not load voice profile {voice_profile_id}: {e}')
 
             audio_b64 = tts.synthesize(
                 text=translated,
                 language=target,
                 mode='face_to_face',
                 voice_profile_id=effective_profile,
+                reference_audio_path=reference_audio_path,
+                reference_text=reference_text,
             )
         except Exception as tts_err:
             # TTS failure shouldn't block the text translation — degrade gracefully

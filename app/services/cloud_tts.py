@@ -82,23 +82,32 @@ class CloudTTSEngine:
     # ── Main Synthesis ──────────────────────────────
 
     def synthesize(self, text, language='en', mode=None, voice_profile_id=None,
-                   voice_gender='female', speed=1.0):
+                   voice_gender='female', speed=1.0,
+                   reference_audio_path=None, reference_text=''):
         """
-        Synthesize text to speech using cloud APIs.
+        Synthesize text to speech using cloud / serverless TTS engines.
 
-        Routing:
-        - If voice_profile_id and ElevenLabs available → ElevenLabs (voice cloning)
-        - face_to_face mode → ElevenLabs (premium quality) or OpenAI fallback
-        - conference mode → OpenAI TTS (fast, low-latency)
-        - Any failure → try the other service
+        Routing strategy (in order):
+        1. If voice_profile_id + reference_audio_path + supported language →
+           Fish Speech (RunPod Serverless) — open-source voice cloning
+        2. If voice_profile_id + ElevenLabs available (legacy fallback) →
+           ElevenLabs — only if RunPod isn't configured
+        3. Default → OpenAI TTS (premium quality default voices, 30+ langs)
+        4. Last resort → ElevenLabs default voice
 
         Args:
             text: Text to synthesize
             language: ISO 639-1 language code
             mode: 'conference' or 'face_to_face'
-            voice_profile_id: ElevenLabs voice ID for cloning (optional)
+            voice_profile_id: User's voice profile ID (we no longer use the
+                value itself — we use reference_audio_path. Kept as a
+                "should we clone?" signal.)
             voice_gender: 'female', 'male', or 'neutral'
             speed: Speech speed multiplier (0.25 to 4.0 for OpenAI)
+            reference_audio_path: Local file path to user's voice sample.
+                Required for Fish Speech voice cloning.
+            reference_text: Transcription of the reference audio (improves
+                cloning quality). Optional.
 
         Returns:
             base64-encoded audio string (mp3) or None
@@ -112,31 +121,50 @@ class CloudTTSEngine:
         # Normalize deprecated mode names ('conference' → 'face_to_face')
         mode = self._DEPRECATED_MODE_ALIASES.get(mode, mode)
 
-        print(f'[CloudTTS] Synthesize: lang={language} mode={mode} gender={voice_gender}')
+        print(f'[CloudTTS] Synthesize: lang={language} mode={mode} '
+              f'gender={voice_gender} clone={bool(voice_profile_id)}')
 
         try:
-            # Route: voice cloning or premium → ElevenLabs first
-            if voice_profile_id and self.elevenlabs_client:
+            # ── Route 1: Voice cloning via Fish Speech (RunPod Serverless) ──
+            # This is the primary path for users with voice cloning enabled.
+            # No per-voice slots, no per-month caps, scales to thousands of
+            # users on a single endpoint.
+            if voice_profile_id and reference_audio_path:
+                from app.services.runpod_tts import RunPodTTSClient
+                runpod = RunPodTTSClient()
+                if runpod.is_available() and runpod.supports_language(language):
+                    result = runpod.synthesize_with_clone(
+                        text=text,
+                        reference_audio_path=reference_audio_path,
+                        reference_text=reference_text,
+                        language=language,
+                        output_format='mp3',
+                    )
+                    if result:
+                        return result
+                    # If Fish Speech fails (cold start timeout, unsupported
+                    # language, etc.), fall through to OpenAI TTS so the
+                    # user still gets audio (just without their voice).
+                    print('[CloudTTS] Fish Speech failed — falling back to default voice')
+
+            # ── Route 2: Legacy ElevenLabs voice cloning ──
+            # Kept for backward compatibility while RunPod isn't configured.
+            # Will be removed once Fish Speech is fully validated.
+            if voice_profile_id and self.elevenlabs_client and not reference_audio_path:
                 result = self._synthesize_elevenlabs(text, language, voice_profile_id, speed)
                 if result:
                     return result
 
-            # Route: face_to_face (tourist mode) → try ElevenLabs for premium quality
-            if mode == 'face_to_face' and self.elevenlabs_client:
-                voice_id = _ELEVENLABS_VOICES.get(voice_gender, _ELEVENLABS_VOICES['female'])
-                result = self._synthesize_elevenlabs(text, language, voice_id, speed)
-                if result:
-                    return result
-
-            # Route: pro mode (Virtual Audio Driver, call centers) → OpenAI TTS for low latency
-            # Route: any fallback → OpenAI TTS
+            # ── Route 3: Default voice via OpenAI TTS ──
+            # 30+ languages, no cloning. Used for users without voice
+            # profiles AND for languages outside Fish Speech's coverage.
             if self.openai_client:
                 result = self._synthesize_openai(text, language, voice_gender, speed)
                 if result:
                     return result
 
-            # Last resort: try the other service
-            if self.elevenlabs_client and not voice_profile_id:
+            # ── Route 4: Last resort — ElevenLabs default voice ──
+            if self.elevenlabs_client:
                 voice_id = _ELEVENLABS_VOICES.get(voice_gender, _ELEVENLABS_VOICES['female'])
                 result = self._synthesize_elevenlabs(text, language, voice_id, speed)
                 if result:
