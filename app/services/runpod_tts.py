@@ -65,7 +65,7 @@ class RunPodTTSClient:
         reference_text: str = '',
         language: str = 'en',
         output_format: str = 'mp3',
-        timeout_seconds: int = 90,
+        timeout_seconds: int = 75,
     ) -> str | None:
         """Generate TTS audio that sounds like the reference voice.
 

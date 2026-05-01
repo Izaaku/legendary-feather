@@ -1643,18 +1643,34 @@ function processF2FUtterance(text){
         session_id: getF2FSessionId(),
     });
 
-    // Safety timeout — if translation doesn't come back in 15s, mark the
-    // bubble as failed instead of leaving it stuck on "Translating...".
-    const translateTimer = setTimeout(() => {
+    // Show "warming up voice clone..." after 8s so the user knows it's
+    // still working through a cold start and doesn't think it's broken.
+    const warmupNotice = setTimeout(() => {
         const el = document.getElementById(bubbleId);
         if(el && el.querySelector('.cb-translated').textContent === 'Translating...') {
-            el.querySelector('.cb-translated').textContent = '(translation failed — try again)';
-            el.querySelector('.cb-translated').style.color = 'var(--error)';
+            el.querySelector('.cb-translated').textContent = 'Warming up voice clone… (~30s on first request)';
+            el.querySelector('.cb-translated').style.color = 'var(--gold)';
         }
-    }, 15000);
+    }, 8000);
+
+    // Safety timeout — if translation doesn't come back in 90s, mark the
+    // bubble as failed. Voice cloning cold start can take 30-60s on
+    // RunPod's first request; subsequent requests are 2-4s.
+    const translateTimer = setTimeout(() => {
+        clearTimeout(warmupNotice);
+        const el = document.getElementById(bubbleId);
+        if(el) {
+            const trEl = el.querySelector('.cb-translated');
+            if(trEl && (trEl.textContent === 'Translating...' || trEl.textContent.startsWith('Warming up'))) {
+                trEl.textContent = '(translation failed — try again)';
+                trEl.style.color = 'var(--error)';
+            }
+        }
+    }, 90000);
 
     socket.once('f2f_translation', (data)=>{
         clearTimeout(translateTimer);
+        clearTimeout(warmupNotice);
 
         // Plan-gate response: backend says we're out of minutes
         if(data.upgrade_required){
