@@ -343,6 +343,52 @@ def reset_password():
         db.close()
 
 
+@auth_bp.route('/debug/tts-check', methods=['GET'])
+@token_required
+def debug_tts_check():
+    """Diagnostic: shows the state of TTS routing for the current user.
+
+    Tells us:
+      - Are the RunPod env vars set?
+      - Does the user have voice profiles registered?
+      - Do the actual reference audio files exist on disk?
+      - Would Fish Speech be called or would it fall back?
+    """
+    import os
+    from app.models.voice_profile import VoiceProfile
+    out = {
+        'env_vars': {
+            'RUNPOD_API_KEY_set': bool(os.getenv('RUNPOD_API_KEY')),
+            'RUNPOD_TTS_ENDPOINT_set': bool(os.getenv('RUNPOD_TTS_ENDPOINT')),
+            'RUNPOD_TTS_ENDPOINT_value': (os.getenv('RUNPOD_TTS_ENDPOINT', '') or '')[:60],
+            'OPENAI_API_KEY_set': bool(os.getenv('OPENAI_API_KEY')),
+            'ELEVENLABS_API_KEY_set': bool(os.getenv('ELEVENLABS_API_KEY')),
+        },
+        'voice_profiles': [],
+    }
+    db = db_session()
+    try:
+        profiles = db.query(VoiceProfile).filter_by(
+            user_id=g.current_user['user_id'],
+            is_active=True,
+        ).all()
+        for p in profiles:
+            file_exists = os.path.exists(p.file_path) if p.file_path else False
+            file_size = os.path.getsize(p.file_path) if file_exists else 0
+            out['voice_profiles'].append({
+                'profile_id': p.profile_id,
+                'profile_name': p.profile_name,
+                'file_path': p.file_path,
+                'file_exists_on_disk': file_exists,
+                'file_size_bytes': file_size,
+                'duration_seconds': p.duration_seconds,
+                'created_at': p.created_at.isoformat() if p.created_at else None,
+            })
+        return jsonify(out)
+    finally:
+        db.close()
+
+
 @auth_bp.route('/change-password', methods=['POST'])
 @token_required
 def change_password():
