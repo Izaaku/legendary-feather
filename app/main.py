@@ -518,26 +518,27 @@ def handle_f2f_translate(data):
         translated = translator.translate(text, source, target)
 
         # ── Synthesize TTS audio for the translation ──
-        # Routing: face_to_face mode picks ElevenLabs (premium) for plans
-        # with elevenlabs minutes; OpenAI TTS otherwise. The CloudTTSEngine
-        # handles the actual selection internally.
+        # VERBOSE LOGGING block — temporary while we debug voice cloning.
+        # Every step prints so we can see exactly which path Fish Speech takes
+        # (or doesn't) in Railway logs.
+        print(f'[F2F-DEBUG] === Starting TTS synthesis ===')
+        print(f'[F2F-DEBUG] user_id={user_id!r} (truthy={bool(user_id)})')
+        print(f'[F2F-DEBUG] voice_profile_id from client={voice_profile_id!r}')
+        print(f'[F2F-DEBUG] user_plan_obj keys={list((user_plan_obj or {}).keys())[:5]}')
+
         audio_b64 = None
         try:
             tts = CloudTTSEngine()
-            # Voice-cloning gate: only allow voice_profile_id when the user's
-            # plan actually supports voice cloning. Strip it otherwise so
-            # paying for a Free plan can't sneak past the gate by sending an
-            # arbitrary profile_id from the client.
             effective_profile = None
             reference_audio_path = None
             reference_text = ''
+
             if voice_profile_id and user_plan_obj:
                 allowance = user_plan_obj.get('voice_cloning_profiles', 0)
+                print(f'[F2F-DEBUG] plan voice_cloning_profiles allowance={allowance}')
                 if allowance == -1 or allowance > 0:
                     effective_profile = voice_profile_id
-                    # Look up the reference audio file path from VoiceProfile.
-                    # Fish Speech needs the actual audio bytes (zero-shot
-                    # cloning), not just the profile ID.
+                    print(f'[F2F-DEBUG] effective_profile set to {effective_profile[:12]}...')
                     try:
                         from app.models.voice_profile import VoiceProfile
                         vp_db = db_session()
@@ -548,13 +549,24 @@ def handle_f2f_translate(data):
                         ).first()
                         if vp:
                             reference_audio_path = vp.file_path
-                            # Use the registered language as the reference
-                            # text language. We don't have the actual transcript
-                            # but Fish Speech works fine without it.
                             reference_text = ''
+                            print(f'[F2F-DEBUG] VoiceProfile found, file_path={reference_audio_path}')
+                            # Verify the file actually exists on disk
+                            import os as _os
+                            exists = _os.path.exists(reference_audio_path) if reference_audio_path else False
+                            size = _os.path.getsize(reference_audio_path) if exists else 0
+                            print(f'[F2F-DEBUG] reference file exists={exists} size={size} bytes')
+                        else:
+                            print(f'[F2F-DEBUG] VoiceProfile NOT FOUND for profile_id={voice_profile_id} user_id={user_id}')
                         vp_db.close()
                     except Exception as e:
-                        print(f'[F2F] Could not load voice profile {voice_profile_id}: {e}')
+                        print(f'[F2F-DEBUG] DB query failed: {type(e).__name__}: {e}')
+                else:
+                    print(f'[F2F-DEBUG] Plan does not allow voice cloning (allowance={allowance}) — skipping')
+            else:
+                print(f'[F2F-DEBUG] Skipping voice cloning: voice_profile_id={bool(voice_profile_id)}, user_plan_obj={bool(user_plan_obj)}')
+
+            print(f'[F2F-DEBUG] Calling tts.synthesize(lang={target}, has_profile={bool(effective_profile)}, has_ref_audio={bool(reference_audio_path)})')
 
             audio_b64 = tts.synthesize(
                 text=translated,
@@ -564,9 +576,11 @@ def handle_f2f_translate(data):
                 reference_audio_path=reference_audio_path,
                 reference_text=reference_text,
             )
+            print(f'[F2F-DEBUG] tts.synthesize returned {len(audio_b64) if audio_b64 else 0} chars of audio')
         except Exception as tts_err:
-            # TTS failure shouldn't block the text translation — degrade gracefully
-            print(f'[F2F] TTS failed (returning text only): {tts_err}')
+            import traceback as _tb
+            print(f'[F2F-DEBUG] TTS EXCEPTION: {type(tts_err).__name__}: {tts_err}')
+            print(_tb.format_exc())
 
         # ── Track minutes used ──
         # Estimate from char count: ~750 chars/minute (~150 wpm * 5 chars/word).

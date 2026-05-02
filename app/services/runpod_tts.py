@@ -94,11 +94,16 @@ class RunPodTTSClient:
             print(f'[RunPodTTS] Language {language!r} not in Fish Speech set — skipping')
             return None
 
+        print(f'[RunPodTTS] === ENTERING synthesize_with_clone ===')
+        print(f'[RunPodTTS] text_len={len(text)} ref_path={reference_audio_path} lang={language}')
+
         # Load and base64-encode the reference audio
         try:
             with open(reference_audio_path, 'rb') as f:
                 ref_audio_bytes = f.read()
             ref_audio_b64 = base64.b64encode(ref_audio_bytes).decode('utf-8')
+            print(f'[RunPodTTS] Loaded ref audio: {len(ref_audio_bytes)} bytes raw, '
+                  f'{len(ref_audio_b64)} chars b64')
         except FileNotFoundError:
             print(f'[RunPodTTS] Reference audio not found: {reference_audio_path}')
             return None
@@ -128,27 +133,34 @@ class RunPodTTSClient:
             }
         }
 
+        print(f'[RunPodTTS] POST {url} timeout={timeout_seconds}s payload_size~{len(ref_audio_b64)+len(text)} chars')
+
         start = time.time()
         try:
             resp = requests.post(url, json=payload, headers=headers, timeout=timeout_seconds)
         except requests.Timeout:
-            print(f'[RunPodTTS] Timed out after {timeout_seconds}s — endpoint cold-starting?')
+            elapsed = time.time() - start
+            print(f'[RunPodTTS] TIMED OUT after {elapsed:.1f}s (limit was {timeout_seconds}s)')
             return None
         except Exception as e:
-            print(f'[RunPodTTS] Network error: {e}')
+            elapsed = time.time() - start
+            print(f'[RunPodTTS] Network error after {elapsed:.1f}s: {type(e).__name__}: {e}')
             return None
 
         elapsed = time.time() - start
+        print(f'[RunPodTTS] HTTP response in {elapsed:.1f}s: status={resp.status_code} body_len={len(resp.text)}')
 
         if resp.status_code != 200:
-            print(f'[RunPodTTS] HTTP {resp.status_code}: {resp.text[:300]}')
+            print(f'[RunPodTTS] HTTP {resp.status_code} ERROR: {resp.text[:500]}')
             return None
 
         try:
             data = resp.json()
         except Exception as e:
-            print(f'[RunPodTTS] Invalid JSON response: {e}')
+            print(f'[RunPodTTS] Invalid JSON response: {e} body={resp.text[:300]}')
             return None
+
+        print(f'[RunPodTTS] Response keys: {list(data.keys())} status={data.get("status")}')
 
         # /runsync wraps the worker output in: {"id": "...", "status": "COMPLETED", "output": {...}}
         status = data.get('status', '').upper()

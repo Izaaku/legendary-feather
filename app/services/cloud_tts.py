@@ -122,17 +122,23 @@ class CloudTTSEngine:
         mode = self._DEPRECATED_MODE_ALIASES.get(mode, mode)
 
         print(f'[CloudTTS] Synthesize: lang={language} mode={mode} '
-              f'gender={voice_gender} clone={bool(voice_profile_id)}')
+              f'gender={voice_gender} clone={bool(voice_profile_id)} '
+              f'has_ref_audio={bool(reference_audio_path)}')
 
         try:
             # ── Route 1: Voice cloning via Fish Speech (RunPod Serverless) ──
             # This is the primary path for users with voice cloning enabled.
             # No per-voice slots, no per-month caps, scales to thousands of
             # users on a single endpoint.
+            print(f'[CloudTTS-DEBUG] Route 1 check: voice_profile_id={bool(voice_profile_id)}, reference_audio_path={bool(reference_audio_path)}')
             if voice_profile_id and reference_audio_path:
                 from app.services.runpod_tts import RunPodTTSClient
                 runpod = RunPodTTSClient()
-                if runpod.is_available() and runpod.supports_language(language):
+                runpod_avail = runpod.is_available()
+                lang_ok = runpod.supports_language(language)
+                print(f'[CloudTTS-DEBUG] Fish Speech available={runpod_avail}, supports_lang({language})={lang_ok}')
+                if runpod_avail and lang_ok:
+                    print(f'[CloudTTS-DEBUG] >>> Calling Fish Speech synthesize_with_clone <<<')
                     result = runpod.synthesize_with_clone(
                         text=text,
                         reference_audio_path=reference_audio_path,
@@ -141,11 +147,16 @@ class CloudTTSEngine:
                         output_format='mp3',
                     )
                     if result:
+                        print(f'[CloudTTS-DEBUG] Fish Speech SUCCESS — got {len(result)} chars audio')
                         return result
                     # If Fish Speech fails (cold start timeout, unsupported
                     # language, etc.), fall through to OpenAI TTS so the
                     # user still gets audio (just without their voice).
-                    print('[CloudTTS] Fish Speech failed — falling back to default voice')
+                    print('[CloudTTS-DEBUG] Fish Speech returned None — falling back to default voice')
+                else:
+                    print(f'[CloudTTS-DEBUG] Skipping Fish Speech (avail={runpod_avail}, lang_ok={lang_ok})')
+            else:
+                print(f'[CloudTTS-DEBUG] Route 1 skipped — missing voice_profile_id or reference_audio_path')
 
             # ── Route 2: Legacy ElevenLabs voice cloning ──
             # Kept for backward compatibility while RunPod isn't configured.
