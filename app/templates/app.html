@@ -2155,9 +2155,14 @@ async function loadVoiceProfiles(){
             if(hasProfiles){
                 selectorWrap.style.display = 'block';
                 selectorEl.disabled = false;
-                selectorEl.innerHTML = '<option value="">Standard voice</option>' +
-                    profiles.map(p => `<option value="${p.id}">${p.name} (your voice)</option>`).join('');
-                if(selectorHint) selectorHint.textContent = 'Pick a voice profile to clone — translation will sound like you.';
+                // Auto-select the user's first voice profile by default — they
+                // explicitly registered it, presumably to use it. Avoids the
+                // bug where users wondered "why isn't my voice being used?"
+                // because the default option silently kept the standard voice.
+                selectorEl.innerHTML =
+                    profiles.map((p, i) => `<option value="${p.id}"${i === 0 ? ' selected' : ''}>${p.name} (your voice)</option>`).join('') +
+                    '<option value="">Standard voice (no cloning)</option>';
+                if(selectorHint) selectorHint.innerHTML = 'Translation will sound like <strong style="color:var(--gold);">your voice</strong>. Pick "Standard voice" to disable cloning.';
             } else if(planAllowsCloning){
                 selectorWrap.style.display = 'block';
                 selectorEl.disabled = true;
