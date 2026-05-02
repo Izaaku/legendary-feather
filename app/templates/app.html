@@ -865,7 +865,31 @@ footer {
             <div class="collapsible-body" id="voiceRegBody">
                 <!-- Guide Phrases -->
                 <div style="background:var(--gold-dim);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
-                    <div style="font-size:11px;color:var(--gold);font-weight:500;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">Read aloud for best voice capture</div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <div style="font-size:11px;color:var(--gold);font-weight:500;letter-spacing:1px;text-transform:uppercase;">Read aloud for best voice capture</div>
+                        <select id="guidePhraseLang" onchange="onGuidePhraseLangChange()" style="background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;">
+                            <option value="en">🇺🇸 English</option>
+                            <option value="es">🇪🇸 Español</option>
+                            <option value="fr">🇫🇷 Français</option>
+                            <option value="de">🇩🇪 Deutsch</option>
+                            <option value="it">🇮🇹 Italiano</option>
+                            <option value="pt">🇵🇹 Português</option>
+                            <option value="nl">🇳🇱 Nederlands</option>
+                            <option value="pl">🇵🇱 Polski</option>
+                            <option value="ru">🇷🇺 Русский</option>
+                            <option value="zh">🇨🇳 中文</option>
+                            <option value="ja">🇯🇵 日本語</option>
+                            <option value="ko">🇰🇷 한국어</option>
+                            <option value="ar">🇸🇦 العربية</option>
+                            <option value="hi">🇮🇳 हिन्दी</option>
+                            <option value="tr">🇹🇷 Türkçe</option>
+                            <option value="sv">🇸🇪 Svenska</option>
+                            <option value="th">🇹🇭 ไทย</option>
+                            <option value="vi">🇻🇳 Tiếng Việt</option>
+                            <option value="id">🇮🇩 Indonesia</option>
+                            <option value="tl">🇵🇭 Tagalog</option>
+                        </select>
+                    </div>
                     <div id="guidePhrase" style="font-size:14px;color:var(--text);line-height:1.6;padding:12px;background:var(--bg);border-radius:8px;text-align:center;min-height:50px;display:flex;align-items:center;justify-content:center;"></div>
                     <div style="display:flex;justify-content:center;gap:8px;margin-top:10px;align-items:center;">
                         <button class="btn-secondary" onclick="prevGuidePhrase()" style="padding:6px 14px;font-size:12px;">◀</button>
@@ -873,7 +897,7 @@ footer {
                         <button class="btn-secondary" onclick="nextGuidePhrase()" style="padding:6px 14px;font-size:12px;">▶</button>
                         <button class="btn-secondary" onclick="regenerateGuidePhrases()" style="padding:6px 12px;font-size:12px;margin-left:6px;" title="Generate new random phrases">🔀 New</button>
                     </div>
-                    <div style="margin-top:8px;font-size:11px;color:var(--text-muted);text-align:center;font-style:italic;">Phrases are randomly generated per session to prevent voice impersonation.</div>
+                    <div style="margin-top:8px;font-size:11px;color:var(--text-muted);text-align:center;font-style:italic;">Phrases are randomly generated per session to prevent voice impersonation. Recording in your native language gives the best clone quality.</div>
                 </div>
                 <button class="recording-button" id="voiceRecordBtn">
                     <span id="recordBtnIcon">🔴</span>
@@ -1653,9 +1677,9 @@ function processF2FUtterance(text){
         }
     }, 8000);
 
-    // Safety timeout — if translation doesn't come back in 90s, mark the
-    // bubble as failed. Voice cloning cold start can take 30-60s on
-    // RunPod's first request; subsequent requests are 2-4s.
+    // Safety timeout — if translation doesn't come back in 200s, mark the
+    // bubble as failed. Voice cloning cold start can take 30-90s on
+    // RunPod's first request; we give 180s server-side + buffer here.
     const translateTimer = setTimeout(() => {
         clearTimeout(warmupNotice);
         const el = document.getElementById(bubbleId);
@@ -1666,7 +1690,7 @@ function processF2FUtterance(text){
                 trEl.style.color = 'var(--error)';
             }
         }
-    }, 90000);
+    }, 200000);
 
     socket.once('f2f_translation', (data)=>{
         clearTimeout(translateTimer);
@@ -1859,53 +1883,570 @@ function toggleVoiceReg(){
     }
 }
 
-// ── DYNAMIC GUIDE PHRASES ──
+// ── DYNAMIC GUIDE PHRASES (multi-language) ──
 // Random per-session sentences prevent replay attacks (uploading someone else's
-// pre-recorded voice). Each session generates 5 unique phrases by combining
-// templates + random modifiers + a session-unique 4-digit code that the user
-// must speak. The code embeds session freshness into the audio — even if an
-// attacker steals an old recording, it won't contain today's code.
-const PHRASE_TEMPLATES = [
-    "The {color} {animal} ran {direction} the {place} while the {time} sky turned {color2}.",
-    "I usually drink {drink} every {weekday} morning before walking through the {place}.",
-    "My {relative} taught me how to {verb} when I was {number} years old, and I still remember it.",
-    "We should meet at the {place} around {hour} and talk about {topic} for a while.",
-    "The {adjective} {object} on the {furniture} reminded me of my trip to {city} last {season}.",
-    "Reading {topic} books while sitting near the {place} helps me forget about {emotion}.",
-    "Yesterday I saw a {color} {animal} {verb}ing in the garden, which was completely unexpected.",
-    "My favorite memory is from {season} {number}, when we visited {city} for the first time.",
-    "If I could travel anywhere tomorrow, I would choose {city} because of its {adjective} architecture.",
-    "Every {weekday} I try to {verb} for at least {number} minutes to clear my mind."
-];
-const PHRASE_VARS = {
-    color:    ['red','blue','green','golden','silver','copper','crimson','emerald','azure','violet'],
-    color2:   ['orange','pink','purple','gray','navy','rose','amber','teal','coral','indigo'],
-    animal:   ['fox','rabbit','wolf','heron','sparrow','dolphin','hawk','squirrel','deer','owl'],
-    direction:['toward','away from','around','past','through','beside','beyond','across'],
-    place:    ['mountain','old library','quiet park','river bank','market square','wooden bridge','small cafe','rose garden','train station','harbor'],
-    place_alt:['mountains','library','park','river','market','bridge','cafe','garden','station','harbor'],
-    time:     ['morning','evening','afternoon','midnight','dawn','twilight','noon','dusk'],
-    drink:    ['coffee','green tea','hot chocolate','fresh juice','lemon water','herbal tea','espresso','iced matcha'],
-    weekday:  ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
-    relative: ['grandfather','grandmother','aunt','uncle','older sister','older brother','cousin','neighbor'],
-    verb:     ['paint','garden','bake','write','swim','ride a bicycle','play chess','dance','meditate','draw'],
-    number:   ['seven','twelve','fifteen','twenty','thirty','six','nine','eleven','eighteen','twenty-five'],
-    hour:     ['three','four','five','six','seven','eight','nine','ten','eleven'],
-    topic:    ['history','poetry','astronomy','travel','philosophy','jazz music','marine biology','architecture','mythology','design'],
-    adjective:['ancient','beautiful','strange','quiet','lively','elegant','mysterious','warm','colorful','peaceful'],
-    object:   ['painting','clock','vase','book','lantern','mirror','letter','photograph','statue','tapestry'],
-    furniture:['old shelf','wooden table','windowsill','mantelpiece','desk','dresser','bench'],
-    city:     ['Lisbon','Kyoto','Barcelona','Reykjavik','Marrakech','Buenos Aires','Vienna','Edinburgh','Chiang Mai','Quebec City'],
-    season:   ['spring','summer','autumn','winter'],
-    emotion:  ['stress','worry','sadness','restlessness','impatience','frustration'],
+// pre-recorded voice). Each session generates 5 unique phrases per language by
+// combining templates + random variables + a session-unique 4-digit code that
+// the user must speak. Recording in the user's native language produces a
+// substantially better voice clone than a non-native English recording.
+const PHRASE_DATA_BY_LANG = {
+    en: {
+        templates: [
+            "The {color} {animal} ran {direction} the {place} while the {time} sky turned {color2}.",
+            "I usually drink {drink} every {weekday} morning before walking through the {place}.",
+            "My {relative} taught me how to {verb} when I was a child, and I still remember it.",
+            "We should meet at the {place} around noon and talk about {topic} for a while.",
+            "The {adjective} {object} reminded me of my trip to {city} last {season}.",
+        ],
+        vars: {
+            color: ['red','blue','green','golden','silver','crimson','emerald','azure'],
+            color2: ['orange','pink','purple','gray','rose','amber','teal','coral'],
+            animal: ['fox','rabbit','wolf','heron','sparrow','hawk','squirrel','deer'],
+            direction: ['toward','around','past','through','beside','across'],
+            place: ['old library','quiet park','river bank','market square','small cafe','rose garden','harbor','train station'],
+            time: ['morning','evening','afternoon','dawn','twilight','dusk'],
+            drink: ['coffee','green tea','hot chocolate','fresh juice','herbal tea','espresso'],
+            weekday: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+            relative: ['grandfather','grandmother','aunt','uncle','older sister','cousin'],
+            verb: ['paint','garden','bake','write','swim','play chess','dance','draw'],
+            topic: ['history','poetry','travel','philosophy','jazz music','architecture'],
+            adjective: ['ancient','beautiful','strange','quiet','elegant','mysterious','warm','peaceful'],
+            object: ['painting','clock','vase','lantern','letter','photograph','statue'],
+            city: ['Lisbon','Kyoto','Barcelona','Reykjavik','Marrakech','Vienna','Edinburgh','Quebec'],
+            season: ['spring','summer','autumn','winter'],
+        },
+        codePrefix: 'The verification code is',
+    },
+    es: {
+        templates: [
+            "El {animal} {color} corrió {direction} el {place} mientras el cielo de la {time} se volvía {color2}.",
+            "Suelo tomar {drink} cada {weekday} por la mañana antes de caminar por el {place}.",
+            "Mi {relative} me enseñó a {verb} cuando era niño, y todavía lo recuerdo.",
+            "Deberíamos vernos en el {place} al mediodía y hablar sobre {topic} un rato.",
+            "El {object} {adjective} me recordó mi viaje a {city} el pasado {season}.",
+        ],
+        vars: {
+            color: ['rojo','azul','verde','dorado','plateado','carmesí','esmeralda'],
+            color2: ['naranja','rosa','morado','gris','ámbar','coral'],
+            animal: ['zorro','conejo','lobo','halcón','gorrión','venado','búho'],
+            direction: ['hacia','alrededor de','más allá de','a través de','junto a'],
+            place: ['biblioteca antigua','parque tranquilo','río','mercado','pequeño café','jardín de rosas','puerto','estación de tren'],
+            time: ['mañana','tarde','noche','madrugada'],
+            drink: ['café','té verde','chocolate caliente','jugo fresco','té de hierbas','espresso'],
+            weekday: ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'],
+            relative: ['abuelo','abuela','tía','tío','hermana mayor','primo'],
+            verb: ['pintar','cocinar','escribir','nadar','jugar ajedrez','bailar','dibujar'],
+            topic: ['historia','poesía','viajes','filosofía','música jazz','arquitectura'],
+            adjective: ['antiguo','hermoso','extraño','tranquilo','elegante','misterioso','cálido','colorido'],
+            object: ['cuadro','reloj','jarrón','farol','carta','fotografía','estatua'],
+            city: ['Lisboa','Kioto','Barcelona','Reikiavik','Marrakech','Viena','Edimburgo','Buenos Aires'],
+            season: ['primavera','verano','otoño','invierno'],
+        },
+        codePrefix: 'El código de verificación es',
+    },
+    fr: {
+        templates: [
+            "Le {animal} {color} a couru {direction} le {place} alors que le ciel du {time} devenait {color2}.",
+            "Je bois {drink} chaque {weekday} matin avant de marcher dans le {place}.",
+            "Mon {relative} m'a appris à {verb} quand j'étais enfant, et je m'en souviens encore.",
+            "Nous devrions nous retrouver au {place} vers midi et parler de {topic} un moment.",
+            "L'{object} {adjective} m'a rappelé mon voyage à {city} l'{season} dernier.",
+        ],
+        vars: {
+            color: ['rouge','bleu','vert','doré','argenté','cramoisi','émeraude'],
+            color2: ['orange','rose','violet','gris','ambre','corail'],
+            animal: ['renard','lapin','loup','héron','moineau','cerf','hibou'],
+            direction: ['vers','autour de','au-delà de','à travers','près de'],
+            place: ['vieille bibliothèque','parc tranquille','bord du fleuve','marché','petit café','jardin de roses','port','gare'],
+            time: ['matin','soir','après-midi','aube'],
+            drink: ['café','thé vert','chocolat chaud','jus frais','tisane','espresso'],
+            weekday: ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'],
+            relative: ['grand-père','grand-mère','tante','oncle','grande sœur','cousin'],
+            verb: ['peindre','cuisiner','écrire','nager','jouer aux échecs','danser','dessiner'],
+            topic: ['histoire','poésie','voyage','philosophie','jazz','architecture'],
+            adjective: ['ancien','beau','étrange','calme','élégant','mystérieux','chaleureux','paisible'],
+            object: ['peinture','horloge','vase','lanterne','lettre','photographie','statue'],
+            city: ['Lisbonne','Kyoto','Barcelone','Reykjavik','Marrakech','Vienne','Édimbourg','Montréal'],
+            season: ['printemps','été','automne','hiver'],
+        },
+        codePrefix: 'Le code de vérification est',
+    },
+    de: {
+        templates: [
+            "Der {color} {animal} lief {direction} den {place}, während der Himmel am {time} {color2} wurde.",
+            "Ich trinke {drink} jeden {weekday} Morgen, bevor ich durch den {place} gehe.",
+            "Mein {relative} brachte mir bei zu {verb}, als ich ein Kind war, und ich erinnere mich immer noch daran.",
+            "Wir sollten uns am {place} um Mittag treffen und über {topic} sprechen.",
+            "Der {adjective} {object} erinnerte mich an meine Reise nach {city} im letzten {season}.",
+        ],
+        vars: {
+            color: ['rote','blaue','grüne','goldene','silberne','smaragdgrüne'],
+            color2: ['orange','rosa','violett','grau','bernsteinfarben'],
+            animal: ['Fuchs','Hase','Wolf','Reiher','Spatz','Hirsch','Eule'],
+            direction: ['in Richtung','um','vorbei an','durch','neben'],
+            place: ['alten Bibliothek','ruhigen Park','Flussufer','Marktplatz','kleinen Café','Rosengarten','Hafen','Bahnhof'],
+            time: ['Morgen','Abend','Nachmittag','Dämmerung'],
+            drink: ['Kaffee','grünen Tee','heiße Schokolade','frischen Saft','Kräutertee','Espresso'],
+            weekday: ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'],
+            relative: ['Großvater','Großmutter','Tante','Onkel','ältere Schwester','Cousin'],
+            verb: ['malen','kochen','schreiben','schwimmen','Schach spielen','tanzen','zeichnen'],
+            topic: ['Geschichte','Poesie','Reisen','Philosophie','Jazzmusik','Architektur'],
+            adjective: ['alte','schöne','seltsame','ruhige','elegante','geheimnisvolle','warme','friedliche'],
+            object: ['Gemälde','Uhr','Vase','Laterne','Brief','Foto','Statue'],
+            city: ['Lissabon','Kyoto','Barcelona','Reykjavik','Marrakesch','Wien','Edinburgh','Prag'],
+            season: ['Frühling','Sommer','Herbst','Winter'],
+        },
+        codePrefix: 'Der Verifizierungscode lautet',
+    },
+    it: {
+        templates: [
+            "La {animal} {color} corse {direction} il {place} mentre il cielo della {time} diventava {color2}.",
+            "Bevo {drink} ogni {weekday} mattina prima di camminare nel {place}.",
+            "Mio {relative} mi ha insegnato a {verb} quando ero bambino, e me lo ricordo ancora.",
+            "Dovremmo incontrarci al {place} verso mezzogiorno e parlare di {topic} per un po'.",
+            "L'{object} {adjective} mi ha ricordato il mio viaggio a {city} la scorsa {season}.",
+        ],
+        vars: {
+            color: ['rossa','blu','verde','dorata','argentata','cremisi','smeraldo'],
+            color2: ['arancione','rosa','viola','grigio','ambra','corallo'],
+            animal: ['volpe','coniglio','lupo','airone','passero','cervo','gufo'],
+            direction: ['verso','intorno a','oltre','attraverso','accanto a'],
+            place: ['vecchia biblioteca','parco tranquillo','fiume','piazza del mercato','piccolo caffè','giardino delle rose','porto','stazione'],
+            time: ['mattina','sera','pomeriggio','alba'],
+            drink: ['caffè','tè verde','cioccolata calda','succo fresco','tisana','espresso'],
+            weekday: ['lunedì','martedì','mercoledì','giovedì','venerdì','sabato','domenica'],
+            relative: ['nonno','nonna','zia','zio','sorella maggiore','cugino'],
+            verb: ['dipingere','cucinare','scrivere','nuotare','giocare a scacchi','ballare','disegnare'],
+            topic: ['storia','poesia','viaggi','filosofia','musica jazz','architettura'],
+            adjective: ['antico','bello','strano','tranquillo','elegante','misterioso','caldo','colorato'],
+            object: ['quadro','orologio','vaso','lanterna','lettera','fotografia','statua'],
+            city: ['Lisbona','Kyoto','Barcellona','Reykjavik','Marrakech','Vienna','Edimburgo','Praga'],
+            season: ['primavera','estate','autunno','inverno'],
+        },
+        codePrefix: 'Il codice di verifica è',
+    },
+    pt: {
+        templates: [
+            "A {animal} {color} correu {direction} o {place} enquanto o céu da {time} ficava {color2}.",
+            "Eu bebo {drink} toda {weekday} de manhã antes de caminhar pelo {place}.",
+            "Meu {relative} me ensinou a {verb} quando eu era criança, e ainda me lembro disso.",
+            "Deveríamos nos encontrar no {place} ao meio-dia e conversar sobre {topic} por um tempo.",
+            "O {object} {adjective} me lembrou da minha viagem a {city} no {season} passado.",
+        ],
+        vars: {
+            color: ['vermelha','azul','verde','dourada','prateada','carmesim','esmeralda'],
+            color2: ['laranja','rosa','roxo','cinza','âmbar','coral'],
+            animal: ['raposa','coelho','lobo','garça','pardal','veado','coruja'],
+            direction: ['em direção a','ao redor de','além de','através de','ao lado de'],
+            place: ['biblioteca antiga','parque tranquilo','margem do rio','mercado','pequeno café','jardim de rosas','porto','estação'],
+            time: ['manhã','tarde','noite','madrugada'],
+            drink: ['café','chá verde','chocolate quente','suco fresco','chá de ervas','espresso'],
+            weekday: ['segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado','domingo'],
+            relative: ['avô','avó','tia','tio','irmã mais velha','primo'],
+            verb: ['pintar','cozinhar','escrever','nadar','jogar xadrez','dançar','desenhar'],
+            topic: ['história','poesia','viagens','filosofia','jazz','arquitetura'],
+            adjective: ['antigo','belo','estranho','tranquilo','elegante','misterioso','caloroso','colorido'],
+            object: ['quadro','relógio','vaso','lanterna','carta','fotografia','estátua'],
+            city: ['Lisboa','Quioto','Barcelona','Reiquiavique','Marraquexe','Viena','Edimburgo','Buenos Aires'],
+            season: ['primavera','verão','outono','inverno'],
+        },
+        codePrefix: 'O código de verificação é',
+    },
+    nl: {
+        templates: [
+            "De {color} {animal} rende {direction} het {place} terwijl de {time} hemel {color2} werd.",
+            "Ik drink {drink} elke {weekday} ochtend voordat ik door het {place} loop.",
+            "Mijn {relative} leerde mij {verb} toen ik een kind was, en ik herinner het me nog steeds.",
+            "We zouden elkaar rond het middaguur moeten ontmoeten bij het {place} en even over {topic} praten.",
+            "Het {adjective} {object} deed me denken aan mijn reis naar {city} afgelopen {season}.",
+        ],
+        vars: {
+            color: ['rode','blauwe','groene','gouden','zilveren','smaragdgroene'],
+            color2: ['oranje','roze','paars','grijs','amber'],
+            animal: ['vos','konijn','wolf','reiger','mus','hert','uil'],
+            direction: ['naar','rond','voorbij','door','naast'],
+            place: ['oude bibliotheek','rustige park','rivieroever','marktplein','kleine café','rozentuin','haven','station'],
+            time: ['ochtend','avond','middag','dageraad'],
+            drink: ['koffie','groene thee','warme chocolade','vers sap','kruidenthee','espresso'],
+            weekday: ['maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag','zondag'],
+            relative: ['grootvader','grootmoeder','tante','oom','oudere zus','neef'],
+            verb: ['schilderen','koken','schrijven','zwemmen','schaken','dansen','tekenen'],
+            topic: ['geschiedenis','poëzie','reizen','filosofie','jazz','architectuur'],
+            adjective: ['oude','mooie','vreemde','rustige','elegante','mysterieuze','warme','kleurrijke'],
+            object: ['schilderij','klok','vaas','lantaarn','brief','foto','beeld'],
+            city: ['Lissabon','Kyoto','Barcelona','Reykjavik','Marrakech','Wenen','Edinburgh','Praag'],
+            season: ['lente','zomer','herfst','winter'],
+        },
+        codePrefix: 'De verificatiecode is',
+    },
+    pl: {
+        templates: [
+            "{color} {animal} biegł {direction} {place}, podczas gdy {time} niebo stawało się {color2}.",
+            "Piję {drink} w każdy {weekday} rano przed spacerem przez {place}.",
+            "Moja {relative} nauczyła mnie {verb}, kiedy byłem dzieckiem, i wciąż to pamiętam.",
+            "Powinniśmy spotkać się w {place} w południe i porozmawiać o {topic}.",
+            "{adjective} {object} przypomniał mi o mojej podróży do {city} ostatniej {season}.",
+        ],
+        vars: {
+            color: ['czerwony','niebieski','zielony','złoty','srebrny','szmaragdowy'],
+            color2: ['pomarańczowe','różowe','fioletowe','szare','bursztynowe'],
+            animal: ['lis','królik','wilk','czapla','wróbel','jeleń','sowa'],
+            direction: ['w stronę','wokół','obok','przez','blisko'],
+            place: ['starej bibliotece','spokojnym parku','rzeki','placu targowym','małej kawiarni','ogrodzie różanym','porcie','dworcu'],
+            time: ['poranne','wieczorne','popołudniowe','wschodzie słońca'],
+            drink: ['kawę','zieloną herbatę','gorącą czekoladę','świeży sok','herbatę ziołową','espresso'],
+            weekday: ['poniedziałek','wtorek','środę','czwartek','piątek','sobotę','niedzielę'],
+            relative: ['babcia','ciocia','wujek','starsza siostra','kuzyn'],
+            verb: ['malować','gotować','pisać','pływać','grać w szachy','tańczyć','rysować'],
+            topic: ['historii','poezji','podróżach','filozofii','jazzie','architekturze'],
+            adjective: ['stary','piękny','dziwny','spokojny','elegancki','tajemniczy','ciepły','kolorowy'],
+            object: ['obraz','zegar','wazon','latarnia','list','fotografia','posąg'],
+            city: ['Lizbony','Kioto','Barcelony','Rejkiawiku','Marrakeszu','Wiednia','Edynburga','Pragi'],
+            season: ['wiosny','lata','jesieni','zimy'],
+        },
+        codePrefix: 'Kod weryfikacyjny to',
+    },
+    ru: {
+        templates: [
+            "{color} {animal} побежал {direction} {place}, пока небо {time} становилось {color2}.",
+            "Я пью {drink} каждый {weekday} утром перед прогулкой через {place}.",
+            "Моя {relative} научила меня {verb}, когда я был ребёнком, и я до сих пор это помню.",
+            "Нам стоит встретиться в {place} около полудня и поговорить о {topic}.",
+            "{adjective} {object} напомнил мне о моей поездке в {city} прошлой {season}.",
+        ],
+        vars: {
+            color: ['красный','синий','зелёный','золотой','серебряный','изумрудный'],
+            color2: ['оранжевым','розовым','фиолетовым','серым','янтарным'],
+            animal: ['лис','кролик','волк','цапля','воробей','олень','сова'],
+            direction: ['к','вокруг','мимо','через','рядом с'],
+            place: ['старой библиотеке','тихом парке','реке','рыночной площади','маленьком кафе','розовом саду','порту','вокзале'],
+            time: ['утром','вечером','днём','рассвета'],
+            drink: ['кофе','зелёный чай','горячий шоколад','свежий сок','травяной чай','эспрессо'],
+            weekday: ['понедельник','вторник','среду','четверг','пятницу','субботу','воскресенье'],
+            relative: ['бабушка','тётя','дядя','старшая сестра','двоюродный брат'],
+            verb: ['рисовать','готовить','писать','плавать','играть в шахматы','танцевать'],
+            topic: ['истории','поэзии','путешествиях','философии','джазе','архитектуре'],
+            adjective: ['старый','красивый','странный','тихий','элегантный','загадочный','тёплый'],
+            object: ['картина','часы','ваза','фонарь','письмо','фотография','статуя'],
+            city: ['Лиссабон','Киото','Барселона','Рейкьявик','Марракеш','Вену','Эдинбург','Прагу'],
+            season: ['весной','летом','осенью','зимой'],
+        },
+        codePrefix: 'Проверочный код:',
+    },
+    zh: {
+        templates: [
+            "那只{color}的{animal}{direction}{place}跑去，{time}的天空变成了{color2}。",
+            "我每个{weekday}早上都会喝{drink},然后走过{place}。",
+            "我的{relative}在我小时候教过我{verb},我至今仍然记得。",
+            "我们应该中午在{place}见面,聊一聊{topic}。",
+            "那件{adjective}的{object}让我想起去年{season}去{city}的旅行。",
+        ],
+        vars: {
+            color: ['红色','蓝色','绿色','金色','银色','翠绿色'],
+            color2: ['橙色','粉色','紫色','灰色','琥珀色'],
+            animal: ['狐狸','兔子','狼','苍鹭','麻雀','鹿','猫头鹰'],
+            direction: ['朝着','绕着','穿过','沿着','靠近'],
+            place: ['老图书馆','安静的公园','河边','市场广场','小咖啡馆','玫瑰园','港口','火车站'],
+            time: ['清晨','傍晚','下午','黎明'],
+            drink: ['咖啡','绿茶','热巧克力','鲜榨果汁','花草茶','浓缩咖啡'],
+            weekday: ['星期一','星期二','星期三','星期四','星期五','星期六','星期天'],
+            relative: ['爷爷','奶奶','阿姨','叔叔','姐姐','表哥'],
+            verb: ['画画','烹饪','写字','游泳','下棋','跳舞','画素描'],
+            topic: ['历史','诗歌','旅行','哲学','爵士乐','建筑'],
+            adjective: ['古老','美丽','奇特','安静','优雅','神秘','温暖','多彩'],
+            object: ['画作','时钟','花瓶','灯笼','信件','照片','雕像'],
+            city: ['里斯本','京都','巴塞罗那','雷克雅未克','马拉喀什','维也纳','爱丁堡','布拉格'],
+            season: ['春天','夏天','秋天','冬天'],
+        },
+        codePrefix: '验证码是',
+    },
+    ja: {
+        templates: [
+            "{color}の{animal}が{place}を{direction}走り、{time}の空が{color2}に染まった。",
+            "私は毎週{weekday}の朝、{place}を歩く前に{drink}を飲みます。",
+            "私の{relative}は私が子供のころ{verb}を教えてくれて、今でも覚えています。",
+            "正午に{place}で会って、{topic}について少し話しましょう。",
+            "{adjective}{object}は去年の{season}に{city}へ行った旅行を思い出させました。",
+        ],
+        vars: {
+            color: ['赤い','青い','緑の','金色の','銀色の','エメラルド色の'],
+            color2: ['オレンジ','ピンク','紫','灰色','琥珀色'],
+            animal: ['きつね','うさぎ','おおかみ','さぎ','すずめ','しか','ふくろう'],
+            direction: ['に向かって','の周りを','を通り過ぎて','の中を','の横を'],
+            place: ['古い図書館','静かな公園','川辺','市場','小さなカフェ','バラ園','港','駅'],
+            time: ['朝','夕方','午後','夜明け'],
+            drink: ['コーヒー','緑茶','ホットチョコレート','フレッシュジュース','ハーブティー','エスプレッソ'],
+            weekday: ['月曜日','火曜日','水曜日','木曜日','金曜日','土曜日','日曜日'],
+            relative: ['祖父','祖母','おば','おじ','姉','いとこ'],
+            verb: ['絵を描くこと','料理','書くこと','泳ぐこと','チェス','踊ること'],
+            topic: ['歴史','詩','旅行','哲学','ジャズ','建築'],
+            adjective: ['古い','美しい','奇妙な','静かな','優雅な','神秘的な','暖かい','カラフルな'],
+            object: ['絵画','時計','花瓶','ランタン','手紙','写真','彫像'],
+            city: ['リスボン','京都','バルセロナ','レイキャビク','マラケシュ','ウィーン','エディンバラ','プラハ'],
+            season: ['春','夏','秋','冬'],
+        },
+        codePrefix: '認証コードは',
+    },
+    ko: {
+        templates: [
+            "{color} {animal}이(가) {place}을(를) {direction} 달렸고, {time} 하늘은 {color2}으로 변했다.",
+            "저는 매주 {weekday} 아침에 {place}을(를) 걷기 전에 {drink}을(를) 마십니다.",
+            "제 {relative}은(는) 제가 어렸을 때 {verb}을(를) 가르쳐 주셨고, 저는 아직도 기억합니다.",
+            "정오에 {place}에서 만나서 {topic}에 대해 잠시 이야기합시다.",
+            "그 {adjective} {object}은(는) 작년 {season}에 {city}로 떠났던 여행을 떠올리게 했다.",
+        ],
+        vars: {
+            color: ['빨간','파란','초록','금색','은색','에메랄드'],
+            color2: ['주황색','분홍색','보라색','회색','호박색'],
+            animal: ['여우','토끼','늑대','왜가리','참새','사슴','부엉이'],
+            direction: ['향해','돌아','지나','통해','옆으로'],
+            place: ['오래된 도서관','조용한 공원','강가','시장 광장','작은 카페','장미 정원','항구','기차역'],
+            time: ['아침','저녁','오후','새벽'],
+            drink: ['커피','녹차','핫초코','신선한 주스','허브차','에스프레소'],
+            weekday: ['월요일','화요일','수요일','목요일','금요일','토요일','일요일'],
+            relative: ['할아버지','할머니','이모','삼촌','언니','사촌'],
+            verb: ['그림 그리기','요리','글쓰기','수영','체스','춤'],
+            topic: ['역사','시','여행','철학','재즈','건축'],
+            adjective: ['오래된','아름다운','이상한','조용한','우아한','신비로운','따뜻한','다채로운'],
+            object: ['그림','시계','꽃병','등불','편지','사진','조각상'],
+            city: ['리스본','교토','바르셀로나','레이캬비크','마라케시','비엔나','에든버러','프라하'],
+            season: ['봄','여름','가을','겨울'],
+        },
+        codePrefix: '인증 코드는',
+    },
+    ar: {
+        templates: [
+            "ركض الـ{animal} الـ{color} {direction} {place} بينما تحولت سماء الـ{time} إلى اللون {color2}.",
+            "أشرب {drink} كل {weekday} صباحًا قبل أن أمشي عبر {place}.",
+            "علمتني {relative} أن أتعلم {verb} عندما كنت طفلاً، وما زلت أتذكر ذلك.",
+            "يجب أن نلتقي في {place} عند الظهر ونتحدث عن {topic} لبعض الوقت.",
+            "ذكّرتني الـ{object} الـ{adjective} برحلتي إلى {city} في {season} الماضي.",
+        ],
+        vars: {
+            color: ['أحمر','أزرق','أخضر','ذهبي','فضي','زمردي'],
+            color2: ['برتقالي','وردي','أرجواني','رمادي','عنبري'],
+            animal: ['ثعلب','أرنب','ذئب','مالك حزين','عصفور','غزال','بومة'],
+            direction: ['نحو','حول','بجانب','عبر','بمحاذاة'],
+            place: ['المكتبة القديمة','الحديقة الهادئة','ضفة النهر','ساحة السوق','المقهى الصغير','حديقة الورود','الميناء','المحطة'],
+            time: ['الصباح','المساء','الظهيرة','الفجر'],
+            drink: ['القهوة','الشاي الأخضر','الشوكولاتة الساخنة','العصير الطازج','شاي الأعشاب','الإسبريسو'],
+            weekday: ['الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت','الأحد'],
+            relative: ['جدتي','عمتي','خالتي','أختي الكبرى','ابن عمي'],
+            verb: ['الرسم','الطبخ','الكتابة','السباحة','الشطرنج','الرقص'],
+            topic: ['التاريخ','الشعر','السفر','الفلسفة','موسيقى الجاز','العمارة'],
+            adjective: ['قديم','جميل','غريب','هادئ','أنيق','غامض','دافئ','ملون'],
+            object: ['اللوحة','الساعة','المزهرية','الفانوس','الرسالة','الصورة','التمثال'],
+            city: ['لشبونة','كيوتو','برشلونة','ريكيافيك','مراكش','فيينا','أدنبرة','براغ'],
+            season: ['الربيع','الصيف','الخريف','الشتاء'],
+        },
+        codePrefix: 'رمز التحقق هو',
+    },
+    hi: {
+        templates: [
+            "{color} {animal} {place} की ओर {direction} दौड़ा जब {time} का आकाश {color2} हो गया।",
+            "मैं हर {weekday} सुबह {place} में टहलने से पहले {drink} पीता हूँ।",
+            "मेरे {relative} ने मुझे {verb} सिखाया जब मैं बच्चा था, और मुझे आज भी याद है।",
+            "हमें दोपहर को {place} पर मिलकर {topic} के बारे में थोड़ी देर बात करनी चाहिए।",
+            "वह {adjective} {object} मुझे पिछले {season} {city} की मेरी यात्रा की याद दिलाता है।",
+        ],
+        vars: {
+            color: ['लाल','नीला','हरा','सुनहरा','चांदी जैसा','पन्ना हरा'],
+            color2: ['नारंगी','गुलाबी','बैंगनी','धूसर','एम्बर'],
+            animal: ['लोमड़ी','खरगोश','भेड़िया','बगुला','गौरैया','हिरण','उल्लू'],
+            direction: ['की ओर','के चारों ओर','से होकर','के पास से'],
+            place: ['पुरानी लाइब्रेरी','शांत पार्क','नदी किनारे','बाज़ार चौक','छोटे कैफे','गुलाब बगीचे','बंदरगाह','रेलवे स्टेशन'],
+            time: ['सुबह','शाम','दोपहर','भोर'],
+            drink: ['कॉफी','हरी चाय','गर्म चॉकलेट','ताज़ा रस','हर्बल चाय','एस्प्रेसो'],
+            weekday: ['सोमवार','मंगलवार','बुधवार','गुरुवार','शुक्रवार','शनिवार','रविवार'],
+            relative: ['दादा','दादी','चाची','चाचा','बड़ी बहन','चचेरा भाई'],
+            verb: ['पेंट करना','खाना पकाना','लिखना','तैरना','शतरंज','नृत्य'],
+            topic: ['इतिहास','कविता','यात्रा','दर्शन','जैज़','वास्तुकला'],
+            adjective: ['प्राचीन','सुंदर','अजीब','शांत','सुरुचिपूर्ण','रहस्यमय','गर्म','रंगीन'],
+            object: ['पेंटिंग','घड़ी','फूलदान','लालटेन','पत्र','तस्वीर','मूर्ति'],
+            city: ['लिस्बन','क्योटो','बार्सिलोना','रेक्जाविक','मराकेश','वियना','एडिनबर्ग','प्राग'],
+            season: ['वसंत','गर्मी','पतझड़','सर्दी'],
+        },
+        codePrefix: 'सत्यापन कोड है',
+    },
+    tr: {
+        templates: [
+            "{color} {animal} {place}'ın {direction} koştu, {time} göğü {color2} oldu.",
+            "Her {weekday} sabahı {place}'da yürüyüşe çıkmadan önce {drink} içerim.",
+            "{relative}m bana çocukken {verb} öğretti ve hâlâ hatırlıyorum.",
+            "Öğle vakti {place}'da buluşup {topic} hakkında biraz konuşmalıyız.",
+            "{adjective} {object} bana geçen {season} {city}'a yaptığım seyahati hatırlattı.",
+        ],
+        vars: {
+            color: ['kırmızı','mavi','yeşil','altın','gümüş','zümrüt'],
+            color2: ['turuncu','pembe','mor','gri','kehribar'],
+            animal: ['tilki','tavşan','kurt','balıkçıl','serçe','geyik','baykuş'],
+            direction: ['e doğru','etrafında','yanından','içinden','yakınında'],
+            place: ['eski kütüphane','sessiz park','nehir kenarı','pazar meydanı','küçük kafe','gül bahçesi','liman','tren istasyonu'],
+            time: ['sabah','akşam','öğleden sonra','şafak'],
+            drink: ['kahve','yeşil çay','sıcak çikolata','taze meyve suyu','bitki çayı','espresso'],
+            weekday: ['Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi','Pazar'],
+            relative: ['büyükbaba','büyükanne','teyze','amca','ablam','kuzen'],
+            verb: ['resim yapma','yemek pişirme','yazma','yüzme','satranç','dans'],
+            topic: ['tarih','şiir','seyahat','felsefe','caz','mimari'],
+            adjective: ['eski','güzel','tuhaf','sessiz','zarif','gizemli','sıcak','renkli'],
+            object: ['tablo','saat','vazo','fener','mektup','fotoğraf','heykel'],
+            city: ['Lizbon','Kyoto','Barselona','Reykjavik','Marakeş','Viyana','Edinburgh','Prag'],
+            season: ['ilkbahar','yaz','sonbahar','kış'],
+        },
+        codePrefix: 'Doğrulama kodu',
+    },
+    sv: {
+        templates: [
+            "Den {color} {animal} sprang {direction} {place} medan himlen på {time} blev {color2}.",
+            "Jag dricker {drink} varje {weekday} morgon innan jag promenerar genom {place}.",
+            "Min {relative} lärde mig att {verb} när jag var barn, och jag minns det fortfarande.",
+            "Vi borde träffas vid {place} runt lunch och prata om {topic} en stund.",
+            "Det {adjective} {object} påminde mig om min resa till {city} i somras.",
+        ],
+        vars: {
+            color: ['röda','blåa','gröna','gyllene','silvriga','smaragdgröna'],
+            color2: ['orange','rosa','lila','grå','bärnstensfärgad'],
+            animal: ['räv','kanin','varg','häger','sparv','hjort','uggla'],
+            direction: ['mot','runt','förbi','genom','bredvid'],
+            place: ['gamla biblioteket','tysta parken','flodstranden','torget','lilla caféet','rosenträdgården','hamnen','tågstationen'],
+            time: ['morgonen','kvällen','eftermiddagen','gryningen'],
+            drink: ['kaffe','grönt te','varm choklad','färsk juice','örtte','espresso'],
+            weekday: ['måndag','tisdag','onsdag','torsdag','fredag','lördag','söndag'],
+            relative: ['farfar','farmor','moster','farbror','storasyster','kusin'],
+            verb: ['måla','laga mat','skriva','simma','spela schack','dansa'],
+            topic: ['historia','poesi','resor','filosofi','jazz','arkitektur'],
+            adjective: ['gamla','vackra','konstiga','tysta','eleganta','mystiska','varma','färgglada'],
+            object: ['tavlan','klockan','vasen','lyktan','brevet','fotot','statyn'],
+            city: ['Lissabon','Kyoto','Barcelona','Reykjavik','Marrakech','Wien','Edinburgh','Prag'],
+            season: ['våren','sommaren','hösten','vintern'],
+        },
+        codePrefix: 'Verifieringskoden är',
+    },
+    th: {
+        templates: [
+            "{animal}สี{color}วิ่ง{direction}{place} ขณะที่ท้องฟ้ายาม{time}กลายเป็นสี{color2}",
+            "ฉันดื่ม{drink}ทุกเช้าวัน{weekday}ก่อนเดินผ่าน{place}",
+            "{relative}ของฉันสอนให้ฉัน{verb}ตอนฉันยังเป็นเด็ก และฉันยังคงจำได้",
+            "เราควรเจอกันที่{place}ตอนเที่ยงและคุยเรื่อง{topic}สักครู่",
+            "{object}ที่{adjective}ทำให้ฉันนึกถึงทริปไป{city}เมื่อ{season}ที่ผ่านมา",
+        ],
+        vars: {
+            color: ['แดง','น้ำเงิน','เขียว','ทอง','เงิน','มรกต'],
+            color2: ['ส้ม','ชมพู','ม่วง','เทา','อำพัน'],
+            animal: ['สุนัขจิ้งจอก','กระต่าย','หมาป่า','นกกระยาง','นกกระจอก','กวาง','นกฮูก'],
+            direction: ['ไปทาง','รอบๆ','ผ่าน','เลียบ','ใกล้'],
+            place: ['ห้องสมุดเก่า','สวนเงียบสงบ','ริมแม่น้ำ','ตลาด','คาเฟ่เล็ก','สวนกุหลาบ','ท่าเรือ','สถานีรถไฟ'],
+            time: ['เช้า','เย็น','บ่าย','รุ่งอรุณ'],
+            drink: ['กาแฟ','ชาเขียว','ช็อกโกแลตร้อน','น้ำผลไม้สด','ชาสมุนไพร','เอสเปรสโซ'],
+            weekday: ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'],
+            relative: ['ปู่','ย่า','ป้า','ลุง','พี่สาว','ญาติ'],
+            verb: ['วาดรูป','ทำอาหาร','เขียน','ว่ายน้ำ','เล่นหมากรุก','เต้นรำ'],
+            topic: ['ประวัติศาสตร์','บทกวี','การเดินทาง','ปรัชญา','ดนตรีแจ๊ส','สถาปัตยกรรม'],
+            adjective: ['โบราณ','สวยงาม','แปลก','เงียบสงบ','สง่างาม','ลึกลับ','อบอุ่น','มีสีสัน'],
+            object: ['ภาพวาด','นาฬิกา','แจกัน','โคมไฟ','จดหมาย','ภาพถ่าย','รูปปั้น'],
+            city: ['ลิสบอน','เกียวโต','บาร์เซโลนา','เรคยาวิก','มาร์ราเกช','เวียนนา','เอดินบะระ','ปราก'],
+            season: ['ฤดูใบไม้ผลิ','ฤดูร้อน','ฤดูใบไม้ร่วง','ฤดูหนาว'],
+        },
+        codePrefix: 'รหัสยืนยันคือ',
+    },
+    vi: {
+        templates: [
+            "Con {animal} màu {color} chạy {direction} {place} trong khi bầu trời {time} chuyển sang màu {color2}.",
+            "Tôi uống {drink} mỗi sáng {weekday} trước khi đi dạo qua {place}.",
+            "{relative} tôi đã dạy tôi {verb} khi tôi còn nhỏ, và tôi vẫn nhớ.",
+            "Chúng ta nên gặp nhau ở {place} vào buổi trưa và nói chuyện về {topic} một lúc.",
+            "{object} {adjective} nhắc tôi nhớ về chuyến đi đến {city} vào {season} năm ngoái.",
+        ],
+        vars: {
+            color: ['đỏ','xanh dương','xanh lá','vàng','bạc','ngọc lục bảo'],
+            color2: ['cam','hồng','tím','xám','hổ phách'],
+            animal: ['cáo','thỏ','sói','diệc','sẻ','nai','cú'],
+            direction: ['về phía','xung quanh','băng qua','dọc theo','gần'],
+            place: ['thư viện cũ','công viên yên tĩnh','bờ sông','quảng trường chợ','quán cà phê nhỏ','vườn hoa hồng','bến cảng','ga tàu'],
+            time: ['buổi sáng','buổi tối','buổi chiều','bình minh'],
+            drink: ['cà phê','trà xanh','sô-cô-la nóng','nước ép tươi','trà thảo mộc','espresso'],
+            weekday: ['thứ Hai','thứ Ba','thứ Tư','thứ Năm','thứ Sáu','thứ Bảy','Chủ nhật'],
+            relative: ['ông nội','bà nội','cô','chú','chị gái','anh họ'],
+            verb: ['vẽ tranh','nấu ăn','viết','bơi','chơi cờ','khiêu vũ'],
+            topic: ['lịch sử','thơ ca','du lịch','triết học','nhạc jazz','kiến trúc'],
+            adjective: ['cổ kính','xinh đẹp','lạ','yên tĩnh','thanh lịch','bí ẩn','ấm áp','đầy màu sắc'],
+            object: ['bức tranh','đồng hồ','bình hoa','đèn lồng','lá thư','bức ảnh','bức tượng'],
+            city: ['Lisbon','Kyoto','Barcelona','Reykjavik','Marrakech','Vienna','Edinburgh','Prague'],
+            season: ['mùa xuân','mùa hè','mùa thu','mùa đông'],
+        },
+        codePrefix: 'Mã xác minh là',
+    },
+    id: {
+        templates: [
+            "{animal} berwarna {color} berlari {direction} {place} sementara langit {time} berubah menjadi {color2}.",
+            "Saya minum {drink} setiap {weekday} pagi sebelum berjalan melewati {place}.",
+            "{relative} saya mengajari saya {verb} saat saya masih kecil, dan saya masih ingat.",
+            "Kita harus bertemu di {place} sekitar tengah hari dan berbicara tentang {topic} sebentar.",
+            "{object} yang {adjective} mengingatkan saya pada perjalanan ke {city} {season} lalu.",
+        ],
+        vars: {
+            color: ['merah','biru','hijau','emas','perak','zamrud'],
+            color2: ['oranye','merah muda','ungu','abu-abu','kuning ambar'],
+            animal: ['rubah','kelinci','serigala','bangau','burung pipit','rusa','burung hantu'],
+            direction: ['menuju','mengelilingi','melewati','melalui','di samping'],
+            place: ['perpustakaan tua','taman yang tenang','tepi sungai','alun-alun pasar','kafe kecil','taman mawar','pelabuhan','stasiun kereta'],
+            time: ['pagi','sore','siang','fajar'],
+            drink: ['kopi','teh hijau','cokelat panas','jus segar','teh herbal','espresso'],
+            weekday: ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'],
+            relative: ['kakek','nenek','bibi','paman','kakak','sepupu'],
+            verb: ['melukis','memasak','menulis','berenang','bermain catur','menari'],
+            topic: ['sejarah','puisi','perjalanan','filosofi','jazz','arsitektur'],
+            adjective: ['kuno','indah','aneh','tenang','elegan','misterius','hangat','penuh warna'],
+            object: ['lukisan','jam','vas','lentera','surat','foto','patung'],
+            city: ['Lisbon','Kyoto','Barcelona','Reykjavik','Marrakech','Wina','Edinburgh','Praha'],
+            season: ['musim semi','musim panas','musim gugur','musim dingin'],
+        },
+        codePrefix: 'Kode verifikasi adalah',
+    },
+    tl: {
+        templates: [
+            "Ang {color} na {animal} ay tumakbo {direction} sa {place} habang ang langit ng {time} ay naging {color2}.",
+            "Umiinom ako ng {drink} tuwing {weekday} ng umaga bago maglakad sa {place}.",
+            "Itinuro sa akin ng aking {relative} kung paano {verb} noong bata pa ako, at naaalala ko pa rin ito.",
+            "Magkita tayo sa {place} sa tanghali at mag-usap tungkol sa {topic} sandali.",
+            "Ang {adjective} na {object} ay nagpaalala sa akin ng aking paglalakbay sa {city} noong nakaraang {season}.",
+        ],
+        vars: {
+            color: ['pula','asul','berde','ginto','pilak','esmeralda'],
+            color2: ['kahel','rosas','lila','kulay-abo','ambar'],
+            animal: ['fox','kuneho','lobo','tagak','maya','usa','kuwago'],
+            direction: ['patungo sa','paikot sa','dumaan sa','sa tabi ng','malapit sa'],
+            place: ['lumang aklatan','tahimik na parke','tabing ilog','plaza ng palengke','maliit na cafe','hardin ng rosas','daungan','istasyon ng tren'],
+            time: ['umaga','gabi','hapon','madaling-araw'],
+            drink: ['kape','green tea','mainit na tsokolate','sariwang juice','herbal tea','espresso'],
+            weekday: ['Lunes','Martes','Miyerkules','Huwebes','Biyernes','Sabado','Linggo'],
+            relative: ['lolo','lola','tiya','tiyo','ate','pinsan'],
+            verb: ['magpinta','magluto','sumulat','lumangoy','maglaro ng chess','sumayaw'],
+            topic: ['kasaysayan','tula','paglalakbay','pilosopiya','jazz','arkitektura'],
+            adjective: ['matanda','maganda','kakaiba','tahimik','eleganteng','misteryoso','mainit','makulay'],
+            object: ['pintura','orasan','plorera','parol','liham','larawan','rebulto'],
+            city: ['Lisbon','Kyoto','Barcelona','Reykjavik','Marrakech','Vienna','Edinburgh','Prague'],
+            season: ['tagsibol','tag-init','taglagas','taglamig'],
+        },
+        codePrefix: 'Ang verification code ay',
+    },
 };
 
 function _pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
+// Get the currently selected language for guide phrases. Persists in
+// localStorage so the user's choice survives reloads.
+function _getGuidePhraseLang(){
+    return localStorage.getItem('lf_voice_phrase_lang')
+        || (PHRASE_DATA_BY_LANG[(navigator.language||'en').slice(0,2)] ? (navigator.language||'en').slice(0,2) : 'en');
+}
+
 function _generatePhrase(){
-    const tpl = _pick(PHRASE_TEMPLATES);
+    const lang = _getGuidePhraseLang();
+    const data = PHRASE_DATA_BY_LANG[lang] || PHRASE_DATA_BY_LANG.en;
+    const tpl = _pick(data.templates);
     return tpl.replace(/\{(\w+)\}/g, (_, key) => {
-        const pool = PHRASE_VARS[key] || [];
+        const pool = data.vars[key] || [];
         return pool.length ? _pick(pool) : key;
     });
 }
@@ -1914,14 +2455,18 @@ function _generatePhrase(){
 // session-unique 4-digit code. The code rotates per phrase so the user must
 // say a different code each time — prevents partial-replay attacks.
 function _buildSessionPhrases(){
+    const lang = _getGuidePhraseLang();
+    const data = PHRASE_DATA_BY_LANG[lang] || PHRASE_DATA_BY_LANG.en;
     const phrases = [];
     const used = new Set();
-    while(phrases.length < 5){
+    let attempts = 0;
+    while(phrases.length < 5 && attempts < 50){
+        attempts++;
         let p = _generatePhrase();
         if(used.has(p)) continue;
         used.add(p);
         const code = Math.floor(1000 + Math.random()*9000); // 4-digit random code
-        phrases.push(`${p} The verification code is ${code}.`);
+        phrases.push(`${p} ${data.codePrefix} ${code}.`);
     }
     return phrases;
 }
@@ -1943,6 +2488,27 @@ function regenerateGuidePhrases(){
     phraseIdx = 0;
     showGuidePhrase();
 }
+
+// User picked a different language for the registration phrases — persist
+// the choice and regenerate the phrase set so they immediately see the new
+// language. Also exposed globally so the inline onchange handler works.
+function onGuidePhraseLangChange(){
+    const sel = document.getElementById('guidePhraseLang');
+    if(!sel) return;
+    const lang = sel.value;
+    if(!PHRASE_DATA_BY_LANG[lang]) return;
+    localStorage.setItem('lf_voice_phrase_lang', lang);
+    regenerateGuidePhrases();
+}
+
+// Sync the dropdown with the persisted/default language on initial load.
+(function initGuidePhraseLang(){
+    const sel = document.getElementById('guidePhraseLang');
+    if(sel){
+        const lang = _getGuidePhraseLang();
+        if(PHRASE_DATA_BY_LANG[lang]) sel.value = lang;
+    }
+})();
 
 showGuidePhrase();
 
