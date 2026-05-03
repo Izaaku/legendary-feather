@@ -14,15 +14,19 @@ Backend translate_f2f handler →
        fall back to OpenAI TTS
 
 The reference audio is the audio file the user uploaded during voice
-registration. We pass it base64-encoded on every TTS call (Fish Speech
-does zero-shot cloning — no per-voice training, no voice ID slots, so
-unlimited users with one endpoint).
+registration. Browser captures it as webm/Opus, which we transcode to
+wav (PCM 16-bit mono 16kHz) before sending — Fish Speech's worker
+expects wav and silently falls back to a default voice when it can't
+decode the input. We pass it base64-encoded on every TTS call (Fish
+Speech does zero-shot cloning — no per-voice training, no voice ID
+slots, so unlimited users with one endpoint).
 
 Env vars (Railway):
   RUNPOD_API_KEY        — Bearer token from RunPod console
   RUNPOD_TTS_ENDPOINT   — https://api.runpod.ai/v2/<endpoint_id>
 """
 import os
+import io
 import base64
 import time
 
@@ -97,12 +101,42 @@ class RunPodTTSClient:
         print(f'[RunPodTTS] === ENTERING synthesize_with_clone ===')
         print(f'[RunPodTTS] text_len={len(text)} ref_path={reference_audio_path} lang={language}')
 
-        # Load and base64-encode the reference audio
+        # Load and transcode the reference audio to WAV.
+        #
+        # The browser captures voice samples as webm/Opus. Fish Speech's RunPod
+        # worker expects WAV — when given webm directly it silently falls back
+        # to a generic default voice (no error, but no cloning either). We use
+        # pydub (ffmpeg) to convert to PCM 16-bit mono 16kHz WAV, which is the
+        # canonical format for speaker reference audio across most TTS models.
         try:
             with open(reference_audio_path, 'rb') as f:
-                ref_audio_bytes = f.read()
+                ref_audio_bytes_raw = f.read()
+            ext = os.path.splitext(reference_audio_path)[1].lower().lstrip('.')
+            print(f'[RunPodTTS] Loaded ref audio: {len(ref_audio_bytes_raw)} bytes raw, ext={ext!r}')
+
+            if ext != 'wav':
+                # Transcode → WAV (16kHz mono 16-bit PCM)
+                try:
+                    from pydub import AudioSegment
+                    src_format = ext if ext else None
+                    seg = AudioSegment.from_file(io.BytesIO(ref_audio_bytes_raw),
+                                                 format=src_format)
+                    seg = seg.set_channels(1).set_frame_rate(22050).set_sample_width(2)
+                    out = io.BytesIO()
+                    seg.export(out, format='wav')
+                    ref_audio_bytes = out.getvalue()
+                    print(f'[RunPodTTS] Transcoded {ext} → wav: '
+                          f'{len(ref_audio_bytes_raw)} → {len(ref_audio_bytes)} bytes '
+                          f'({seg.duration_seconds:.1f}s, {seg.frame_rate}Hz, {seg.channels}ch)')
+                except Exception as e:
+                    print(f'[RunPodTTS] Transcode failed ({type(e).__name__}: {e}) — '
+                          f'sending {ext} bytes as-is. Voice cloning may not work.')
+                    ref_audio_bytes = ref_audio_bytes_raw
+            else:
+                ref_audio_bytes = ref_audio_bytes_raw
+
             ref_audio_b64 = base64.b64encode(ref_audio_bytes).decode('utf-8')
-            print(f'[RunPodTTS] Loaded ref audio: {len(ref_audio_bytes)} bytes raw, '
+            print(f'[RunPodTTS] Final ref audio: {len(ref_audio_bytes)} bytes, '
                   f'{len(ref_audio_b64)} chars b64')
         except FileNotFoundError:
             print(f'[RunPodTTS] Reference audio not found: {reference_audio_path}')
