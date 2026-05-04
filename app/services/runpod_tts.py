@@ -162,8 +162,13 @@ class RunPodTTSClient:
                 'temperature': 0.8,
                 'top_p': 0.8,
                 'repetition_penalty': 1.1,
-                'max_new_tokens': 1024,
-                'chunk_length': 300,
+                # Reduced from 1024 → 512 to fit a 20GB GPU. The Fish Speech S2 Pro
+                # worker hits CUDA OOM at 1024 with the full model in memory; 512
+                # tokens covers ~20s of audio which is enough for sentence-level
+                # F2F translation.
+                'max_new_tokens': 512,
+                # Lower chunk = less peak memory. Default 300 was OOMing.
+                'chunk_length': 200,
             }
         }
 
