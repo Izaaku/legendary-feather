@@ -2563,9 +2563,14 @@ function onF2FTtsVoiceChange(){
     }
 })();
 
-document.getElementById('voiceRecordBtn').addEventListener('click',()=>{
-    if(isVoiceRecording) stopVoiceRecording(); else startVoiceRecording();
-});
+// Voice-cloning event wiring — only when the recording UI is rendered
+// (i.e. VOICE_CLONING_ENABLED=true). For V1 it's hidden, so guard each lookup.
+const _voiceRecordBtn = document.getElementById('voiceRecordBtn');
+if (_voiceRecordBtn) {
+    _voiceRecordBtn.addEventListener('click',()=>{
+        if(isVoiceRecording) stopVoiceRecording(); else startVoiceRecording();
+    });
+}
 
 async function startVoiceRecording(){
     try{
@@ -2605,8 +2610,10 @@ function stopVoiceRecording(){
 // The Save button stays disabled until the user checks the consent box.
 // We also enforce the same gate server-side check by sending consent=true
 // in the request body (backend can audit-log this).
+// Whole block is guarded for V1 (voice cloning UI is hidden).
 const voiceConsentCheckbox = document.getElementById('voiceConsentCheckbox');
 const saveProfileBtnEl = document.getElementById('saveProfileBtn');
+if (voiceConsentCheckbox && saveProfileBtnEl) {
 voiceConsentCheckbox.addEventListener('change', () => {
     const checked = voiceConsentCheckbox.checked;
     saveProfileBtnEl.disabled = !checked;
@@ -2666,6 +2673,7 @@ saveProfileBtnEl.addEventListener('click',()=>{
     };
     reader.readAsDataURL(recordedAudioBlob);
 });
+}  // end voice-cloning UI guard
 
 // ── Voice Cloning Upsell ──
 // Shown when the backend returns 403 + upgrade_required from /api/voice/register.
@@ -2866,7 +2874,7 @@ async function syncCheckoutSessionIfPresent(){
 
 // ══════════════════════════════════════════════════════
 // INIT
-// ══════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded',()=>{
     initSocket();
     initLanguages();
