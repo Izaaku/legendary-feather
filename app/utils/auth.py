@@ -122,21 +122,42 @@ def decode_token(token: str) -> dict | None:
 
 # ── Password hashing (SHA-256 + salt, no bcrypt dependency) ─────────
 
+import bcrypt
+_BCRYPT_ROUNDS = 12  # ~250ms per hash on a modern CPU
+
+
 def hash_password(password: str) -> str:
-    """Hash a password with a random salt."""
-    salt = secrets.token_hex(16)
-    h = hashlib.sha256(f"{salt}:{password}".encode()).hexdigest()
-    return f"{salt}:{h}"
+    """Hash a password with bcrypt (12 rounds)."""
+    if not isinstance(password, str):
+        password = str(password)
+    salt = bcrypt.gensalt(rounds=_BCRYPT_ROUNDS)
+    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
 
-def verify_password(password: str, password_hash: str) -> bool:
-    """Verify a password against its hash."""
+def _verify_legacy_sha256(password: str, password_hash: str) -> bool:
     try:
-        salt, h = password_hash.split(':', 1)
+        salt, h = password_hash.split(":", 1)
         expected = hashlib.sha256(f"{salt}:{password}".encode()).hexdigest()
         return hmac.compare_digest(h, expected)
     except Exception:
         return False
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    """Verify a password. Supports bcrypt + legacy SHA-256 hashes."""
+    if not password_hash:
+        return False
+    try:
+        if password_hash.startswith("$2"):  # bcrypt prefix
+            return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+        return _verify_legacy_sha256(password, password_hash)
+    except Exception:
+        return False
+
+
+def needs_rehash(password_hash: str) -> bool:
+    """True if the stored hash is in legacy format and should be upgraded."""
+    return bool(password_hash) and not password_hash.startswith("$2")
 
 
 # ── Route decorators ────────────────────────────────────────────────

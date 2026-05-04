@@ -6,7 +6,17 @@ load_dotenv()
 
 
 class Config:
+    # SECURITY: SECRET_KEY signs JWTs and Flask sessions. If left as the
+    # default placeholder, anyone reading our source code can forge tokens
+    # for any account. The warning below makes the misconfiguration loud
+    # in production logs without crashing the boot.
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-change-me')
+    if SECRET_KEY == 'dev-secret-change-me' and os.getenv('FLASK_ENV') != 'development':
+        import warnings as _w
+        _w.warn(
+            'SECRET_KEY is the default placeholder — set a real env var (32+ random chars) in production!',
+            RuntimeWarning, stacklevel=2,
+        )
     DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///legendary_feather.db')
     APP_URL = os.getenv('APP_URL', 'http://localhost:5000')
 

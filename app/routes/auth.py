@@ -284,9 +284,15 @@ def forgot_password():
         """
         sent = send_user_email(user.email, subject, body_html)
         if not sent:
-            # Email not configured. For dev / setup, log the link so the
-            # owner can still recover their password.
-            print(f'[ForgotPassword] EMAIL NOT CONFIGURED — reset link: {reset_link}')
+            # SECURITY: never log the reset link in production. Reset tokens
+            # in stdout become permanent account-takeover artifacts in any log
+            # aggregator that reads container output. Set LOG_RESET_LINKS=1
+            # only in dev when you need to recover the owner password.
+            import os as _os
+            if _os.getenv('LOG_RESET_LINKS') == '1' or _os.getenv('FLASK_ENV') == 'development':
+                print(f'[ForgotPassword] DEV reset link (LOG_RESET_LINKS=1): {reset_link}')
+            else:
+                print('[ForgotPassword] Email send failed (token NOT logged for security)')
 
         return jsonify({'message': GENERIC_MSG}), 200
 
