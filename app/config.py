@@ -32,23 +32,6 @@ class Config:
         else os.getenv('STRIPE_WEBHOOK_SECRET')
     )
 
-
-def stripe_price(plan_slug):
-    """Read a Stripe Price ID for a plan, respecting STRIPE_MODE.
-
-    Looks up env vars in this order:
-      1. STRIPE_PRICE_<PLAN>_TEST   (when STRIPE_MODE=test)
-      2. STRIPE_PRICE_<PLAN>_LIVE   (when STRIPE_MODE=live)
-      3. STRIPE_PRICE_<PLAN>        (fallback for legacy single-set deployments)
-    """
-    plan_upper = plan_slug.upper()
-    mode = os.getenv('STRIPE_MODE', '').lower()
-    if mode in ('test', 'live'):
-        suffixed = os.getenv(f'STRIPE_PRICE_{plan_upper}_{mode.upper()}')
-        if suffixed:
-            return suffixed
-    return os.getenv(f'STRIPE_PRICE_{plan_upper}')
-
     # AI Services
     OLLAMA_URL = os.getenv('OLLAMA_URL', 'http://localhost:11434')
     ARCEE_API_KEY = os.getenv('ARCEE_API_KEY')
@@ -75,6 +58,23 @@ def stripe_price(plan_slug):
 
     # Sales / Leads notification email (Enterprise inquiries)
     SALES_NOTIFY_EMAIL = os.getenv('SALES_NOTIFY_EMAIL', 'sales@legendaryfeather.com')
+
+
+def stripe_price(plan_slug):
+    """Read a Stripe Price ID for a plan, respecting STRIPE_MODE.
+
+    Looks up env vars in this order:
+      1. STRIPE_PRICE_<PLAN>_TEST   (when STRIPE_MODE=test)
+      2. STRIPE_PRICE_<PLAN>_LIVE   (when STRIPE_MODE=live)
+      3. STRIPE_PRICE_<PLAN>        (fallback for legacy single-set deployments)
+    """
+    plan_upper = plan_slug.upper()
+    mode = os.getenv('STRIPE_MODE', '').lower()
+    if mode in ('test', 'live'):
+        suffixed = os.getenv(f'STRIPE_PRICE_{plan_upper}_{mode.upper()}')
+        if suffixed:
+            return suffixed
+    return os.getenv(f'STRIPE_PRICE_{plan_upper}')
 
 
 # ============================================================================
