@@ -62,6 +62,79 @@ class RunPodTTSClient:
 
     # ─── Main entry point ──────────────────────────────
 
+    def warmup_async(
+        self,
+        reference_audio_path: str,
+        reference_text: str = '',
+        language: str = 'en',
+    ) -> bool:
+        """Fire-and-forget warmup that queues a tiny synthesis job to populate
+        the worker's speaker embedding cache. Uses RunPod's async /run endpoint
+        instead of /runsync so we return immediately — the worker processes the
+        warmup in the background while the user is still on the registration
+        screen, and by the time they make their first real translation the
+        cache is hot.
+
+        Returns True if the warmup job was successfully submitted.
+        """
+        if not self._available:
+            return False
+        try:
+            with open(reference_audio_path, 'rb') as f:
+                ref_bytes = f.read()
+            ext = os.path.splitext(reference_audio_path)[1].lower().lstrip('.')
+            if ext != 'wav':
+                try:
+                    from pydub import AudioSegment
+                    seg = AudioSegment.from_file(io.BytesIO(ref_bytes), format=ext or None)
+                    seg = seg.set_channels(1).set_frame_rate(22050).set_sample_width(2)
+                    out = io.BytesIO()
+                    seg.export(out, format='wav')
+                    ref_bytes = out.getvalue()
+                except Exception as e:
+                    print(f'[RunPodTTS-warmup] Transcode failed: {e}')
+            ref_b64 = base64.b64encode(ref_bytes).decode('utf-8')
+
+            warmup_text = {
+                'es': 'Hola.', 'fr': 'Bonjour.', 'de': 'Hallo.',
+                'it': 'Ciao.', 'pt': 'Olá.', 'zh': '你好。',
+                'ja': 'こんにちは。', 'ko': '안녕하세요.',
+                'ar': 'مرحبا.', 'ru': 'Привет.',
+            }.get((language or 'en')[:2], 'Hello.')
+
+            url = f'{self.endpoint}/run'  # async endpoint — returns immediately
+            payload = {
+                'input': {
+                    'text': warmup_text,
+                    'format': 'mp3',
+                    'reference_audio': [ref_b64],
+                    'reference_text': [reference_text or ''],
+                    'temperature': 0.8,
+                    'top_p': 0.8,
+                    'repetition_penalty': 1.1,
+                    'max_new_tokens': 64,   # tiny — just enough to cache embedding
+                    'chunk_length': 100,
+                    'use_memory_cache': 'on',
+                }
+            }
+            headers = {
+                'Authorization': f'Bearer {self.api_key}',
+                'Content-Type': 'application/json',
+            }
+            # Short HTTP timeout — /run returns immediately with a job id.
+            resp = requests.post(url, json=payload, headers=headers, timeout=15)
+            if resp.status_code == 200:
+                job_id = resp.json().get('id', 'unknown')
+                print(f'[RunPodTTS-warmup] Submitted warmup job {job_id} '
+                      f'(lang={language}, ref_text_chars={len(reference_text)})')
+                return True
+            else:
+                print(f'[RunPodTTS-warmup] Submit failed: HTTP {resp.status_code} {resp.text[:200]}')
+                return False
+        except Exception as e:
+            print(f'[RunPodTTS-warmup] Failed: {type(e).__name__}: {e}')
+            return False
+
     def synthesize_with_clone(
         self,
         text: str,
