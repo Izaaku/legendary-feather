@@ -208,7 +208,15 @@ class RunPodTTSClient:
             print(f'[RunPodTTS] Invalid JSON response: {e} body={resp.text[:300]}')
             return None
 
-        print(f'[RunPodTTS] Response keys: {list(data.keys())} status={data.get("status")}')
+        # delayTime = time the job spent queued/waiting for a worker (cold start)
+        # executionTime = pure inference time inside the worker
+        # If delayTime is high → cold-starting workers each request (need Active Workers
+        # or longer idle timeout). If executionTime is high → model itself is slow.
+        delay_ms = data.get('delayTime', 0)
+        exec_ms = data.get('executionTime', 0)
+        worker_id = data.get('workerId', 'unknown')
+        print(f'[RunPodTTS] Response keys: {list(data.keys())} status={data.get("status")} '
+              f'workerId={worker_id} delayTime={delay_ms}ms executionTime={exec_ms}ms')
 
         # /runsync wraps the worker output in: {"id": "...", "status": "COMPLETED", "output": {...}}
         status = data.get('status', '').upper()
