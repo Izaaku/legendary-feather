@@ -832,7 +832,7 @@ footer {
                 <div class="talk-label">Hold to talk — language is detected automatically</div>
             </div>
             <div class="f2f-chat" id="f2fChat">
-                <div style="text-align:center;color:var(--text-muted);padding:30px;font-size:13px;">Conversation will appear here...</div>
+                <div class="f2f-empty-placeholder" style="text-align:center;color:var(--text-muted);padding:30px;font-size:13px;">Conversation will appear here...</div>
             </div>
         </div>
 
@@ -1642,7 +1642,12 @@ function processF2FUtterance(text){
     const bubbleId = 'f2f_'+Date.now();
 
     const chat = document.getElementById('f2fChat');
-    if(chat.querySelector('div[style]') && chat.children.length===1) chat.innerHTML='';
+    // Remove only the empty-state placeholder if it's still there. The previous
+    // selector ('div[style]') was too broad — it also matched style-attributes
+    // on real bubble children (e.g. cb-translated turned gold during warmup),
+    // which caused old bubbles to be wiped on every new translation.
+    const placeholder = chat.querySelector('.f2f-empty-placeholder');
+    if(placeholder) placeholder.remove();
 
     const bubble = document.createElement('div');
     bubble.className = 'chat-bubble person-a';

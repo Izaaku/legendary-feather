@@ -158,7 +158,10 @@ class RunPodTTSClient:
                 'text': text[:4000],          # Fish Speech text length limit
                 'format': output_format,
                 'reference_audio': [ref_audio_b64],
-                'reference_text': [reference_text] if reference_text else [],
+                # IMPORTANT: pass a transcript even if empty — the worker requires
+                # reference_text length to match reference_audio length. When we
+                # don't have one, send an empty string in the list (not [] alone).
+                'reference_text': [reference_text or ''],
                 'temperature': 0.8,
                 'top_p': 0.8,
                 'repetition_penalty': 1.1,
@@ -169,8 +172,14 @@ class RunPodTTSClient:
                 'max_new_tokens': 512,
                 # Lower chunk = less peak memory. Default 300 was OOMing.
                 'chunk_length': 200,
+                # Cache speaker embeddings between requests so 2nd+ requests reuse
+                # the prior reference audio instead of re-encoding it. Reduces
+                # latency AND keeps the speaker consistent across translations.
+                'use_memory_cache': 'on',
             }
         }
+        if reference_text:
+            print(f'[RunPodTTS] Using reference_text ({len(reference_text)} chars) for speaker alignment')
 
         print(f'[RunPodTTS] POST {url} timeout={timeout_seconds}s payload_size~{len(ref_audio_b64)+len(text)} chars')
 

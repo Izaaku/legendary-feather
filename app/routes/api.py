@@ -1,4 +1,5 @@
 """Main API endpoints for translation sessions."""
+import os
 import uuid
 import base64
 from datetime import datetime, timezone
@@ -325,6 +326,30 @@ def register_voice():
 
         if not profile:
             return jsonify({'error': 'Failed to register voice profile - audio may be too small'}), 500
+
+        # ── Transcribe reference audio with Whisper for Fish Speech alignment ──
+        # Fish Speech voice cloning works MUCH better when given a reference text
+        # alongside the audio: the model can align acoustic features with phonemes
+        # to learn speaker characteristics. Without it, output speakers are random.
+        # We persist the transcript next to the audio (reference.txt) so /translate_f2f
+        # can pass it through on every TTS call.
+        try:
+            ref_dir = os.path.dirname(profile['path'])
+            ref_text_path = os.path.join(ref_dir, 'reference.txt')
+            transcript = ''
+            try:
+                stt_result = whisper.transcribe(audio_bytes, language) or {}
+                transcript = (stt_result.get('text') or '').strip()
+            except Exception as stt_err:
+                print(f'[VoiceRegister] Whisper transcription failed: {stt_err}')
+            if transcript:
+                with open(ref_text_path, 'w', encoding='utf-8') as f:
+                    f.write(transcript)
+                print(f'[VoiceRegister] Saved reference transcript ({len(transcript)} chars) → {ref_text_path}')
+            else:
+                print('[VoiceRegister] No transcript produced — voice clone quality may be reduced.')
+        except Exception as e:
+            print(f'[VoiceRegister] Could not save reference transcript: {e}')
 
         # Try to save to database, but don't fail if DB has issues
         try:

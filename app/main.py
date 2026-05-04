@@ -549,13 +549,30 @@ def handle_f2f_translate(data):
                         ).first()
                         if vp:
                             reference_audio_path = vp.file_path
-                            reference_text = ''
                             print(f'[F2F-DEBUG] VoiceProfile found, file_path={reference_audio_path}')
                             # Verify the file actually exists on disk
                             import os as _os
                             exists = _os.path.exists(reference_audio_path) if reference_audio_path else False
                             size = _os.path.getsize(reference_audio_path) if exists else 0
                             print(f'[F2F-DEBUG] reference file exists={exists} size={size} bytes')
+                            # Load the reference transcript saved at registration time.
+                            # Fish Speech's voice cloning needs the text of what's
+                            # spoken in the reference audio to align speaker
+                            # characteristics — without it, output speakers are
+                            # random per request.
+                            if exists:
+                                ref_text_path = _os.path.join(_os.path.dirname(reference_audio_path), 'reference.txt')
+                                if _os.path.exists(ref_text_path):
+                                    try:
+                                        with open(ref_text_path, 'r', encoding='utf-8') as _rf:
+                                            reference_text = _rf.read().strip()
+                                        print(f'[F2F-DEBUG] Loaded reference_text ({len(reference_text)} chars)')
+                                    except Exception as _re:
+                                        print(f'[F2F-DEBUG] Failed to read reference.txt: {_re}')
+                                        reference_text = ''
+                                else:
+                                    print(f'[F2F-DEBUG] No reference.txt found alongside audio — clone quality reduced')
+                                    reference_text = ''
                         else:
                             print(f'[F2F-DEBUG] VoiceProfile NOT FOUND for profile_id={voice_profile_id} user_id={user_id}')
                         vp_db.close()
