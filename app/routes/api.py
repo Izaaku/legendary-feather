@@ -351,6 +351,46 @@ def register_voice():
         except Exception as e:
             print(f'[VoiceRegister] Could not save reference transcript: {e}')
 
+        # ── Fire-and-forget warmup: pre-populate Fish Speech speaker cache ──
+        # The first real translation otherwise sounds like a generic voice
+        # because the worker's reference-audio cache is empty. We run a tiny
+        # dummy synthesis here so by the time the user starts translating,
+        # the speaker embedding is already cached on the worker.
+        try:
+            from app.services.runpod_tts import RunPodTTSClient
+            import threading
+            warmup_lang = (language or 'en')[:2]
+
+            def _warmup():
+                try:
+                    runpod = RunPodTTSClient()
+                    if not runpod.is_available():
+                        return
+                    # Pick warmup text in a language Fish Speech supports.
+                    # Short text → small generation → fast warmup (~5-10s).
+                    warmup_text = {
+                        'es': 'Hola.', 'fr': 'Bonjour.', 'de': 'Hallo.',
+                        'it': 'Ciao.', 'pt': 'Olá.', 'zh': '你好。',
+                        'ja': 'こんにちは。', 'ko': '안녕하세요.',
+                        'ar': 'مرحبا.', 'ru': 'Привет.',
+                    }.get(warmup_lang, 'Hello.')
+                    runpod.synthesize_with_clone(
+                        text=warmup_text,
+                        reference_audio_path=profile['path'],
+                        reference_text=transcript,
+                        language=warmup_lang if runpod.supports_language(warmup_lang) else 'en',
+                        timeout_seconds=180,
+                    )
+                    print(f'[VoiceRegister] Warmup call completed — cache populated')
+                except Exception as we:
+                    print(f'[VoiceRegister] Warmup call failed (non-fatal): {we}')
+
+            # Run in background — registration response returns immediately
+            threading.Thread(target=_warmup, daemon=True).start()
+            print('[VoiceRegister] Started Fish Speech warmup in background')
+        except Exception as e:
+            print(f'[VoiceRegister] Could not schedule warmup: {e}')
+
         # Try to save to database, but don't fail if DB has issues
         try:
             db = db_session()
