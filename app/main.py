@@ -680,7 +680,8 @@ def handle_transcribe(data):
     from app.services.cloud_whisper import CloudWhisperService
 
     audio_b64 = data.get('audio', '')
-    language_hint = data.get('language', None)  # Optional hint
+    language_hint = data.get('language', None)  # Optional explicit language
+    language_pair = data.get('language_pair', None)  # F2F: ['en', 'es'] etc.
     request_id = data.get('request_id', '')  # Track which request this responds to
 
     if not audio_b64:
@@ -700,6 +701,38 @@ def handle_transcribe(data):
     try:
         audio_bytes = base64.b64decode(audio_b64)
         result = whisper.transcribe(audio_bytes, language=language_hint)
+
+        # ── Clamp detection to the F2F language pair ──────────────
+        # Whisper auto-detection occasionally picks a language outside the two
+        # the user is actively translating between (e.g. detects French when
+        # the user said "How are you" with a mild accent). When language_pair
+        # is provided, we re-run Whisper forcing each candidate language and
+        # keep whichever returns the longest non-empty text — this is a
+        # reliable heuristic since the wrong-language forced run typically
+        # yields garbled / empty output.
+        try:
+            normalized_pair = [str(l).lower()[:2] for l in (language_pair or []) if l]
+            detected = (result.get('detected_language') or '').lower()[:2]
+            if (not language_hint
+                    and normalized_pair
+                    and len(normalized_pair) == 2
+                    and detected
+                    and detected not in normalized_pair):
+                print(f'[Whisper] Detected {detected!r} not in pair {normalized_pair} — re-running per language')
+                candidates = []
+                for lang in normalized_pair:
+                    retry = whisper.transcribe(audio_bytes, language=lang) or {}
+                    txt = (retry.get('text') or '').strip()
+                    if txt:
+                        candidates.append((lang, retry, len(txt)))
+                if candidates:
+                    candidates.sort(key=lambda x: x[2], reverse=True)
+                    chosen_lang, chosen_result, chars = candidates[0]
+                    chosen_result['detected_language'] = chosen_lang
+                    result = chosen_result
+                    print(f'[Whisper] Clamped to {chosen_lang!r} ({chars} chars wins)')
+        except Exception as clamp_err:
+            print(f'[Whisper] Pair clamp failed (non-fatal): {clamp_err}')
 
         # ── Filter Whisper hallucinations on short / silent audio ──
         # OpenAI Whisper consistently hallucinates these phrases when given

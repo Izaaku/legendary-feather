@@ -1586,7 +1586,18 @@ function sendF2FAudioToWhisper(blob){
     reader.onload = () => {
         const b64 = reader.result.split(',')[1];
         const reqId = 'f2f_'+Date.now();
-        socket.emit('transcribe', {audio:b64, request_id:reqId});
+        // Send the F2F language pair so the backend can clamp Whisper's
+        // language detection. Without this, Whisper sometimes "hallucinates"
+        // a third language (e.g. detects French when the user is speaking
+        // mixed Spanish/English) and the translation comes out wrong.
+        const lang1 = (document.getElementById('f2fLang1')||{}).value || '';
+        const lang2 = (document.getElementById('f2fLang2')||{}).value || '';
+        const pair = [lang1, lang2].filter(Boolean);
+        socket.emit('transcribe', {
+            audio: b64,
+            request_id: reqId,
+            language_pair: pair.length === 2 ? pair : null,
+        });
 
         // Safety timeout — if the server doesn't respond in 15s, reset the
         // button so the user isn't stuck on "Transcribing..." forever.
