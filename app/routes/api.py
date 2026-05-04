@@ -256,6 +256,16 @@ def register_voice():
     > 0 (or unlimited = -1) can register a voice. Free, Travel Pass, Tourist,
     and Pay-as-you-go users get a 403.
     """
+    # V1 launch: voice cloning is disabled. The endpoint is kept so existing
+    # client code doesn't 404, but it returns a 503 explaining the feature is
+    # coming back later. Set VOICE_CLONING_ENABLED=true to re-enable.
+    from app.config import Config as _Cfg
+    if not getattr(_Cfg, 'VOICE_CLONING_ENABLED', False):
+        return jsonify({
+            'error': 'Voice cloning is not available in this version. Premium natural voices are used by default.',
+            'feature_disabled': True,
+        }), 503
+
     data = request.get_json()
     # SECURITY: use the authenticated user from the token, not the client body.
     # Allowing the client to specify user_id would let any authenticated user

@@ -557,10 +557,6 @@ body {
   </a>
 
   <div class="sidebar-section">Account</div>
-  <a class="sidebar-item" href="#" id="nav-voice">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-    Voice Profiles
-  </a>
   <a class="sidebar-item" href="#" id="nav-history">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     History
@@ -657,7 +653,7 @@ const plans = {
     minutes: 60,
     used: 23,
     features: ['Face-to-face mode', '100+ languages', 'Standard voices', 'Android & iOS'],
-    locked: ['Voice cloning', 'Conference mode', 'Meeting history', 'Team management', 'API access'],
+    locked: ['Premium voices', 'Regional dialects', 'Meeting history', 'Team management', 'API access'],
     extraCost: '€0.15/min',
     upgradeTo: 'Premium',
     history: [
@@ -672,45 +668,35 @@ const plans = {
     price: '€24.99',
     minutes: 200,
     used: 87,
-    features: ['Face-to-face + Conference mode', '100+ languages', 'Voice cloning', 'Full history', 'Priority processing'],
+    features: ['Face-to-face mode', '100+ languages', 'Premium voices', 'Regional dialects', 'Full history', 'Priority processing'],
     locked: ['Meeting history', 'Team management', 'API access'],
     extraCost: '€0.15/min',
     upgradeTo: 'Business',
     history: [
-      { text: '<strong>Japanese → English</strong> business call with voice clone', time: '1h ago', dot: '' },
-      { text: '<strong>Korean → Spanish</strong> conference session (4 participants)', time: '5h ago', dot: 'green' },
+      { text: '<strong>Japanese → English</strong> business call', time: '1h ago', dot: '' },
+      { text: '<strong>Korean → Spanish</strong> hotel check-in', time: '5h ago', dot: 'green' },
       { text: '<strong>Arabic → English</strong> client meeting', time: 'Yesterday', dot: '' },
       { text: '<strong>Mandarin → English</strong> webinar translation', time: '2 days ago', dot: 'blue' },
-      { text: '<strong>Hindi → English</strong> voice cloned call', time: '3 days ago', dot: 'green' },
+      { text: '<strong>Hindi → English</strong> long-distance call', time: '3 days ago', dot: 'green' },
     ],
     topLangs: ['Japanese', 'Korean', 'Arabic', 'Mandarin', 'Hindi', 'French'],
-    voiceProfiles: [
-      { name: 'My Voice (English)', lang: 'en-US · Neural Clone', initials: 'ME' },
-      { name: 'My Voice (Spanish)', lang: 'es-ES · Neural Clone', initials: 'ME' },
-    ],
   },
   business: {
     name: 'Business',
     price: '€89.99',
     minutes: 1000,
     used: 412,
-    features: ['All modes + API access', '1,100+ languages', 'Team voice profiles', 'Meeting AI summaries', 'Transcription export', 'SLA + Priority support', 'Shared team dashboard'],
+    features: ['All modes + API access', '1,100+ languages', 'Meeting AI summaries', 'Transcription export', 'SLA + Priority support', 'Shared team dashboard'],
     locked: [],
     extraCost: '€0.14/min · Fair use: 3,000 min',
     upgradeTo: null,
     history: [
       { text: '<strong>EN→DE→FR</strong> Multi-language board meeting (6 participants)', time: '30min ago', dot: '' },
-      { text: '<strong>EN→JP</strong> Client pitch with voice clone — Sarah M.', time: '3h ago', dot: 'green' },
+      { text: '<strong>EN→JP</strong> Client pitch — Sarah M.', time: '3h ago', dot: 'green' },
       { text: '<strong>EN→PT</strong> Weekly LATAM sync — Team auto-transcribed', time: 'Yesterday', dot: 'blue' },
       { text: '<strong>EN→ZH</strong> Supplier negotiation — AI summary generated', time: '2 days ago', dot: '' },
     ],
     topLangs: ['German', 'French', 'Japanese', 'Portuguese', 'Mandarin', 'Arabic', 'Korean', 'Hindi'],
-    voiceProfiles: [
-      { name: 'Sarah Mitchell', lang: 'en-US · Sales Lead', initials: 'SM' },
-      { name: 'Carlos Vega', lang: 'es-MX · LATAM Manager', initials: 'CV' },
-      { name: 'Yuki Tanaka', lang: 'ja-JP · Japan Ops', initials: 'YT' },
-      { name: 'Marc Dupont', lang: 'fr-FR · EU Director', initials: 'MD' },
-    ],
     meetings: [
       { title: 'Q2 Board Review — Multilingual', date: 'Apr 17, 2026', duration: '47 min', langs: 'EN, DE, FR', participants: 6, summary: 'Revenue targets exceeded by 12%. Expansion into DACH approved. Next steps: hire regional PM by May 15.' },
       { title: 'Client Pitch — Nakamura Corp', date: 'Apr 16, 2026', duration: '32 min', langs: 'EN, JP', participants: 4, summary: 'Positive reception on enterprise tier. Follow-up demo scheduled for Apr 23. Key concern: data residency in Japan.' },
@@ -942,14 +928,7 @@ function showPlan(planKey) {
     });
     html += `</div>`;
   } else {
-    // Locked voice cloning for Personal
-    html += `<div class="card animate-in delay-4" style="position:relative;">
-      <div class="locked-overlay">
-        <div class="card-header"><div class="card-title">Voice <em>Cloning</em></div></div>
-        <div class="voice-profile"><div class="voice-avatar">?</div><div class="voice-info"><div class="voice-name">Your cloned voice</div><div class="voice-lang">Translate in your own voice</div></div></div>
-      </div>
-      <div class="locked-badge">Upgrade to Premium</div>
-    </div>`;
+    // (Voice cloning panel removed for V1 — feature deferred to V2.)
   }
 
   // ── MEETINGS (Business only) ──
@@ -1092,7 +1071,7 @@ sidebarItems.forEach(item => {
     // Handle navigation by id or fallback to position
     const id = this.id;
     if (id === 'nav-history') { showHistoryView(); return; }
-    if (id === 'nav-voice') { showVoiceProfilesView(); return; }
+    // (nav-voice removed: voice cloning deferred to V2)
     if (id === 'nav-support') { showSupportChat(); return; }
     if (id === 'nav-faq') { showFAQView(); return; }
 
@@ -1158,94 +1137,8 @@ function userHasVoiceCloning() {
   return VOICE_CLONING_PLANS.includes(plan);
 }
 
-function showVoiceProfilesView() {
-  const canClone = userHasVoiceCloning();
-  const recordingButton = canClone
-    ? `<button class="quick-btn primary" onclick="window.location.href='/app#voice-register'">Start Recording</button>`
-    : `<button class="quick-btn primary" onclick="showVoiceCloningUpsell()">Unlock Voice Cloning</button>`;
-
-  const subhead = canClone
-    ? 'Record 10-30 seconds of speech to create a voice profile.'
-    : 'Voice cloning is available on Tourist Pro and higher. Upgrade to translate in your own voice.';
-
-  document.getElementById('main-content').innerHTML = `
-    <div class="welcome-header animate-in">
-      <div><div class="welcome-name">Voice Profiles</div>
-      <div class="welcome-date">Clone your voice for personalized translations</div></div>
-    </div>
-    <div class="card animate-in delay-1">
-      <div class="card-header"><div class="card-title">Your Voice Profiles</div></div>
-      <div id="voiceProfilesList" style="color:var(--text-sub);font-size:13px;">${canClone ? 'Loading...' : 'No voice profiles yet — voice cloning is a premium feature.'}</div>
-    </div>
-    <div class="card animate-in delay-2">
-      <div class="card-header"><div class="card-title">Register New Voice</div></div>
-      <p style="font-size:13px;color:var(--text-sub);margin-bottom:16px;">${subhead}</p>
-      ${recordingButton}
-    </div>`;
-
-  // Only fetch profiles if the user has voice cloning enabled — otherwise the
-  // backend would just return an empty list, and we already show a friendlier
-  // "premium feature" message above.
-  if (canClone) {
-    authFetch('/api/voice/profiles')
-      .then(r => r.json())
-      .then(data => {
-        const el = document.getElementById('voiceProfilesList');
-        if (data.profiles && data.profiles.length > 0) {
-          el.innerHTML = data.profiles.map(p => '<div style="padding:10px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;"><strong style="color:var(--gold);">' + p.profile_name + '</strong> — ' + (p.duration_seconds||0).toFixed(1) + 's</div>').join('');
-        } else {
-          el.textContent = 'No voice profiles yet. Record one below!';
-        }
-      }).catch(() => { document.getElementById('voiceProfilesList').textContent = 'Could not load profiles.'; });
-  }
-}
-
-// Shows the gold upsell modal listing plans that include voice cloning. Same
-// UX as the modal in /app — keeps the upgrade flow consistent across pages.
-function showVoiceCloningUpsell() {
-  const plans = [
-    {id:'tourist_pro', name:'Tourist Pro', price:'€14.99', cycle:'/mo', perk:'1 voice profile + 30 premium min', recommended:true},
-    {id:'solo',        name:'Solo',        price:'€26.99', cycle:'/mo', perk:'3 voice profiles + 600 min'},
-    {id:'team',        name:'Team',        price:'€79.99', cycle:'/agent/mo', perk:'Unlimited voice profiles per agent (min 3)'},
-    {id:'scale',       name:'Scale',       price:'€224.99', cycle:'/agent/mo', perk:'Unlimited + premium clone quality (min 10)'},
-  ];
-  const existing = document.getElementById('voiceUpsellModal'); if (existing) existing.remove();
-  const modal = document.createElement('div');
-  modal.id = 'voiceUpsellModal';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
-  modal.innerHTML = `
-    <div style="background:var(--bg2);border:1px solid var(--gold-dim);border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 40px rgba(212,168,67,0.15);">
-      <div style="padding:28px 28px 0;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;">
-        <div>
-          <div style="font-size:11px;color:var(--gold);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">✨ Available on these plans</div>
-          <h2 style="margin:0;font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;color:var(--text);line-height:1.2;">Voice cloning is a premium feature</h2>
-          <p style="margin:8px 0 0;font-size:13px;color:var(--text-sub);">Translate in your own voice with our premium tier.</p>
-        </div>
-        <button onclick="document.getElementById('voiceUpsellModal').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:24px;line-height:1;padding:0;">&times;</button>
-      </div>
-      <div style="padding:20px 28px;display:flex;flex-direction:column;gap:10px;">
-        ${plans.map(p => `
-          <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--bg3);border:1px solid ${p.recommended ? 'var(--gold)' : 'var(--border)'};border-radius:12px;position:relative;">
-            ${p.recommended ? '<div style="position:absolute;top:-9px;left:14px;background:var(--gold);color:#000;font-size:9px;font-weight:600;letter-spacing:1px;padding:2px 8px;border-radius:6px;text-transform:uppercase;">Recommended</div>' : ''}
-            <div>
-              <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--gold);">${p.name}</div>
-              <div style="font-size:12px;color:var(--text-sub);margin-top:2px;">${p.perk}</div>
-            </div>
-            <div style="text-align:right;">
-              <div style="font-size:16px;color:var(--text);font-weight:500;">${p.price}<span style="font-size:11px;color:var(--text-muted);">${p.cycle}</span></div>
-              <a href="/checkout?plan=${p.id}" style="display:inline-block;margin-top:6px;padding:6px 12px;background:${p.recommended ? 'var(--gold)' : 'transparent'};color:${p.recommended ? '#000' : 'var(--gold)'};border:1px solid var(--gold);border-radius:20px;font-size:11px;font-weight:500;text-decoration:none;letter-spacing:0.5px;">Upgrade</a>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-      <div style="padding:0 28px 24px;text-align:center;">
-        <a href="/pricing" style="font-size:12px;color:var(--text-muted);text-decoration:none;">Compare all plans →</a>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
-}
+// (showVoiceProfilesView and showVoiceCloningUpsell removed for V1.
+//  Voice cloning is deferred to V2 — see Config.VOICE_CLONING_ENABLED.)
 
 function showHistoryView() {
   document.getElementById('main-content').innerHTML = `
@@ -1310,7 +1203,7 @@ const observer = new MutationObserver(() => {
       const text = this.textContent.trim();
       if (text === 'Start Translation') window.location.href = '/app';
       else if (text === 'Change Languages') showLanguagesView();
-      else if (text === 'Manage Voices') showVoiceProfilesView();
+      // (Manage Voices removed: voice cloning deferred to V2)
       else if (text === 'Create Room') alert('Live Translation Rooms coming soon!');
     });
   });
@@ -1322,7 +1215,7 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
     const text = this.textContent.trim();
     if (text === 'Start Translation') window.location.href = '/app';
     else if (text === 'Change Languages') showLanguagesView();
-    else if (text === 'Manage Voices') showVoiceProfilesView();
+    // (Manage Voices removed: voice cloning deferred to V2)
   });
 });
 

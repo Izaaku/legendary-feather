@@ -18,11 +18,26 @@ from openai import OpenAI
 from app.config import CORE_LANGUAGES
 
 
-# OpenAI TTS voice options
+# OpenAI TTS voice options.
+#   • All six OpenAI voices listed below can be passed directly via the
+#     `voice_id` parameter on synthesize().
+#   • Backwards-compat: legacy callers that pass `voice_gender='female'|'male'|'neutral'`
+#     get mapped to the canonical defaults (nova/onyx/shimmer).
+#   • _OPENAI_VOICES catalogs which voices are valid so we can validate
+#     incoming `voice_id` values before forwarding to OpenAI.
+_OPENAI_VOICES_GENDER_DEFAULT = {
+    'female': 'nova',
+    'male': 'onyx',
+    'neutral': 'shimmer',
+}
+# All 6 voices the API accepts. Keep this aligned with OpenAI's voice catalog.
 _OPENAI_VOICES = {
-    'female': 'nova',      # Warm, expressive female
-    'male': 'onyx',        # Deep, confident male
-    'neutral': 'shimmer',  # Neutral, versatile
+    'nova':    {'gender': 'female',  'description': 'Warm, expressive female'},
+    'shimmer': {'gender': 'female',  'description': 'Soft, neutral female'},
+    'alloy':   {'gender': 'female',  'description': 'Professional, balanced female'},
+    'onyx':    {'gender': 'male',    'description': 'Deep, confident male'},
+    'echo':    {'gender': 'male',    'description': 'Young, dynamic male'},
+    'fable':   {'gender': 'male',    'description': 'Warm storyteller male'},
 }
 
 # ElevenLabs voice IDs (defaults — premium multilingual voices)
@@ -83,7 +98,8 @@ class CloudTTSEngine:
 
     def synthesize(self, text, language='en', mode=None, voice_profile_id=None,
                    voice_gender='female', speed=1.0,
-                   reference_audio_path=None, reference_text=''):
+                   reference_audio_path=None, reference_text='',
+                   voice_id=None):
         """
         Synthesize text to speech using cloud / serverless TTS engines.
 
@@ -102,7 +118,11 @@ class CloudTTSEngine:
             voice_profile_id: User's voice profile ID (we no longer use the
                 value itself — we use reference_audio_path. Kept as a
                 "should we clone?" signal.)
-            voice_gender: 'female', 'male', or 'neutral'
+            voice_gender: 'female', 'male', or 'neutral' (legacy fallback —
+                used to pick a default voice when voice_id is not set).
+            voice_id: One of OpenAI's 6 voices (nova/shimmer/alloy/onyx/echo/fable).
+                When provided, takes precedence over voice_gender. Invalid
+                values fall back to the gender default.
             speed: Speech speed multiplier (0.25 to 4.0 for OpenAI)
             reference_audio_path: Local file path to user's voice sample.
                 Required for Fish Speech voice cloning.
@@ -125,13 +145,19 @@ class CloudTTSEngine:
               f'gender={voice_gender} clone={bool(voice_profile_id)} '
               f'has_ref_audio={bool(reference_audio_path)}')
 
+        # V1 launch: voice cloning is gated behind a feature flag. Default
+        # voices via OpenAI TTS are fast (~2s), natural, and don't need
+        # per-user slot management. We re-enable cloning in V2 with a
+        # low-latency provider (Cartesia, ElevenLabs Pro). Set
+        # VOICE_CLONING_ENABLED=true in the env to flip it back on.
+        from app.config import Config as _Cfg
+        cloning_enabled = bool(getattr(_Cfg, 'VOICE_CLONING_ENABLED', False))
+
         try:
             # ── Route 1: Voice cloning via Fish Speech (RunPod Serverless) ──
-            # This is the primary path for users with voice cloning enabled.
-            # No per-voice slots, no per-month caps, scales to thousands of
-            # users on a single endpoint.
-            print(f'[CloudTTS-DEBUG] Route 1 check: voice_profile_id={bool(voice_profile_id)}, reference_audio_path={bool(reference_audio_path)}')
-            if voice_profile_id and reference_audio_path:
+            # Gated behind VOICE_CLONING_ENABLED. Code retained for V2.
+            print(f'[CloudTTS-DEBUG] Route 1 check: cloning_enabled={cloning_enabled}, voice_profile_id={bool(voice_profile_id)}, reference_audio_path={bool(reference_audio_path)}')
+            if cloning_enabled and voice_profile_id and reference_audio_path:
                 from app.services.runpod_tts import RunPodTTSClient
                 runpod = RunPodTTSClient()
                 runpod_avail = runpod.is_available()
@@ -149,19 +175,15 @@ class CloudTTSEngine:
                     if result:
                         print(f'[CloudTTS-DEBUG] Fish Speech SUCCESS — got {len(result)} chars audio')
                         return result
-                    # If Fish Speech fails (cold start timeout, unsupported
-                    # language, etc.), fall through to OpenAI TTS so the
-                    # user still gets audio (just without their voice).
                     print('[CloudTTS-DEBUG] Fish Speech returned None — falling back to default voice')
                 else:
                     print(f'[CloudTTS-DEBUG] Skipping Fish Speech (avail={runpod_avail}, lang_ok={lang_ok})')
-            else:
-                print(f'[CloudTTS-DEBUG] Route 1 skipped — missing voice_profile_id or reference_audio_path')
+            elif not cloning_enabled and voice_profile_id:
+                print('[CloudTTS-DEBUG] Voice cloning disabled in V1 — using default voice')
 
-            # ── Route 2: Legacy ElevenLabs voice cloning ──
-            # Kept for backward compatibility while RunPod isn't configured.
-            # Will be removed once Fish Speech is fully validated.
-            if voice_profile_id and self.elevenlabs_client and not reference_audio_path:
+            # ── Route 2: Legacy ElevenLabs voice cloning (V2 path) ──
+            # Also gated by VOICE_CLONING_ENABLED.
+            if cloning_enabled and voice_profile_id and self.elevenlabs_client and not reference_audio_path:
                 result = self._synthesize_elevenlabs(text, language, voice_profile_id, speed)
                 if result:
                     return result
@@ -169,15 +191,18 @@ class CloudTTSEngine:
             # ── Route 3: Default voice via OpenAI TTS ──
             # 30+ languages, no cloning. Used for users without voice
             # profiles AND for languages outside Fish Speech's coverage.
+            # voice_id (one of the 6 OpenAI voices) takes precedence over
+            # voice_gender when present.
             if self.openai_client:
-                result = self._synthesize_openai(text, language, voice_gender, speed)
+                result = self._synthesize_openai(text, language, voice_gender, speed,
+                                                 voice_id=voice_id)
                 if result:
                     return result
 
             # ── Route 4: Last resort — ElevenLabs default voice ──
             if self.elevenlabs_client:
-                voice_id = _ELEVENLABS_VOICES.get(voice_gender, _ELEVENLABS_VOICES['female'])
-                result = self._synthesize_elevenlabs(text, language, voice_id, speed)
+                el_voice_id = _ELEVENLABS_VOICES.get(voice_gender, _ELEVENLABS_VOICES['female'])
+                result = self._synthesize_elevenlabs(text, language, el_voice_id, speed)
                 if result:
                     return result
 
@@ -188,10 +213,21 @@ class CloudTTSEngine:
             print(f'[CloudTTS] Synthesis error: {e}')
             return None
 
-    def _synthesize_openai(self, text, language, voice_gender, speed):
-        """Synthesize using OpenAI TTS API."""
+    def _synthesize_openai(self, text, language, voice_gender, speed, voice_id=None):
+        """Synthesize using OpenAI TTS API.
+
+        Voice resolution:
+          1. If voice_id is provided AND in the OpenAI voice catalog → use it.
+          2. Otherwise fall back to the gender-default mapping
+             (female → nova, male → onyx, neutral → shimmer).
+        Invalid voice_ids are silently ignored so a stale localStorage value
+        never breaks synthesis.
+        """
         try:
-            voice = _OPENAI_VOICES.get(voice_gender, 'nova')
+            if voice_id and voice_id in _OPENAI_VOICES:
+                voice = voice_id
+            else:
+                voice = _OPENAI_VOICES_GENDER_DEFAULT.get(voice_gender, 'nova')
 
             # Clamp speed to OpenAI's range
             speed = max(0.25, min(4.0, speed))

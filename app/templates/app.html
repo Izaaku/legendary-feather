@@ -812,9 +812,11 @@ footer {
                 </div>
             </div>
 
+            {% if voice_cloning_enabled %}
             <!-- ═══ VOICE SELECTOR — Use my cloned voice (premium plans only) ═══ -->
             <!-- Hidden by default. JS reveals it if (a) user has voice cloning
-                 in their plan AND (b) they have at least one voice profile saved. -->
+                 in their plan AND (b) they have at least one voice profile saved.
+                 Whole section is gated by VOICE_CLONING_ENABLED for V1 launch. -->
             <div id="f2fVoiceSelector" style="display:none;margin-bottom:16px;padding:12px 14px;background:var(--gold-dim);border:1px solid var(--border);border-radius:10px;">
                 <div style="font-size:11px;color:var(--gold);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Translation voice</div>
                 <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
@@ -823,6 +825,24 @@ footer {
                         <!-- Voice profiles populated by JS -->
                     </select>
                     <span id="f2fVoiceSelectorHint" style="font-size:11px;color:var(--text-muted);flex:1;min-width:200px;">Pick a voice profile to clone — translation will sound like you.</span>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ═══ TRANSLATION VOICE PICKER ═══ -->
+            <!-- 6 OpenAI TTS voices. Choice persists in localStorage so it
+                 carries between sessions. Default: nova (warm, female). -->
+            <div style="margin-bottom:16px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;">
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <label for="f2fTtsVoice" style="font-size:11px;color:var(--gold);font-weight:600;letter-spacing:1.5px;text-transform:uppercase;flex-shrink:0;">Translation voice</label>
+                    <select id="f2fTtsVoice" onchange="onF2FTtsVoiceChange()" style="flex:1;min-width:200px;">
+                        <option value="nova">Nova — warm female (default)</option>
+                        <option value="shimmer">Shimmer — soft female</option>
+                        <option value="alloy">Alloy — professional female</option>
+                        <option value="onyx">Onyx — deep male</option>
+                        <option value="echo">Echo — dynamic male</option>
+                        <option value="fable">Fable — warm storyteller male</option>
+                    </select>
                 </div>
             </div>
 
@@ -856,7 +876,8 @@ footer {
             <input type="file" id="ocrFileInput" accept="image/*" capture="environment" style="display:none;">
         </div>
 
-        <!-- ═══ VOICE REGISTRATION (collapsible) ═══ -->
+        <!-- ═══ VOICE REGISTRATION (collapsible) — V1: hidden behind feature flag ═══ -->
+        {% if voice_cloning_enabled %}
         <div class="card">
             <div class="collapsible-header" id="voiceRegHeader" onclick="toggleVoiceReg()">
                 <div class="card-title" style="margin-bottom:0;"><span>🎙️</span> Register Your Voice</div>
@@ -931,6 +952,7 @@ footer {
                 </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Status -->
         <div class="status-message" id="statusMessage"></div>
@@ -1661,14 +1683,17 @@ function processF2FUtterance(text){
     bubble.scrollIntoView({behavior:'smooth'});
 
     // Send the user_id so the backend can gate by plan and track minutes.
-    // Also send the selected voice profile (if any) so the TTS uses voice
-    // cloning when the user has selected one.
+    // Also send the selected voice profile (cloning) and the picked OpenAI
+    // voice (1 of 6) so the backend can use the user's preferred voice.
     const voiceProfileEl = document.getElementById('f2fVoiceProfile');
     const voiceProfileId = voiceProfileEl ? voiceProfileEl.value : '';
+    const ttsVoiceEl = document.getElementById('f2fTtsVoice');
+    const ttsVoiceId = ttsVoiceEl ? ttsVoiceEl.value : null;
     socket.emit('translate_f2f', {
         text, lang1, lang2,
         user_id: getUserId(),
         voice_profile_id: voiceProfileId || null,
+        voice_id: ttsVoiceId || null,
         session_id: getF2FSessionId(),
     });
 
@@ -2516,6 +2541,27 @@ function onGuidePhraseLangChange(){
 })();
 
 showGuidePhrase();
+
+// ── F2F TTS Voice Picker ──
+// 6 OpenAI voices. Selection persists in localStorage so it carries across
+// sessions. Default: 'nova'. Invalid values silently fall back to default.
+const _F2F_TTS_VOICES = ['nova','shimmer','alloy','onyx','echo','fable'];
+function onF2FTtsVoiceChange(){
+    const sel = document.getElementById('f2fTtsVoice');
+    if(!sel) return;
+    const v = sel.value;
+    if(_F2F_TTS_VOICES.includes(v)){
+        localStorage.setItem('lf_tts_voice', v);
+    }
+}
+(function initF2FTtsVoice(){
+    const sel = document.getElementById('f2fTtsVoice');
+    if(!sel) return;
+    const saved = localStorage.getItem('lf_tts_voice');
+    if(saved && _F2F_TTS_VOICES.includes(saved)){
+        sel.value = saved;
+    }
+})();
 
 document.getElementById('voiceRecordBtn').addEventListener('click',()=>{
     if(isVoiceRecording) stopVoiceRecording(); else startVoiceRecording();

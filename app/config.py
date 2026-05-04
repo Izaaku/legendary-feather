@@ -61,6 +61,13 @@ def stripe_price(plan_slug):
 
     # Voice Cloning
     VOICE_PROFILES_PATH = os.getenv('VOICE_PROFILES_PATH', './data/voice_profiles')
+    # V1 launch: voice cloning is OFF by default. The infra (Fish Speech on
+    # RunPod or ElevenLabs slot rotation) is more cost/complexity than the
+    # feature is worth at our current stage. Customers want fast, accurate
+    # translation in a natural voice — not their own voice. We'll re-enable in
+    # V2 (Cartesia or ElevenLabs Pro) when there's clear demand from paying
+    # users. Set VOICE_CLONING_ENABLED=true in Railway to flip back on.
+    VOICE_CLONING_ENABLED = os.getenv('VOICE_CLONING_ENABLED', 'false').lower() == 'true'
 
     # Performance Optimization
     USE_DEEPSPEED = os.getenv('USE_DEEPSPEED', 'false').lower() == 'true'
@@ -102,7 +109,6 @@ PRICING = {
             'Unlimited everything',
             'All AI models',
             '100+ languages',
-            'Voice cloning unlimited',
             'Admin panel',
             'API access',
         ],
@@ -182,12 +188,12 @@ PRICING = {
     'tourist_pro': {
         'category': 'traveler',
         'name': 'Tourist Pro',
-        'tagline': 'Premium voice + voice cloning',
+        'tagline': 'Premium voice quality',
         'prices': {'eur': 14.99, 'usd': 16.99},
         'billing': 'monthly',
         'minutes_openai': 150,
         'minutes_elevenlabs': 30,
-        'voice_cloning_profiles': 1,
+        'voice_cloning_profiles': 0,
         'languages': 100,
         'per_seat': False,
         'visible': True,
@@ -196,7 +202,6 @@ PRICING = {
             '150 standard min + 30 premium min / month',
             '100+ languages with regional dialects',
             'Premium studio-quality voice for key conversations',
-            'Voice cloning (1 profile)',
             'Offline mode (basic)',
             'Priority support',
             'For digital nomads and long-stay expats',
@@ -244,7 +249,7 @@ PRICING = {
         'min_seats': 1,
         'minutes_openai': 600,
         'minutes_elevenlabs': 0,
-        'voice_cloning_profiles': 3,
+        'voice_cloning_profiles': 0,
         'languages': 16,
         'visible': True,
         'stripe_price_id': stripe_price('solo'),
@@ -252,8 +257,8 @@ PRICING = {
             '600 minutes / month',
             'Virtual Audio Driver (Windows / Mac)',
             'Works with Zoom, Teams, Twilio Flex, RingCentral, Five9',
-            'Voice cloning (3 profiles)',
             '16 core languages',
+            'Premium studio-quality voice',
             'Email support',
             'For freelancers, solo sellers, recruiters',
         ],
@@ -268,7 +273,7 @@ PRICING = {
         'min_seats': 3,
         'minutes_openai': 1500,  # per seat / month
         'minutes_elevenlabs': 50,  # per seat / month
-        'voice_cloning_profiles': -1,
+        'voice_cloning_profiles': 0,
         'languages': 30,
         'visible': True,
         'highlight': True,  # most popular for business
@@ -278,7 +283,6 @@ PRICING = {
             'Virtual Audio Driver (Windows / Mac)',
             'Admin dashboard with team metrics',
             'Sub-accounts for supervisors',
-            'Voice cloning unlimited',
             '30+ languages',
             'API access (basic)',
             'Priority support',
@@ -295,13 +299,13 @@ PRICING = {
         'min_seats': 10,
         'minutes_openai': 6000,  # per seat / month
         'minutes_elevenlabs': 200,  # per seat / month
-        'voice_cloning_profiles': -1,
+        'voice_cloning_profiles': 0,
         'languages': 50,
         'visible': True,
         'stripe_price_id': stripe_price('scale'),
         'features': [
             '6,000 standard min + 200 premium min per agent',
-            'Voice cloning of agent (premium quality)',
+            'Premium studio-quality voice for every call',
             'Advanced dashboard with per-agent analytics',
             'Recording + transcripts (compliance-ready)',
             'Full REST API + webhooks',
@@ -322,7 +326,7 @@ PRICING = {
         'min_seats': 50,
         'minutes_openai': -1,
         'minutes_elevenlabs': -1,
-        'voice_cloning_profiles': -1,
+        'voice_cloning_profiles': 0,
         'languages': 100,
         'visible': True,
         'stripe_price_id': None,  # Enterprise = custom contract, no Stripe Price ID
@@ -330,7 +334,6 @@ PRICING = {
             'Custom pricing for 50+ agents',
             'Dedicated deployment (your cloud or isolated Railway)',
             'SOC 2 / HIPAA / PCI compliance',
-            'Custom voice models trained on your audio',
             'Custom integration with your PBX (Twilio Flex, Five9, Genesys)',
             '24/7 phone support',
             'SLA penalties in contract',

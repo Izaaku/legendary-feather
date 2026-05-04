@@ -302,7 +302,8 @@ def translator_app():
     """The full translator app (face-to-face mode + future Pro mode)."""
     return render_template('app.html',
                            stripe_key=Config.STRIPE_PUBLISHABLE_KEY,
-                           languages=LANGUAGES)
+                           languages=LANGUAGES,
+                           voice_cloning_enabled=Config.VOICE_CLONING_ENABLED)
 
 
 @app.route('/success')
@@ -471,6 +472,7 @@ def handle_f2f_translate(data):
     lang2 = data.get('lang2', 'es')
     user_id = data.get('user_id', '')  # Optional — used for minute tracking
     voice_profile_id = data.get('voice_profile_id') or None  # Optional — voice cloning
+    voice_id = data.get('voice_id') or None  # Optional — one of OpenAI's 6 voices
     session_id = data.get('session_id') or None  # Optional — F2F session tracking
 
     if not text.strip():
@@ -592,6 +594,7 @@ def handle_f2f_translate(data):
                 voice_profile_id=effective_profile,
                 reference_audio_path=reference_audio_path,
                 reference_text=reference_text,
+                voice_id=voice_id,
             )
             print(f'[F2F-DEBUG] tts.synthesize returned {len(audio_b64) if audio_b64 else 0} chars of audio')
         except Exception as tts_err:

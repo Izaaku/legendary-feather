@@ -296,8 +296,8 @@ def ai_suggest_response():
     prompt = f"""You are a professional customer support agent for Legendary Feather, a real-time AI translation platform.
 Generate 3 short, helpful response suggestions for the customer's latest message.
 Each response should be 1-3 sentences, professional but friendly.
-The platform offers: real-time voice translation, text translation, image/OCR translation, voice cloning.
-Plans: Personal (€9.99/mo, 120 min), Premium (€24.99/mo, 600 min, voice cloning), Business (€89.99/mo, unlimited).
+The platform offers: real-time voice translation, text translation, image/OCR translation, premium studio-quality voices, regional dialect support.
+Plans: Free (5 min/mo), Travel Pass (€9.99/7 days, 100 min), Tourist (€4.99/mo, 60 min), Tourist Pro (€14.99/mo, 150+30 premium min), Solo ($29/mo, 600 min), Team ($89/agent/mo), Scale ($249/agent/mo), Enterprise (custom).
 
 Conversation:
 {context}
