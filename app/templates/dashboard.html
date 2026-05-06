@@ -908,28 +908,7 @@ function showPlan(planKey) {
 
   html += `</div>`; // close grid-2
 
-  // ── VOICE PROFILES (Premium & Business) ──
-  if (planKey === 'premium' || planKey === 'business') {
-    html += `<div class="card animate-in delay-4">
-      <div class="card-header">
-        <div class="card-title">Voice <em>Profiles</em></div>
-        <a class="card-action" href="#">+ Add Voice</a>
-      </div>`;
-    plan.voiceProfiles.forEach(v => {
-      html += `<div class="voice-profile">
-        <div class="voice-avatar">${v.initials}</div>
-        <div class="voice-info">
-          <div class="voice-name">${v.name}</div>
-          <div class="voice-lang">${v.lang}</div>
-        </div>
-        <button class="voice-action">Edit</button>
-        <button class="voice-action">Test</button>
-      </div>`;
-    });
-    html += `</div>`;
-  } else {
-    // (Voice cloning panel removed for V1 — feature deferred to V2.)
-  }
+  // (Voice profile rendering removed for V1 — feature deferred to V2.)
 
   // ── MEETINGS (Business only) ──
   if (planKey === 'business') {
