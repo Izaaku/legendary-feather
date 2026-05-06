@@ -1490,10 +1490,24 @@ function populateSelect(sel, opts={}){
 }
 
 function initLanguages(){
-    populateSelect(document.getElementById('f2fLang1'),{defaultVal:'en'});
-    populateSelect(document.getElementById('f2fLang2'),{defaultVal:'es'});
+    // Read URL query params so deep-links from the FAQ ("Click to translate
+    // in Spanish") arrive with the right language preselected. Supports
+    // ?lang=xx (sets Lang2/target — "translate INTO this") and the explicit
+    // ?source=xx&target=yy override.
+    const _qp = new URLSearchParams(window.location.search);
+    const _lang = (_qp.get('lang') || '').slice(0,3).toLowerCase();
+    const _src  = (_qp.get('source') || '').slice(0,3).toLowerCase();
+    const _tgt  = (_qp.get('target') || '').slice(0,3).toLowerCase();
+
+    // Defaults: EN ↔ ES. ?lang= replaces lang2 only (most common: I want to
+    // translate from my native language INTO the destination one).
+    const lang1Default = _src || 'en';
+    const lang2Default = _tgt || _lang || 'es';
+
+    populateSelect(document.getElementById('f2fLang1'),{defaultVal:lang1Default});
+    populateSelect(document.getElementById('f2fLang2'),{defaultVal:lang2Default});
     populateSelect(document.getElementById('txtSourceLang'),{autoDetect:true});
-    populateSelect(document.getElementById('txtTargetLang'),{defaultVal:'es'});
+    populateSelect(document.getElementById('txtTargetLang'),{defaultVal:_tgt || _lang || 'es'});
 }
 
 

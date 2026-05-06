@@ -102,7 +102,9 @@ def send_message(conv_id):
 @support_bp.route('/admin/conversations', methods=['GET'])
 @owner_required
 def admin_get_conversations():
-    """Admin/agent gets all conversations."""
+    """Admin/agent gets all conversations, enriched with the customer's
+    plan / minutes / Stripe last4 so the agent can identify them at a glance
+    without flipping between dashboards."""
     status = request.args.get('status', None)
     filters = {}
     if status:
@@ -113,8 +115,67 @@ def admin_get_conversations():
         filters=filters if filters else None,
         order='updated_at.desc',
         limit=50
-    )
-    return jsonify(convs)
+    ) or []
+
+    # Bulk-fetch User rows for the conversations' user_ids (one DB roundtrip).
+    from app.utils.database import db_session
+    from app.models.user import User
+    user_ids = list({c.get('user_id') for c in convs if c.get('user_id')})
+    users_by_id = {}
+    if user_ids:
+        db = db_session()
+        try:
+            for u in db.query(User).filter(User.user_id.in_(user_ids)).all():
+                users_by_id[u.user_id] = u
+        finally:
+            db.close()
+
+    # Optional Stripe enrichment — only the LAST 4 of the default card so the
+    # agent can identify the right payment method ("the visa ending 4242").
+    # Failures are silent so support never breaks if Stripe is unreachable.
+    last4_by_user = {}
+    try:
+        import os, stripe
+        stripe_key = os.getenv('STRIPE_SECRET_KEY') or os.getenv('STRIPE_SECRET_KEY_LIVE') or os.getenv('STRIPE_SECRET_KEY_TEST')
+        if stripe_key:
+            stripe.api_key = stripe_key
+            for uid, u in users_by_id.items():
+                if not u.stripe_customer_id:
+                    continue
+                try:
+                    pms = stripe.PaymentMethod.list(customer=u.stripe_customer_id, type='card', limit=1)
+                    if pms.data:
+                        last4_by_user[uid] = {
+                            'brand': pms.data[0].card.brand,
+                            'last4': pms.data[0].card.last4,
+                        }
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    enriched = []
+    for c in convs:
+        uid = c.get('user_id')
+        u = users_by_id.get(uid) if uid else None
+        c['customer_plan'] = u.plan if u else None
+        c['customer_minutes_used'] = u.minutes_used if u else None
+        c['customer_minutes_total'] = u.minutes_total if u else None
+        # Customer's preferred language — so the agent can reply in their tongue
+        c['customer_language'] = (u.preferred_source_lang if u else None) or 'en'
+        c['customer_is_active'] = u.is_active if u else None
+        c['customer_signup_date'] = u.created_at.isoformat() if (u and u.created_at) else None
+        # Fall back to the User row if the conversation doesn't have name/email
+        if not c.get('user_name') and u:
+            c['user_name'] = u.name
+        if not c.get('user_email') and u:
+            c['user_email'] = u.email
+        # Payment card last4
+        pm = last4_by_user.get(uid)
+        c['customer_card'] = pm  # {'brand': 'visa', 'last4': '4242'} or None
+        enriched.append(c)
+
+    return jsonify(enriched)
 
 
 @support_bp.route('/admin/conversations/<conv_id>/assign', methods=['POST'])

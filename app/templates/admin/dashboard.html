@@ -377,10 +377,18 @@
             <div class="loading">Loading messages...</div>
           </div>
           <div style="padding:12px 16px; border-top:1px solid var(--border); background:var(--surface2);">
+            <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
+              <select id="support-templates" onchange="insertTemplate()" style="flex:1; padding:8px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-size:12px;">
+                <option value="">📋 Insert a quick reply template…</option>
+              </select>
+            </div>
             <textarea id="support-reply" placeholder="Type your reply..." rows="3" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-family:inherit; font-size:13px; resize:vertical;"></textarea>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
-              <span id="support-template-hint" style="font-size:11px; color:var(--text-muted);">Tip: be empathetic + actionable.</span>
-              <button class="btn-primary" onclick="sendReply()" style="padding:8px 18px; font-size:12px;">Send reply</button>
+              <span id="support-template-hint" style="font-size:11px; color:var(--text-muted);">Tip: templates auto-fill {customer_name} and {agent_name}.</span>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <button class="btn-secondary" id="support-translate-btn" onclick="translateReplyToCustomer()" style="padding:8px 14px; font-size:12px;" title="Translate the reply to the customer's preferred language using DeepL">🌐 Translate to <span id="support-translate-target">customer</span></button>
+                <button class="btn-primary" onclick="sendReply()" style="padding:8px 18px; font-size:12px;">Send reply</button>
+              </div>
             </div>
           </div>
         </div>
@@ -472,9 +480,14 @@ async function loadSupport() {
   if (!_myUserId) {
     try {
       const me = await apiFetch('/api/auth/me');
-      if (me && me.user) _myUserId = me.user.user_id;
+      if (me && me.user) {
+        _myUserId = me.user.user_id;
+        _supportAgentName = (me.user.name || 'Support').split(' ')[0];
+        _supportAgentLang = (me.user.preferred_source_lang || 'en').toLowerCase().slice(0,2);
+      }
     } catch(e) {}
   }
+  if (_supportTemplates.length === 0) loadSupportTemplates();
 
   const filter = document.getElementById('support-filter').value;
   const url = filter ? ('/api/support/admin/conversations?status=' + encodeURIComponent(filter)) : '/api/support/admin/conversations';
@@ -504,7 +517,7 @@ async function loadSupport() {
   }
   ul.innerHTML = list.map(c => {
     const subject = (c.subject || c.last_message || 'Conversation').toString().slice(0, 60);
-    const customer = c.customer_name || c.customer_email || c.customer_id || '';
+    const customer = c.user_name || c.user_email || c.user_id || 'Unknown';
     const isSelected = _selectedConv && _selectedConv.id === c.id;
     return '<div onclick="selectConv(\'' + c.id + '\')" style="padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;background:' + (isSelected ? 'var(--gold-dim)' : 'transparent') + ';">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px;">' +
@@ -526,9 +539,45 @@ async function selectConv(convId) {
   document.getElementById('support-detail-empty').style.display = 'none';
   document.getElementById('support-detail-content').style.display = 'flex';
   document.getElementById('support-detail-subject').textContent = _selectedConv.subject || 'Conversation';
-  document.getElementById('support-detail-customer').textContent =
-    (_selectedConv.customer_name || _selectedConv.customer_email || 'Unknown customer') +
-    ' · ' + (_selectedConv.status || '');
+  // Build a rich customer info line: name <email> · Plan · 23/60 min · Visa ****4242
+  const c = _selectedConv;
+  const parts = [];
+  const nameLine = (c.user_name || 'Unknown') + (c.user_email ? ' <' + c.user_email + '>' : '');
+  parts.push(nameLine);
+  if (c.customer_plan) {
+    let planLabel = c.customer_plan.replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
+    if (typeof c.customer_minutes_used === 'number' && typeof c.customer_minutes_total === 'number') {
+      planLabel += ' · ' + c.customer_minutes_used + '/' + c.customer_minutes_total + ' min';
+    }
+    parts.push(planLabel);
+  }
+  if (c.customer_card && c.customer_card.last4) {
+    const brand = (c.customer_card.brand || 'card').replace(/^\w/, ch => ch.toUpperCase());
+    parts.push(brand + ' ****' + c.customer_card.last4);
+  }
+  if (c.customer_language) {
+    // Speaks Spanish 🇪🇸 — flag is informational, language NAME is what the agent reads
+    const langLabel = _supportLangName(c.customer_language);
+    const flag = _supportLangFlag(c.customer_language);
+    parts.push('<span style="color:var(--gold);font-weight:500;">Speaks ' + langLabel + ' ' + flag + '</span>');
+  }
+  if (c.customer_signup_date) {
+    parts.push('Joined ' + new Date(c.customer_signup_date).toLocaleDateString());
+  }
+  document.getElementById('support-detail-customer').innerHTML = parts.join(' &middot; ');
+
+  // Update the "Translate to X" button label & visibility
+  const targetLang = c.customer_language || 'en';
+  const translateBtn = document.getElementById('support-translate-btn');
+  const translateLabel = document.getElementById('support-translate-target');
+  if (translateLabel) translateLabel.textContent = _supportLangName(targetLang);
+  if (translateBtn) {
+    if (targetLang === _supportAgentLang) {
+      translateBtn.style.display = 'none';  // No point translating same language
+    } else {
+      translateBtn.style.display = 'inline-block';
+    }
+  }
 
   const resolveBtn = document.getElementById('support-resolve-btn');
   if (_selectedConv.status === 'resolved') {
@@ -554,6 +603,94 @@ async function selectConv(convId) {
     '</div>';
   }).join('');
   msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
+let _supportTemplates = [];
+let _supportAgentName = 'Support';
+let _supportAgentLang = 'en';  // The agent's own UI language — used as the source when auto-translating
+
+const _SUPPORT_LANG_NAMES = {
+  en:'English', es:'Spanish', fr:'French', de:'German', it:'Italian', pt:'Portuguese',
+  nl:'Dutch', pl:'Polish', ru:'Russian', zh:'Chinese', ja:'Japanese', ko:'Korean',
+  ar:'Arabic', hi:'Hindi', tr:'Turkish', sv:'Swedish', th:'Thai', vi:'Vietnamese',
+  id:'Indonesian', tl:'Tagalog', fil:'Filipino', cs:'Czech', hu:'Hungarian',
+  da:'Danish', no:'Norwegian', fi:'Finnish', el:'Greek', he:'Hebrew', ro:'Romanian',
+  uk:'Ukrainian', bg:'Bulgarian', hr:'Croatian', sk:'Slovak', sl:'Slovenian',
+  bn:'Bengali', ta:'Tamil', te:'Telugu', mr:'Marathi', ur:'Urdu', fa:'Persian',
+  sw:'Swahili', am:'Amharic', vi:'Vietnamese', ms:'Malay'
+};
+const _SUPPORT_LANG_FLAGS = {
+  en:'🇺🇸', es:'🇪🇸', fr:'🇫🇷', de:'🇩🇪', it:'🇮🇹', pt:'🇵🇹', nl:'🇳🇱', pl:'🇵🇱',
+  ru:'🇷🇺', zh:'🇨🇳', ja:'🇯🇵', ko:'🇰🇷', ar:'🇸🇦', hi:'🇮🇳', tr:'🇹🇷', sv:'🇸🇪',
+  th:'🇹🇭', vi:'🇻🇳', id:'🇮🇩', tl:'🇵🇭', fil:'🇵🇭', cs:'🇨🇿', hu:'🇭🇺',
+  da:'🇩🇰', no:'🇳🇴', fi:'🇫🇮', el:'🇬🇷', he:'🇮🇱', ro:'🇷🇴', uk:'🇺🇦',
+  bg:'🇧🇬', hr:'🇭🇷', sk:'🇸🇰', sl:'🇸🇮', bn:'🇧🇩', ta:'🇮🇳', te:'🇮🇳',
+  mr:'🇮🇳', ur:'🇵🇰', fa:'🇮🇷', sw:'🇰🇪', am:'🇪🇹', ms:'🇲🇾'
+};
+function _supportLangName(code) { return _SUPPORT_LANG_NAMES[(code||'en').toLowerCase().slice(0,2)] || (code || 'their language'); }
+function _supportLangFlag(code) { return _SUPPORT_LANG_FLAGS[(code||'en').toLowerCase().slice(0,2)] || '🌐'; }
+
+async function translateReplyToCustomer() {
+  if (!_selectedConv) return;
+  const ta = document.getElementById('support-reply');
+  const text = (ta.value || '').trim();
+  if (!text) { ta.focus(); return; }
+
+  const targetLang = _selectedConv.customer_language || 'en';
+  if (targetLang === _supportAgentLang) {
+    // Same language — nothing to translate
+    return;
+  }
+
+  const btn = document.getElementById('support-translate-btn');
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Translating…';
+
+  try {
+    const resp = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text, source_lang: _supportAgentLang, target_lang: targetLang, advanced: true })
+    });
+    const data = await resp.json();
+    if (data && data.translated) {
+      ta.value = data.translated;
+    } else {
+      alert('Translation failed: ' + (data.error || 'Unknown error'));
+    }
+  } catch (e) {
+    alert('Translation failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+
+async function loadSupportTemplates() {
+  try {
+    const tpls = await apiFetch('/api/support/templates') || [];
+    _supportTemplates = tpls;
+    const sel = document.getElementById('support-templates');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">📋 Insert a quick reply template…</option>' +
+      tpls.map((t, i) => '<option value="' + i + '">' + t.title + '</option>').join('');
+  } catch(e) {}
+}
+
+function insertTemplate() {
+  const sel = document.getElementById('support-templates');
+  const idx = sel.value;
+  if (idx === '' || !_supportTemplates[idx]) return;
+  const tpl = _supportTemplates[idx];
+  const customerName = (_selectedConv && _selectedConv.user_name) ? _selectedConv.user_name.split(' ')[0] : 'there';
+  let body = (tpl.body || '')
+    .replace(/\{customer_name\}/g, customerName)
+    .replace(/\{agent_name\}/g, _supportAgentName);
+  const ta = document.getElementById('support-reply');
+  ta.value = body;
+  ta.focus();
+  sel.value = '';
 }
 
 async function sendReply() {
