@@ -639,25 +639,38 @@ async function _lfTranslateBatch(texts, lang) {
   // Skip empty / numeric / already-translated strings
   const todo = [...new Set(texts)].filter(t => t && t.trim() && !_LF_I18N.cache[t] && !/^[\d\s\W]+$/.test(t));
   if (!todo.length) return;
-  // Translate in parallel with caps to avoid rate limits
   const token = sessionStorage.getItem('lf_token');
-  await Promise.all(todo.map(async (text) => {
-    if (_LF_I18N.cache[text]) return;
-    if (_LF_I18N.inflight.has(text)) return _LF_I18N.inflight.get(text);
-    const p = (async () => {
-      try {
-        const r = await fetch('/api/translate', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: text, source_lang: 'en', target_lang: lang, advanced: true })
+
+  // ONE HTTP request via /api/translate-batch (much friendlier to the WAF
+  // / rate limiter than firing 50 parallel /api/translate calls).
+  // Cap at 200 strings per batch (server limit). For larger pages we slice.
+  const CHUNK = 100;
+  for (let i = 0; i < todo.length; i += CHUNK) {
+    const slice = todo.slice(i, i + CHUNK);
+    try {
+      const r = await fetch('/api/translate-batch', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texts: slice, source_lang: 'en', target_lang: lang })
+      });
+      if (!r.ok) {
+        // 403 (WAF) / 429 (rate limit) / 5xx — back off and skip this batch
+        // silently. The page stays in English, much better UX than a broken
+        // page or a flood of errors. Next page-load will retry from cache.
+        console.warn('[i18n] Translate batch failed:', r.status);
+        continue;
+      }
+      const data = await r.json();
+      if (data && Array.isArray(data.translations)) {
+        slice.forEach((src, idx) => {
+          const tr = data.translations[idx];
+          if (tr && tr !== src) _LF_I18N.cache[src] = tr;
         });
-        const data = await r.json();
-        if (data && data.translated) _LF_I18N.cache[text] = data.translated;
-      } catch (e) {}
-    })();
-    _LF_I18N.inflight.set(text, p);
-    return p;
-  }));
+      }
+    } catch (e) {
+      console.warn('[i18n] Translate batch error:', e);
+    }
+  }
   _lfSaveCache(lang);
 }
 

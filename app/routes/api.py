@@ -163,6 +163,41 @@ def transcribe_audio():
         return jsonify({'error': str(e)}), 500
 
 
+@api_bp.route('/translate-batch', methods=['POST'])
+@token_required
+def translate_batch():
+    """Translate multiple strings in one HTTP request. Used by the i18n
+    helper on the customer dashboard so we only fire ONE call instead of
+    50+ that would trip the rate limiter / WAF.
+
+    Request:  { "texts": [...], "source_lang": "en", "target_lang": "es" }
+    Response: { "translations": [...] }   (same order as input, "" on error)
+    """
+    data = request.get_json() or {}
+    texts = data.get('texts') or []
+    source_lang = data.get('source_lang', 'en')
+    target_lang = data.get('target_lang', 'es')
+
+    if not isinstance(texts, list) or not texts:
+        return jsonify({'translations': []})
+    if len(texts) > 200:
+        return jsonify({'error': 'Max 200 strings per batch'}), 400
+    if source_lang == target_lang:
+        return jsonify({'translations': list(texts)})
+
+    out = []
+    for t in texts:
+        try:
+            if not t or not isinstance(t, str):
+                out.append('')
+                continue
+            tr = translator.translate(t, source_lang, target_lang)
+            out.append(tr or t)
+        except Exception:
+            out.append(t or '')
+    return jsonify({'translations': out})
+
+
 @api_bp.route('/translate', methods=['POST'])
 @token_required
 def translate_text():

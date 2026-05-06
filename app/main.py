@@ -130,7 +130,7 @@ _rate_store = defaultdict(list)
 RATE_LIMITS = {
     '/api/auth/login': (5, 60),      # 5 requests per 60 seconds
     '/api/auth/signup': (3, 60),     # 3 per 60s
-    '/api/translate': (30, 60),      # 30 per 60s
+    '/api/translate': (300, 60),     # 300 per 60s — i18n auto-translate on dashboard load fires many requests in parallel; batch endpoint /api/translate-batch is preferred but legacy callers still exist
     '/api/transcribe': (20, 60),     # 20 per 60s
     '/api/synthesize': (20, 60),     # 20 per 60s
 }
