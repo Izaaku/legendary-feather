@@ -1085,23 +1085,80 @@ function closeSidebar() {
 // ── SIDEBAR VIEW FUNCTIONS ──
 function showLanguagesView() {
   const plan = plans[mapPlanToMockKey(userPlan)] || plans.personal;
+  // Languages → clickable. Each one links to /app?lang=XX which preselects
+  // it as Lang2 (target) so the user can immediately start translating from
+  // their native language INTO the one they clicked.
+  const CORE_LANGS = [
+    {code:'en', name:'English'},   {code:'es', name:'Spanish'},
+    {code:'fr', name:'French'},    {code:'de', name:'German'},
+    {code:'it', name:'Italian'},   {code:'pt', name:'Portuguese'},
+    {code:'pl', name:'Polish'},    {code:'tr', name:'Turkish'},
+    {code:'ru', name:'Russian'},   {code:'nl', name:'Dutch'},
+    {code:'cs', name:'Czech'},     {code:'ar', name:'Arabic'},
+    {code:'zh', name:'Chinese'},   {code:'ja', name:'Japanese'},
+    {code:'ko', name:'Korean'},    {code:'hu', name:'Hungarian'},
+  ];
+  const ALL_LANGS = [
+    {code:'hi', name:'Hindi'},        {code:'fil', name:'Filipino'},
+    {code:'sv', name:'Swedish'},      {code:'da', name:'Danish'},
+    {code:'th', name:'Thai'},         {code:'vi', name:'Vietnamese'},
+    {code:'id', name:'Indonesian'},   {code:'tl', name:'Tagalog'},
+    {code:'bn', name:'Bengali'},      {code:'ta', name:'Tamil'},
+    {code:'te', name:'Telugu'},       {code:'el', name:'Greek'},
+    {code:'ro', name:'Romanian'},     {code:'bg', name:'Bulgarian'},
+    {code:'uk', name:'Ukrainian'},    {code:'no', name:'Norwegian'},
+    {code:'fi', name:'Finnish'},      {code:'he', name:'Hebrew'},
+    {code:'fa', name:'Persian'},      {code:'ur', name:'Urdu'},
+    {code:'ms', name:'Malay'},        {code:'sw', name:'Swahili'},
+    {code:'mr', name:'Marathi'},      {code:'gu', name:'Gujarati'},
+    {code:'kn', name:'Kannada'},      {code:'ml', name:'Malayalam'},
+    {code:'pa', name:'Punjabi'},      {code:'sk', name:'Slovak'},
+    {code:'hr', name:'Croatian'},     {code:'sr', name:'Serbian'},
+    {code:'sl', name:'Slovenian'},    {code:'lt', name:'Lithuanian'},
+    {code:'lv', name:'Latvian'},      {code:'et', name:'Estonian'},
+    {code:'is', name:'Icelandic'},    {code:'mt', name:'Maltese'},
+    {code:'sq', name:'Albanian'},     {code:'mk', name:'Macedonian'},
+    {code:'bs', name:'Bosnian'},      {code:'hy', name:'Armenian'},
+    {code:'az', name:'Azerbaijani'},  {code:'kk', name:'Kazakh'},
+    {code:'mn', name:'Mongolian'},    {code:'my', name:'Burmese'},
+    {code:'km', name:'Khmer'},        {code:'lo', name:'Laotian'},
+    {code:'si', name:'Sinhala'},      {code:'ne', name:'Nepali'},
+    {code:'am', name:'Amharic'},      {code:'yo', name:'Yoruba'},
+    {code:'ha', name:'Hausa'},        {code:'ig', name:'Igbo'},
+    {code:'zu', name:'Zulu'},         {code:'af', name:'Afrikaans'},
+    {code:'cy', name:'Welsh'},        {code:'ga', name:'Irish'},
+    {code:'ca', name:'Catalan'},      {code:'eu', name:'Basque'},
+    {code:'gl', name:'Galician'},
+  ];
+
+  const renderChip = (l, accent) => {
+    const bg = accent ? 'var(--gold-dim)' : 'var(--bg3)';
+    const color = accent ? 'var(--gold)' : 'var(--text)';
+    return '<a href="/app?lang=' + l.code + '" ' +
+      'style="display:inline-block;padding:8px 14px;border-radius:8px;background:' + bg + ';border:1px solid var(--border);font-size:12px;color:' + color + ';text-decoration:none;transition:transform 0.15s ease, background 0.15s ease;" ' +
+      'onmouseover="this.style.transform=\'translateY(-2px)\';this.style.background=\'var(--gold)\';this.style.color=\'#000\';" ' +
+      'onmouseout="this.style.transform=\'\';this.style.background=\'' + bg + '\';this.style.color=\'' + color + '\';" ' +
+      'title="Translate to ' + l.name + '">' + l.name + '</a>';
+  };
+
   document.getElementById('main-content').innerHTML = `
     <div class="welcome-header animate-in">
       <div><div class="welcome-name">Languages</div>
-      <div class="welcome-date">100+ languages supported</div></div>
+      <div class="welcome-date">100+ languages supported &middot; tap any to start translating</div></div>
     </div>
     <div class="card animate-in delay-1">
-      <div class="card-header"><div class="card-title">Core Languages <em>(16 native TTS)</em></div></div>
+      <div class="card-header"><div class="card-title">Core Languages <em>(16 with premium voice)</em></div></div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;">
-        ${['English','Spanish','French','German','Italian','Portuguese','Polish','Turkish','Russian','Dutch','Czech','Arabic','Chinese','Japanese','Korean','Hungarian'].map(l =>
-          '<span style="padding:8px 14px;border-radius:8px;background:var(--gold-dim);border:1px solid var(--border);font-size:12px;color:var(--gold);">'+l+'</span>'
-        ).join('')}
+        ${CORE_LANGS.map(l => renderChip(l, true)).join('')}
       </div>
     </div>
     <div class="card animate-in delay-2">
       <div class="card-header"><div class="card-title">All Supported Languages</div></div>
-      <div style="font-size:13px;color:var(--text-sub);line-height:2;">
-        Hindi, Filipino, Swedish, Danish, Thai, Vietnamese, Indonesian, Bengali, Tamil, Telugu, Greek, Romanian, Bulgarian, Ukrainian, Norwegian, Finnish, and 80+ more...
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${ALL_LANGS.map(l => renderChip(l, false)).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:14px;font-style:italic;">
+        Plus 30+ more available inside the app's language picker. Click any language above to start translating with it preselected.
       </div>
     </div>`;
 }
