@@ -633,17 +633,15 @@ def ocr_image():
         return jsonify({'error': str(e)}), 500
 
 
-@api_bp.route('/health', methods=['GET'])
-def health_check():
-    """Check health of all services."""
-    tts_health = tts_engine.health_check()
-    return jsonify({
-        'status': 'ok',
-        'mode': 'cloud',
-        'services': {
-            'whisper_api': whisper.is_available(),
-            'deepl': translator.health_check(),
-            'openai_tts': tts_health.get('openai_tts', False),
-            'elevenlabs': tts_health.get('elevenlabs', False),
-        }
-    })
+@api_bp.route('/dashboard/stats', methods=['GET'])
+@token_required
+def dashboard_stats():
+    """Real dashboard stats — replaces mock numbers in the customer dashboard.
+
+    Returns: minutes used/total, sessions today, top languages used, and
+    the most recent translation sessions for the Recent Activity card.
+    No mock data — all values come from the conversations table.
+    """
+    from sqlalchemy import func, desc
+    user_id = g.current_user['user_id']
+    db = d

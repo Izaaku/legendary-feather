@@ -903,73 +903,54 @@ function switchPlanView(planKey, btn) {
 }
 
 // ── DATA ──
+// Plan templates (V1 traveler-only). All usage stats (history, topLangs, used,
+// minutes) are populated from the live /api/dashboard/stats endpoint at render
+// time — no mock numbers leak through if the API call fails the dashboard
+// shows real empty states instead of fake activity.
 const plans = {
   personal: {
     name: 'Personal',
     price: '€9.99',
     minutes: 60,
-    used: 23,
+    used: 0,
     features: ['Face-to-face mode', '100+ languages', 'Standard voices', 'Android & iOS'],
-    locked: ['Premium voices', 'Regional dialects', 'Meeting history', 'Team management', 'API access'],
+    locked: ['Premium voices', 'Regional dialects', 'Full history'],
     extraCost: '€0.15/min',
-    upgradeTo: 'Premium',
-    history: [
-      { text: '<strong>Spanish → English</strong> conversation at café', time: '2h ago', dot: '' },
-      { text: '<strong>French → English</strong> hotel check-in', time: 'Yesterday', dot: 'green' },
-      { text: '<strong>Italian → English</strong> restaurant order', time: '3 days ago', dot: 'blue' },
-    ],
-    topLangs: ['Spanish', 'French', 'Italian', 'Portuguese', 'German'],
+    upgradeTo: null,
+    history: [],
+    topLangs: [],
   },
   premium: {
     name: 'Premium',
     price: '€24.99',
     minutes: 200,
-    used: 87,
+    used: 0,
     features: ['Face-to-face mode', '100+ languages', 'Premium voices', 'Regional dialects', 'Full history', 'Priority processing'],
-    locked: ['Meeting history', 'Team management', 'API access'],
+    locked: [],
     extraCost: '€0.15/min',
-    upgradeTo: 'Business',
-    history: [
-      { text: '<strong>Japanese → English</strong> business call', time: '1h ago', dot: '' },
-      { text: '<strong>Korean → Spanish</strong> hotel check-in', time: '5h ago', dot: 'green' },
-      { text: '<strong>Arabic → English</strong> client meeting', time: 'Yesterday', dot: '' },
-      { text: '<strong>Mandarin → English</strong> webinar translation', time: '2 days ago', dot: 'blue' },
-      { text: '<strong>Hindi → English</strong> long-distance call', time: '3 days ago', dot: 'green' },
-    ],
-    topLangs: ['Japanese', 'Korean', 'Arabic', 'Mandarin', 'Hindi', 'French'],
+    upgradeTo: null,
+    history: [],
+    topLangs: [],
   },
   business: {
     name: 'Business',
     price: '€89.99',
     minutes: 1000,
-    used: 412,
-    features: ['All modes + API access', '1,100+ languages', 'Meeting AI summaries', 'Transcription export', 'SLA + Priority support', 'Shared team dashboard'],
+    used: 0,
+    features: ['All modes', '100+ languages', 'Premium voices', 'Priority processing', 'Full history'],
     locked: [],
-    extraCost: '€0.14/min · Fair use: 3,000 min',
+    extraCost: '€0.14/min',
     upgradeTo: null,
-    history: [
-      { text: '<strong>EN→DE→FR</strong> Multi-language board meeting (6 participants)', time: '30min ago', dot: '' },
-      { text: '<strong>EN→JP</strong> Client pitch — Sarah M.', time: '3h ago', dot: 'green' },
-      { text: '<strong>EN→PT</strong> Weekly LATAM sync — Team auto-transcribed', time: 'Yesterday', dot: 'blue' },
-      { text: '<strong>EN→ZH</strong> Supplier negotiation — AI summary generated', time: '2 days ago', dot: '' },
-    ],
-    topLangs: ['German', 'French', 'Japanese', 'Portuguese', 'Mandarin', 'Arabic', 'Korean', 'Hindi'],
-    meetings: [
-      { title: 'Q2 Board Review — Multilingual', date: 'Apr 17, 2026', duration: '47 min', langs: 'EN, DE, FR', participants: 6, summary: 'Revenue targets exceeded by 12%. Expansion into DACH approved. Next steps: hire regional PM by May 15.' },
-      { title: 'Client Pitch — Nakamura Corp', date: 'Apr 16, 2026', duration: '32 min', langs: 'EN, JP', participants: 4, summary: 'Positive reception on enterprise tier. Follow-up demo scheduled for Apr 23. Key concern: data residency in Japan.' },
-      { title: 'LATAM Weekly Sync', date: 'Apr 15, 2026', duration: '28 min', langs: 'EN, ES, PT', participants: 5, summary: 'Brazil launch on track for May 1. Mexico partner agreement pending legal review. Colombia pilot at 800 users.' },
-      { title: 'Supplier Call — Shenzhen', date: 'Apr 14, 2026', duration: '19 min', langs: 'EN, ZH', participants: 3, summary: 'Component pricing locked at $0.42/unit for Q3. MOQ reduced to 5,000. Shipping lead time: 3 weeks.' },
-      { title: 'EU Compliance Review', date: 'Apr 12, 2026', duration: '38 min', langs: 'EN, DE, FR', participants: 4, summary: 'GDPR audit passed. New data retention policy approved. Voice data auto-deletes after 90 days.' },
-    ],
-    team: [
-      { name: 'Sarah Mitchell', role: 'Sales Lead', initials: 'SM', minutes: 156, online: true },
-      { name: 'Carlos Vega', role: 'LATAM Manager', initials: 'CV', minutes: 89, online: true },
-      { name: 'Yuki Tanaka', role: 'Japan Operations', initials: 'YT', minutes: 72, online: false },
-      { name: 'Marc Dupont', role: 'EU Director', initials: 'MD', minutes: 58, online: true },
-      { name: 'Priya Sharma', role: 'India Market', initials: 'PS', minutes: 37, online: false },
-    ],
+    history: [],
+    topLangs: [],
+    meetings: [],
+    team: [],
   }
 };
+
+// In-memory cache for the most recent /api/dashboard/stats payload so we can
+// re-render without re-fetching when the user toggles language / view.
+let dashboardStats = null;
 
 // Map real plan slugs (free, travel_pass, tourist, tourist_pro, payg, solo,
 // team, scale, owner) to one of the 3 mockup categories used by this dashboard
@@ -998,13 +979,94 @@ function mapPlanToMockKey(slug) {
   return map[slug] || 'personal';
 }
 
+// ── Helpers used by the dashboard stats hydrator ─────────────────────
+const _LF_LANG_NAMES = {
+  en: 'English', es: 'Spanish', fr: 'French', de: 'German', it: 'Italian',
+  pt: 'Portuguese', nl: 'Dutch', pl: 'Polish', ru: 'Russian', ja: 'Japanese',
+  ko: 'Korean', zh: 'Chinese', ar: 'Arabic', hi: 'Hindi', tr: 'Turkish',
+  sv: 'Swedish', da: 'Danish', no: 'Norwegian', fi: 'Finnish', cs: 'Czech',
+  el: 'Greek', he: 'Hebrew', th: 'Thai', vi: 'Vietnamese', id: 'Indonesian',
+  uk: 'Ukrainian', ro: 'Romanian', hu: 'Hungarian',
+};
+function _lfGetLangName(code) {
+  if (!code) return '';
+  const c = String(code).toLowerCase().slice(0,2);
+  return _LF_LANG_NAMES[c] || code.toUpperCase();
+}
+
+function _lfFormatRelTime(iso) {
+  if (!iso) return '';
+  try {
+    const t = new Date(iso).getTime();
+    const diffSec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+    if (diffSec < 60) return 'Just now';
+    if (diffSec < 3600) return Math.floor(diffSec / 60) + 'm ago';
+    if (diffSec < 86400) return Math.floor(diffSec / 3600) + 'h ago';
+    if (diffSec < 86400 * 7) return Math.floor(diffSec / 86400) + 'd ago';
+    return new Date(iso).toLocaleDateString();
+  } catch (e) { return ''; }
+}
+
+// Pull live stats from /api/dashboard/stats and re-render the current view.
+async function loadDashboardStats() {
+  const token = sessionStorage.getItem('lf_token');
+  if (!token) return;
+  try {
+    const r = await fetch('/api/dashboard/stats', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!r.ok) return;
+    dashboardStats = await r.json();
+
+    // Keep currentSession's minutes_used/total in sync so other views
+    // (Settings, sidebar) reflect the latest numbers without another fetch.
+    if (currentSession && dashboardStats) {
+      currentSession.minutes_used = dashboardStats.minutes_used;
+      currentSession.minutes_total = dashboardStats.minutes_total;
+      try { sessionStorage.setItem('lf_session', JSON.stringify(currentSession)); } catch(e) {}
+    }
+
+    // Re-render the dashboard with fresh data
+    if (currentSession) {
+      showPlan(mapPlanToMockKey(currentSession.plan || 'free'));
+    }
+  } catch (e) {
+    // Silent — empty states are already rendered, no need to alarm the user.
+  }
+}
+
 function showPlan(planKey) {
   // Defensive: ensure planKey resolves to a valid mockup entry. If a caller
   // passes a real plan slug like 'free', map it to 'personal'.
   const resolvedKey = plans[planKey] ? planKey : mapPlanToMockKey(planKey);
   const plan = plans[resolvedKey] || plans.personal;
-  const pct = Math.round((plan.used / plan.minutes) * 100);
-  const remaining = plan.minutes - plan.used;
+
+  // Hydrate `plan` with real values from /api/dashboard/stats so the dashboard
+  // never shows mock numbers. Fall back to currentSession (which has at least
+  // minutes_used/total from /auth/login) and finally to the template defaults.
+  if (dashboardStats) {
+    plan.used = dashboardStats.minutes_used || 0;
+    if (typeof dashboardStats.minutes_total === 'number') plan.minutes = dashboardStats.minutes_total;
+    plan.history = (dashboardStats.recent || []).map(r => {
+      const src = (r.source_lang || '').toUpperCase();
+      const tgt = (r.target_lang || '').toUpperCase();
+      const dur = r.duration_minutes ? ` &middot; ${r.duration_minutes} min` : '';
+      const time = _lfFormatRelTime(r.started_at);
+      return {
+        text: `<strong>${src} → ${tgt}</strong> ${r.mode === 'face_to_face' ? 'Face-to-Face' : 'Conference'}${dur}`,
+        time: time,
+        dot: r.status === 'completed' ? 'green' : (r.status === 'active' ? '' : 'blue')
+      };
+    });
+    plan.topLangs = (dashboardStats.top_langs || []);
+  } else if (currentSession && typeof currentSession.minutes_used === 'number') {
+    plan.used = currentSession.minutes_used;
+    if (typeof currentSession.minutes_total === 'number') plan.minutes = currentSession.minutes_total;
+  }
+
+  const safeMinutes = plan.minutes || 1;
+  const pct = Math.round((plan.used / safeMinutes) * 100);
+  const remaining = Math.max(0, plan.minutes - plan.used);
   const circumference = 2 * Math.PI * 58;
   const offset = circumference - (pct / 100) * circumference;
 
@@ -1062,26 +1124,29 @@ function showPlan(planKey) {
       </div>
     </div>`;
 
-  // Sessions today
+  // Sessions today (real data from /api/dashboard/stats — falls back to 0 if not fetched yet)
+  const sessionsToday = (dashboardStats && typeof dashboardStats.sessions_today === 'number') ? dashboardStats.sessions_today : 0;
+  const minutesToday = (dashboardStats && typeof dashboardStats.minutes_today === 'number') ? dashboardStats.minutes_today : 0;
   html += `
     <div class="stat-card">
       <div class="stat-icon">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/></svg>
       </div>
       <div class="stat-label">Sessions Today</div>
-      <div class="stat-value">${planKey === 'business' ? '12' : planKey === 'premium' ? '5' : '2'}</div>
-      <div class="stat-sub">${planKey === 'business' ? '47 min total' : planKey === 'premium' ? '23 min total' : '8 min total'}</div>
+      <div class="stat-value">${sessionsToday}</div>
+      <div class="stat-sub">${minutesToday > 0 ? minutesToday + ' min total' : 'No sessions yet today'}</div>
     </div>`;
 
-  // Languages used
+  // Languages used (real count from last 30 days)
+  const langsCount = (dashboardStats && typeof dashboardStats.languages_used_count === 'number') ? dashboardStats.languages_used_count : plan.topLangs.length;
   html += `
     <div class="stat-card">
       <div class="stat-icon">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10"/></svg>
       </div>
       <div class="stat-label">Languages Used</div>
-      <div class="stat-value">${plan.topLangs.length}</div>
-      <div class="stat-sub">this month</div>
+      <div class="stat-value">${langsCount}</div>
+      <div class="stat-sub">${langsCount > 0 ? 'last 30 days' : 'Start your first session'}</div>
     </div>`;
 
 
@@ -1100,68 +1165,74 @@ function showPlan(planKey) {
         Change Languages
       </button>`;
 
-  if (planKey === 'premium' || planKey === 'business') {
-    html += `<button class="quick-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-        Manage Voices
-      </button>`;
-  }
 
   html += `</div></div>`;
 
   // ── GRID CONTENT ──
   html += `<div class="grid-2 animate-in delay-3">`;
 
-  // Recent Activity
+  // Recent Activity (real conversation history from /api/dashboard/stats)
   html += `<div class="card">
     <div class="card-header">
       <div class="card-title">Recent <em>Activity</em></div>
-      <a class="card-action" href="#">View All</a>
+      ${plan.history.length > 0 ? '<a class="card-action" href="#" onclick="event.preventDefault(); switchView(\'history\');">View All</a>' : ''}
     </div>`;
-  plan.history.forEach(h => {
-    html += `<div class="activity-item">
-      <div class="activity-dot ${h.dot}"></div>
-      <div class="activity-text">${h.text}</div>
-      <div class="activity-time">${h.time}</div>
+  if (plan.history.length === 0) {
+    html += `<div style="padding:24px 8px;text-align:center;color:var(--text-muted);">
+      <div style="font-size:13px;margin-bottom:6px;color:var(--text-sub);">No translations yet</div>
+      <div style="font-size:11px;line-height:1.6;">Start your first conversation and your activity will appear here.</div>
     </div>`;
-  });
+  } else {
+    plan.history.forEach(h => {
+      html += `<div class="activity-item">
+        <div class="activity-dot ${h.dot || ''}"></div>
+        <div class="activity-text">${h.text}</div>
+        <div class="activity-time">${h.time}</div>
+      </div>`;
+    });
+  }
   html += `</div>`;
 
-  // Top Languages
+  // Top Languages — built from real /api/dashboard/stats top_langs (last 30 days)
   html += `<div class="card">
     <div class="card-header">
       <div class="card-title">Top <em>Languages</em></div>
-      <a class="card-action" href="#">See All ${planKey === 'business' ? '1,100+' : '100+'}</a>
-    </div>
-    <div class="lang-chips">`;
-  plan.topLangs.forEach((l, i) => {
-    html += `<div class="lang-chip ${i === 0 ? 'active' : ''}">${l}</div>`;
-  });
-  html += `</div>
-    <div style="margin-top:20px;">
-      <div class="usage-bar-container">
+      <a class="card-action" href="#">100+ available</a>
+    </div>`;
+
+  if (plan.topLangs.length === 0) {
+    html += `<div style="padding:24px 8px;text-align:center;color:var(--text-muted);">
+      <div style="font-size:13px;margin-bottom:6px;color:var(--text-sub);">No language data yet</div>
+      <div style="font-size:11px;line-height:1.6;">Your most-used languages will appear here once you start translating.</div>
+    </div>`;
+  } else {
+    // chips
+    html += `<div class="lang-chips">`;
+    plan.topLangs.forEach((l, i) => {
+      const label = (typeof l === 'string') ? l : (_lfGetLangName ? _lfGetLangName(l.lang) : l.lang);
+      html += `<div class="lang-chip ${i === 0 ? 'active' : ''}">${label}</div>`;
+    });
+    html += `</div>`;
+
+    // usage bars: compute real percentages from counts, top 3
+    const top3 = plan.topLangs.slice(0, 3);
+    const totalCount = top3.reduce((s, l) => s + (typeof l === 'object' ? (l.count || 0) : 0), 0) || 1;
+    html += `<div style="margin-top:20px;">`;
+    top3.forEach(l => {
+      const label = (typeof l === 'string') ? l : (_lfGetLangName ? _lfGetLangName(l.lang) : l.lang);
+      const cnt = (typeof l === 'object') ? (l.count || 0) : 0;
+      const pct = Math.round((cnt / totalCount) * 100);
+      html += `<div class="usage-bar-container">
         <div class="usage-bar-header">
-          <span class="usage-bar-label">${plan.topLangs[0]}</span>
-          <span class="usage-bar-value">42%</span>
+          <span class="usage-bar-label">${label}</span>
+          <span class="usage-bar-value">${pct}%</span>
         </div>
-        <div class="usage-bar"><div class="usage-bar-fill" style="width:42%"></div></div>
-      </div>
-      <div class="usage-bar-container">
-        <div class="usage-bar-header">
-          <span class="usage-bar-label">${plan.topLangs[1]}</span>
-          <span class="usage-bar-value">28%</span>
-        </div>
-        <div class="usage-bar"><div class="usage-bar-fill" style="width:28%"></div></div>
-      </div>
-      <div class="usage-bar-container">
-        <div class="usage-bar-header">
-          <span class="usage-bar-label">${plan.topLangs[2]}</span>
-          <span class="usage-bar-value">18%</span>
-        </div>
-        <div class="usage-bar"><div class="usage-bar-fill" style="width:18%"></div></div>
-      </div>
-    </div>
-  </div>`;
+        <div class="usage-bar"><div class="usage-bar-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
 
   html += `</div>`; // close grid-2
 
@@ -1276,9 +1347,12 @@ function showPlan(planKey) {
   document.getElementById('main-content').innerHTML = html;
 }
 
-// Init — load user's actual plan from session
+// Init — load user's actual plan from session, then immediately fetch real
+// stats from /api/dashboard/stats and re-render. The first paint shows empty
+// states; the second (a few hundred ms later) replaces them with real data.
 const userPlan = currentSession ? currentSession.plan : 'free';
 showPlan(mapPlanToMockKey(userPlan));
+loadDashboardStats();
 
 // Highlight the correct switcher button for owners
 if (currentSession && currentSession.is_owner) {
@@ -1434,6 +1508,7 @@ function userHasVoiceCloning() {
 //  Voice cloning is deferred to V2 — see Config.VOICE_CLONING_ENABLED.)
 
 function showHistoryView() {
+  // Render shell first, then fill with real data from /api/dashboard/stats
   document.getElementById('main-content').innerHTML = `
     <div class="welcome-header animate-in">
       <div><div class="welcome-name">Translation History</div>
@@ -1441,8 +1516,41 @@ function showHistoryView() {
     </div>
     <div class="card animate-in delay-1">
       <div class="card-header"><div class="card-title">Recent Sessions</div></div>
-      <div style="color:var(--text-sub);font-size:13px;">No translation sessions recorded yet. Start a translation to see your history here.</div>
+      <div id="historyList" style="color:var(--text-sub);font-size:13px;">Loading…</div>
     </div>`;
+
+  const renderList = (items) => {
+    const el = document.getElementById('historyList');
+    if (!el) return;
+    if (!items || items.length === 0) {
+      el.innerHTML = '<div style="padding:16px 0;color:var(--text-muted);">No translation sessions recorded yet. Start a translation to see your history here.</div>';
+      return;
+    }
+    el.innerHTML = items.map(r => {
+      const src = _lfGetLangName(r.source_lang);
+      const tgt = _lfGetLangName(r.target_lang);
+      const dur = r.duration_minutes ? r.duration_minutes + ' min' : '—';
+      const when = _lfFormatRelTime(r.started_at);
+      const mode = r.mode === 'face_to_face' ? 'Face-to-Face' : (r.mode || 'Conversation');
+      const dot = r.status === 'completed' ? 'green' : (r.status === 'active' ? '' : 'blue');
+      return `<div class="activity-item">
+        <div class="activity-dot ${dot}"></div>
+        <div class="activity-text"><strong>${src} → ${tgt}</strong> &middot; ${mode}</div>
+        <div class="activity-time">${when} &middot; ${dur}</div>
+      </div>`;
+    }).join('');
+  };
+
+  if (dashboardStats && dashboardStats.recent) {
+    renderList(dashboardStats.recent);
+  } else {
+    // Fetch on demand if we don't have it yet
+    const token = sessionStorage.getItem('lf_token');
+    fetch('/api/dashboard/stats', { headers: { 'Authorization': 'Bearer ' + token } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) { dashboardStats = d; renderList(d.recent || []); } else { renderList([]); } })
+      .catch(() => renderList([]));
+  }
 }
 
 function showSettingsView() {
