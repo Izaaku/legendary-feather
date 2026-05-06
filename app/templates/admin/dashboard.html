@@ -353,6 +353,17 @@
           </select>
           <button class="btn-secondary" onclick="loadSupport()" style="padding:8px 12px; font-size:11px;">↻ Refresh</button>
         </div>
+        <div style="padding:10px 16px; border-bottom:1px solid var(--border); display:flex; gap:6px; align-items:center; font-size:11px; color:var(--text-sub);">
+          <span>You write in:</span>
+          <select id="support-agent-lang" onchange="setAgentLang(this.value)" style="padding:4px 8px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); font-size:11px;">
+            <option value="es">🇪🇸 Spanish</option>
+            <option value="en">🇺🇸 English</option>
+            <option value="fr">🇫🇷 French</option>
+            <option value="pt">🇵🇹 Portuguese</option>
+            <option value="it">🇮🇹 Italian</option>
+            <option value="de">🇩🇪 German</option>
+          </select>
+        </div>
         <div id="support-list" style="overflow-y:auto; max-height:560px;">
           <div class="loading"><div class="spinner"></div><br>Loading...</div>
         </div>
@@ -484,6 +495,8 @@ async function loadSupport() {
         _myUserId = me.user.user_id;
         _supportAgentName = (me.user.name || 'Support').split(' ')[0];
         _supportAgentLang = (me.user.preferred_source_lang || 'en').toLowerCase().slice(0,2);
+        const sel = document.getElementById('support-agent-lang');
+        if (sel) sel.value = _supportAgentLang;
       }
     } catch(e) {}
   }
@@ -603,11 +616,65 @@ async function selectConv(convId) {
     '</div>';
   }).join('');
   msgsEl.scrollTop = msgsEl.scrollHeight;
+  _supportAdminLastMsgCount = msgs.length;
+  startAdminSupportPolling();
 }
 
 let _supportTemplates = [];
 let _supportAgentName = 'Support';
-let _supportAgentLang = 'en';  // The agent's own UI language — used as the source when auto-translating
+let _supportAgentLang = 'en';
+let _supportAdminPollTimer = null;
+let _supportAdminLastMsgCount = 0;
+
+async function setAgentLang(lang) {
+  if (!lang) return;
+  _supportAgentLang = lang.toLowerCase().slice(0,2);
+  // Re-evaluate translate-button visibility for the selected conversation
+  if (_selectedConv) {
+    const targetLang = _selectedConv.customer_language || 'en';
+    const translateBtn = document.getElementById('support-translate-btn');
+    if (translateBtn) translateBtn.style.display = (targetLang === _supportAgentLang) ? 'none' : 'inline-block';
+  }
+  // Persist to the User row so reloads remember the preference
+  try {
+    await fetch('/api/auth/me', {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferred_source_lang: _supportAgentLang })
+    });
+  } catch (e) {}
+}
+
+function startAdminSupportPolling() {
+  stopAdminSupportPolling();
+  _supportAdminPollTimer = setInterval(async () => {
+    if (!_selectedConv) return;
+    try {
+      const msgs = await apiFetch('/api/support/conversations/' + _selectedConv.id + '/messages') || [];
+      if (msgs.length !== _supportAdminLastMsgCount) {
+        // Re-render messages without rebuilding the whole detail panel
+        const msgsEl = document.getElementById('support-messages');
+        if (!msgsEl) return;
+        msgsEl.innerHTML = msgs.map(m => {
+          const isAgent = m.sender_type === 'agent';
+          const align = isAgent ? 'flex-end' : 'flex-start';
+          const bg = isAgent ? '#d4a843' : 'var(--surface2)';
+          const fg = isAgent ? '#000' : 'var(--text)';
+          return '<div style="align-self:' + align + ';max-width:75%;background:' + bg + ';color:' + fg + ';padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;">' +
+            '<div style="font-size:10px;opacity:0.7;margin-bottom:4px;font-weight:500;">' + (m.sender_name || (isAgent ? 'You' : 'Customer')) + ' · ' + _supportFmtDate(m.created_at) + '</div>' +
+            '<div style="white-space:pre-wrap;">' + (m.message || '').replace(/[<>]/g, c => ({'<':'&lt;','>':'&gt;'}[c])) + '</div>' +
+          '</div>';
+        }).join('');
+        msgsEl.scrollTop = msgsEl.scrollHeight;
+        _supportAdminLastMsgCount = msgs.length;
+      }
+    } catch (e) {}
+  }, 5000);
+}
+
+function stopAdminSupportPolling() {
+  if (_supportAdminPollTimer) { clearInterval(_supportAdminPollTimer); _supportAdminPollTimer = null; }
+}  // The agent's own UI language — used as the source when auto-translating
 
 const _SUPPORT_LANG_NAMES = {
   en:'English', es:'Spanish', fr:'French', de:'German', it:'Italian', pt:'Portuguese',

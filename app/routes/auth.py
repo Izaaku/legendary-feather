@@ -224,6 +224,34 @@ def get_profile():
         db.close()
 
 
+@auth_bp.route('/me', methods=['PATCH'])
+@token_required
+def update_profile():
+    """Update the current user's profile. For now only the language fields
+    are editable from the client — name/email/password go through dedicated
+    flows so they can validate/notify properly."""
+    data = request.get_json() or {}
+    db = db_session()
+    try:
+        user = db.query(User).filter_by(user_id=g.current_user['user_id']).first()
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        ALLOWED = ('preferred_source_lang', 'preferred_target_lang')
+        changed = False
+        for field in ALLOWED:
+            if field in data and data[field]:
+                v = str(data[field]).strip().lower()[:5]
+                if v:
+                    setattr(user, field, v)
+                    changed = True
+        if changed:
+            db.commit()
+        return jsonify({'user': user.to_dict()})
+    finally:
+        db.close()
+
+
 # ── Password Reset Flow ────────────────────────────────────────────
 # Stateless reset tokens signed with SECRET_KEY. No DB columns needed —
 # the token itself encodes user_id + email + expiry, signed with HMAC.

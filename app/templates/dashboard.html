@@ -1272,8 +1272,11 @@ async function initSupportChat() {
     });
     const messages = await msgResp.json();
     renderChatMessages(messages);
+    _supportLastMsgCount = Array.isArray(messages) ? messages.length : 0;
+    startSupportPolling();
 
-    // Join WebSocket room
+    // Optional WebSocket — only if socket.io is loaded on the page (it isn\'t
+    // on /dashboard, so this block is a no-op there. Kept for future).
     if (typeof io !== 'undefined') {
       if (!supportSocket) supportSocket = io();
       supportSocket.emit('join_chat', { conversation_id: currentConvId });
@@ -1332,33 +1335,64 @@ function appendChatMessage(m) {
   container.scrollTop = container.scrollHeight;
 }
 
-function sendChatMessage() {
+async function sendChatMessage() {
   const input = document.getElementById('chatInput');
   const message = input.value.trim();
   if (!message || !currentConvId) return;
 
-  const user = JSON.parse(sessionStorage.getItem('lf_session') || '{}');
+  const token = sessionStorage.getItem('lf_token');
+  if (!token) { input.focus(); return; }
 
-  // Show immediately in UI
+  // Optimistic UI: show the message immediately so the customer sees their
+  // own typing without waiting for the round-trip. The server response
+  // becomes the source of truth on the next poll.
   appendChatMessage({
     message: message,
     sender_type: 'customer',
     created_at: new Date().toISOString()
   });
-
-  // Send via WebSocket
-  if (supportSocket) {
-    supportSocket.emit('chat_message', {
-      conversation_id: currentConvId,
-      message: message,
-      sender_id: user.user_id || user.id || 'customer',
-      sender_type: 'customer',
-      sender_name: user.name || user.email || 'Customer'
-    });
-  }
-
   input.value = '';
   input.focus();
+
+  // Persist via REST. The dashboard page does NOT load socket.io, so the
+  // earlier WebSocket emit silently no-op'd and messages were lost. REST is
+  // simpler and reliable; we poll for new replies below.
+  try {
+    await fetch('/api/support/conversations/' + currentConvId + '/messages', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: message })
+    });
+  } catch (e) {
+    console.error('[Support] sendChatMessage error:', e);
+  }
+}
+
+// Poll for new agent replies every 5 seconds while the support view is open.
+let _supportPollTimer = null;
+let _supportLastMsgCount = 0;
+
+function startSupportPolling() {
+  stopSupportPolling();
+  _supportPollTimer = setInterval(async () => {
+    if (!currentConvId) return;
+    const token = sessionStorage.getItem('lf_token');
+    if (!token) return;
+    try {
+      const resp = await fetch('/api/support/conversations/' + currentConvId + '/messages', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const messages = await resp.json();
+      if (Array.isArray(messages) && messages.length !== _supportLastMsgCount) {
+        renderChatMessages(messages);
+        _supportLastMsgCount = messages.length;
+      }
+    } catch (e) {}
+  }, 5000);
+}
+
+function stopSupportPolling() {
+  if (_supportPollTimer) { clearInterval(_supportPollTimer); _supportPollTimer = null; }
 }
 
 // ── FAQ View ──
