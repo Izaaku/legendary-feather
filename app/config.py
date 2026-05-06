@@ -261,7 +261,7 @@ PRICING = {
         'minutes_elevenlabs': 0,
         'voice_cloning_profiles': 0,
         'languages': 16,
-        'visible': True,
+        'visible': False,
         'stripe_price_id': stripe_price('solo'),
         'features': [
             '600 minutes / month',
@@ -285,7 +285,7 @@ PRICING = {
         'minutes_elevenlabs': 50,  # per seat / month
         'voice_cloning_profiles': 0,
         'languages': 30,
-        'visible': True,
+        'visible': False,
         'highlight': True,  # most popular for business
         'stripe_price_id': stripe_price('team'),
         'features': [
@@ -311,7 +311,7 @@ PRICING = {
         'minutes_elevenlabs': 200,  # per seat / month
         'voice_cloning_profiles': 0,
         'languages': 50,
-        'visible': True,
+        'visible': False,
         'stripe_price_id': stripe_price('scale'),
         'features': [
             '6,000 standard min + 200 premium min per agent',
@@ -338,7 +338,7 @@ PRICING = {
         'minutes_elevenlabs': -1,
         'voice_cloning_profiles': 0,
         'languages': 100,
-        'visible': True,
+        'visible': False,
         'stripe_price_id': None,  # Enterprise = custom contract, no Stripe Price ID
         'features': [
             'Custom pricing for 50+ agents',

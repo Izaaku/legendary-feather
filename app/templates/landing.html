@@ -531,7 +531,6 @@ footer a:hover { color: var(--gold); }
   <ul class="nav-links">
     <li><a href="#modes">How it works</a></li>
     <li><a href="/pricing">Pricing</a></li>
-    <li><a href="#contact-centers">For Business</a></li>
     <li><a href="/auth?signup=1&amp;next=/app" class="nav-cta nav-cta-primary">Try free</a></li>
   </ul>
 </nav>
@@ -541,10 +540,9 @@ footer a:hover { color: var(--gold); }
   <img src="/static/images/golden-feather-hero.png" class="hero-feather" alt="Legendary Feather">
   <div class="hero-tag">Real-time AI Translation</div>
   <h1 class="hero-h1">Speak freely.<br><em>Translate instantly.</em></h1>
-  <p class="hero-sub">A simultaneous AI interpreter for travelers, expats, and global contact centers. 100+ languages, natural voice, zero friction.</p>
+  <p class="hero-sub">A simultaneous AI interpreter for travelers, expats, and anyone who needs to communicate across languages in person. 100+ languages, natural voice, zero friction.</p>
   <div class="hero-ctas">
     <a href="/auth?signup=1&amp;next=/app" class="btn-primary" onclick="trackCta('Hero - Try Free')">Try free →</a>
-    <a href="#contact-centers" class="btn-secondary">For Contact Centers</a>
   </div>
   <div class="hero-trust">No credit card · 5 free minutes · 100+ languages</div>
 </section>
@@ -570,30 +568,13 @@ footer a:hover { color: var(--gold); }
       </ul>
       <a href="/auth?signup=1&amp;next=/app" class="mode-cta mode-cta-primary" onclick="trackCta('Mode 01 - Try Travel')">Try Face-to-Face free →</a>
     </div>
-
-    <!-- Mode 2: Pro / Contact Centers (COMING SOON) -->
-    <div class="mode-card">
-      <div class="mode-num">02</div>
-      <span class="mode-status status-soon">○ Coming soon</span>
-      <h3 class="mode-title" style="margin-top:14px;">Pro Mode</h3>
-      <div class="mode-tagline">Contact centers · global teams</div>
-      <p class="mode-desc">A real-time translator that works on Zoom, Teams, Twilio Flex, Five9, RingCentral. Your customer hears your agent in perfect English. Your agent hears the customer in their language.</p>
-      <ul class="mode-bullets">
-        <li>~2s average latency</li>
-        <li>Works with any softphone or browser meeting</li>
-        <li>Admin dashboard, analytics, recording, SSO</li>
-        <li>Built for BPOs, e-commerce, global sales teams</li>
-      </ul>
-      <a href="#contact-centers" class="mode-cta mode-cta-ghost">Join Pro waitlist →</a>
-    </div>
-  </div>
 </section>
 
 <!-- Pricing preview -->
 <section class="section" id="pricing">
   <span class="section-label">Pricing</span>
   <h2 class="section-title">Pay only for what <em>you need</em></h2>
-  <p class="section-sub">From a 7-day Travel Pass to enterprise contracts for 200-agent BPOs. Travel plans live now. Pro plans unlock when Pro mode launches.</p>
+  <p class="section-sub">From a 7-day Travel Pass for short trips, to monthly subscriptions for digital nomads and frequent travelers.</p>
 
   <div class="pricing-grid">
     <!-- Free -->
@@ -638,19 +619,6 @@ footer a:hover { color: var(--gold); }
       <a href="/pricing" class="pp-cta pp-cta-ghost" onclick="trackCta('Plan - Tourist Pro')">Get Tourist Pro</a>
     </div>
 
-    <!-- Pro Scale -->
-    <div class="pp-card">
-      <div class="pp-name">Scale</div>
-      <div class="pp-tag">For BPOs &amp; contact centers</div>
-      <div class="pp-price">$249 <small>/ agent / mo</small></div>
-      <div class="pp-meta">10+ agents · Coming soon</div>
-      <ul class="pp-features">
-        <li>Virtual Audio Driver + Extension</li>
-        <li>Per-agent analytics + recording</li>
-        <li>Full API + dashboard + SSO</li>
-      </ul>
-      <a href="#contact-centers" class="pp-cta pp-cta-ghost" onclick="trackCta('Plan - Scale Waitlist')">Join Pro waitlist</a>
-    </div>
   </div>
 
   <div style="text-align:center; margin-top:36px;">
@@ -663,17 +631,14 @@ footer a:hover { color: var(--gold); }
   <span class="section-label">Who uses it</span>
   <h2 class="section-title">From Tokyo to Manila to <em>Mexico City</em></h2>
   <div class="uc-list">
-    <span class="uc-tag">📞 <em>BPOs &amp; call centers</em></span>
-    <span class="uc-tag">🛒 <em>Mercado Libre &amp; Amazon sellers</em></span>
-    <span class="uc-tag">💼 <em>B2B sales reps</em></span>
-    <span class="uc-tag">🩺 <em>Telemedicine</em></span>
-    <span class="uc-tag">✈️ <em>Travelers &amp; expats</em></span>
+    <span class="uc-tag">✈️ <em>Travelers</em></span>
     <span class="uc-tag">🏨 <em>Hospitality &amp; tourism</em></span>
-    <span class="uc-tag">👥 <em>Global recruiters</em></span>
-    <span class="uc-tag">🏠 <em>International real estate</em></span>
+    <span class="uc-tag">🌎 <em>Expats &amp; digital nomads</em></span>
+    <span class="uc-tag">🩺 <em>Telemedicine consultations</em></span>
     <span class="uc-tag">⚖️ <em>Legal consultations</em></span>
-    <span class="uc-tag">🛟 <em>Customer support</em></span>
-    <span class="uc-tag">🌎 <em>Remote teams</em></span>
+    <span class="uc-tag">🏠 <em>International real estate buyers</em></span>
+    <span class="uc-tag">🎓 <em>Students abroad</em></span>
+    <span class="uc-tag">👨‍👩‍👧 <em>Family across borders</em></span>
   </div>
 </section>
 
@@ -688,33 +653,6 @@ footer a:hover { color: var(--gold); }
       <button type="submit">Subscribe</button>
     </form>
     <p class="waitlist-msg" id="travel-form-msg"></p>
-  </div>
-</section>
-
-<!-- Pro / Contact Centers waitlist (qualified lead capture) -->
-<section class="section" id="contact-centers">
-  <span class="section-label">For Contact Centers</span>
-  <h2 class="section-title">Ready for <em>Pro Mode?</em></h2>
-  <p class="section-sub">Pro Mode is launching for BPOs, contact centers and global teams. Join the waitlist and we'll reach out with early access — plus a custom proposal for your team size.</p>
-
-  <div class="waitlist-card">
-    <h3>Get <em>early access</em></h3>
-    <p class="waitlist-sub">Tell us about your team. We'll reach out within 1 business day with a tailored proposal.</p>
-
-    <form id="pro-form" class="waitlist-form-pro" onsubmit="return submitWaitlist(event, 'pro-form', 'Pro - Contact Centers')">
-      <input type="text" name="name" placeholder="Full name *" required maxlength="200">
-      <div class="row">
-        <input type="email" name="email" placeholder="Work email *" required maxlength="320">
-        <input type="text" name="company" placeholder="Company *" required maxlength="200">
-      </div>
-      <div class="row">
-        <input type="text" name="num_agents" placeholder="# of agents (e.g. 25, 100+)" maxlength="10">
-        <input type="text" name="country" placeholder="Country" maxlength="100">
-      </div>
-      <textarea name="use_case" placeholder="What softphone do you use? (Twilio Flex, Five9, Zoom, etc.) Any compliance needs?" maxlength="2000"></textarea>
-      <button type="submit">Request early access →</button>
-    </form>
-    <p class="waitlist-msg" id="pro-form-msg"></p>
   </div>
 </section>
 
