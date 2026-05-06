@@ -1447,6 +1447,19 @@ function showSettingsView() {
       </div>
     </div>
     <div class="card animate-in delay-2">
+      <div class="card-header"><div class="card-title">Display Language</div></div>
+      <p style="font-size:13px;color:var(--text-sub);margin:0 0 12px 0;">
+        We'll show your dashboard, FAQ, and support chat in this language. The same value also tells our support team what language to reply to you in.
+      </p>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;max-width:480px;">
+        <select id="settingsLangSelect" style="flex:1;min-width:200px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:Outfit;font-size:13px;">
+          ${_LF_LANG_CHOICES.map(l => '<option value="' + l.code + '">' + l.flag + ' ' + l.label + '</option>').join('')}
+        </select>
+        <button class="quick-btn primary" onclick="changeDisplayLanguage()">Save</button>
+      </div>
+      <div id="langMsg" style="font-size:12px;margin-top:10px;"></div>
+    </div>
+    <div class="card animate-in delay-3">
       <div class="card-header"><div class="card-title">Change Password</div></div>
       <div style="display:flex;flex-direction:column;gap:12px;max-width:400px;">
         <input type="password" id="currentPw" placeholder="Current password" style="padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:Outfit;">
@@ -1455,10 +1468,47 @@ function showSettingsView() {
         <div id="pwMsg" style="font-size:12px;"></div>
       </div>
     </div>
-    <div class="card animate-in delay-3">
+    <div class="card animate-in delay-4">
       <div class="card-header"><div class="card-title">Danger Zone</div></div>
       <button class="quick-btn" style="border-color:var(--red);color:var(--red);" onclick="logout()">Sign Out</button>
     </div>`;
+
+  // After render, set the dropdown to the current language
+  setTimeout(() => {
+    const sel = document.getElementById('settingsLangSelect');
+    if (sel) sel.value = _lfGetUserLang() || 'en';
+  }, 50);
+}
+
+async function changeDisplayLanguage() {
+  const sel = document.getElementById('settingsLangSelect');
+  const newLang = (sel && sel.value) || 'en';
+  const msg = document.getElementById('langMsg');
+  try {
+    // Persist to backend (same field the support agent reads)
+    const r = await fetch('/api/auth/me', {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('lf_token'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferred_source_lang: newLang })
+    });
+    if (!r.ok) throw new Error('Server returned ' + r.status);
+
+    // Update local session so the i18n helper picks it up
+    try {
+      const sess = JSON.parse(sessionStorage.getItem('lf_session') || '{}');
+      sess.preferred_source_lang = newLang;
+      sess.lang_picked = true;
+      sessionStorage.setItem('lf_session', JSON.stringify(sess));
+      if (sess.user_id) localStorage.setItem('lf_lang_picked_' + sess.user_id, '1');
+    } catch (e) {}
+
+    // Reset i18n cache for the previous lang flag and reload page so EVERY
+    // string re-translates with the new target. Cleanest UX, ~1s reload.
+    if (msg) { msg.style.color = 'var(--green)'; msg.textContent = '✓ Language updated. Reloading…'; }
+    setTimeout(() => window.location.reload(), 800);
+  } catch (e) {
+    if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Could not save: ' + e.message; }
+  }
 }
 
 async function changePassword() {

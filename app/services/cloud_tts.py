@@ -250,6 +250,12 @@ class CloudTTSEngine:
             print(f'[CloudTTS/OpenAI] Generated {len(audio_bytes)} bytes | '
                   f'voice={voice} | model={model}')
 
+            # Track API cost for the admin panel
+            try:
+                from app.routes.admin import track_api_cost
+                track_api_cost('openai_tts', chars=len(text or ''))
+            except Exception:
+                pass
             return audio_b64
 
         except Exception as e:

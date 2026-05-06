@@ -88,6 +88,11 @@ class CloudWhisperService:
 
             print(f'[CloudWhisper] Transcribed in {elapsed:.1f}s | Lang: {detected_lang} | '
                   f'Duration: {duration:.1f}s | Text: "{text[:80]}..."')
+            try:
+                from app.routes.admin import track_api_cost
+                track_api_cost('openai_whisper', seconds=duration)
+            except Exception:
+                pass
 
             return {
                 'text': text.strip(),

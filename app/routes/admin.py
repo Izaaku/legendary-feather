@@ -463,3 +463,251 @@ def _format_uptime(seconds):
     if hours > 0:
         return f'{hours}h {minutes}m'
     return f'{minutes}m'
+
+
+
+# ════════════════════════════════════════════════════════════════════
+# CAPACITY / CLEANUP / COST TRACKING
+# ════════════════════════════════════════════════════════════════════
+# These three endpoints help an operator (you) see "how full are my buckets,
+# what's my API spend, when do I need to upgrade tier or run cleanup". The
+# cleanup endpoint can be triggered manually OR on a schedule (Railway has
+# scheduled jobs, or a simple cron-job.org webhook works fine for V1).
+
+@admin_bp.route('/api/capacity', methods=['GET'])
+@owner_required
+def get_capacity():
+    """Return storage / row-count / connection metrics with green-yellow-red
+    thresholds. Operator sees at a glance which bucket is filling up."""
+    from app.utils.supabase_client import supabase
+    from sqlalchemy import text as _sql
+
+    metrics = {}
+
+    # ── Postgres ──────────────────────────────────────
+    db = db_session()
+    try:
+        try:
+            users_count = db.query(User).count()
+        except Exception:
+            users_count = -1
+        try:
+            # Total DB size in MB
+            row = db.execute(_sql("SELECT pg_database_size(current_database()) AS sz")).fetchone()
+            db_size_mb = round((row.sz or 0) / 1024 / 1024, 1) if row else None
+        except Exception:
+            db_size_mb = None
+        try:
+            row = db.execute(_sql("SELECT count(*) AS c FROM pg_stat_activity WHERE datname = current_database()")).fetchone()
+            active_conns = row.c if row else None
+        except Exception:
+            active_conns = None
+    finally:
+        db.close()
+
+    metrics['postgres'] = {
+        'users_total': users_count,
+        'db_size_mb': db_size_mb,
+        'active_connections': active_conns,
+        'connection_limit': 100,  # Railway hobby tier
+        'status': _bucket_status(db_size_mb or 0, 1000, 4000),  # MB: green<1GB, yellow<4GB, red≥4GB
+    }
+
+    # ── Supabase row counts ───────────────────────────
+    convs = supabase.select('chat_conversations', limit=1) if hasattr(supabase, 'select') else []
+    msgs_count = 0
+    convs_count = 0
+    audit_count = 0
+    try:
+        # PostgREST exact count via prefer header — fallback to len() if not supported
+        all_convs = supabase.select('chat_conversations', limit=10000) or []
+        convs_count = len(all_convs)
+        all_msgs = supabase.select('chat_messages', limit=10000) or []
+        msgs_count = len(all_msgs)
+        all_audit = supabase.select('voice_audit_log', limit=10000) or []
+        audit_count = len(all_audit)
+    except Exception:
+        pass
+
+    metrics['supabase'] = {
+        'conversations': convs_count,
+        'messages': msgs_count,
+        'voice_audit_events': audit_count,
+        # Free tier: 500 MB. Rough: ~200B per message + ~500B per conv + ~300B per audit
+        'estimated_size_mb': round((convs_count * 0.0005 + msgs_count * 0.0002 + audit_count * 0.0003), 2),
+        'free_tier_limit_mb': 500,
+        'status': _bucket_status(msgs_count, 500_000, 2_000_000),
+    }
+
+    # ── Overall recommendation ───────────────────────
+    statuses = [m.get('status', 'green') for m in metrics.values()]
+    overall = 'red' if 'red' in statuses else ('yellow' if 'yellow' in statuses else 'green')
+
+    metrics['overall_status'] = overall
+    metrics['recommendations'] = _capacity_recommendations(metrics)
+
+    return jsonify(metrics)
+
+
+def _bucket_status(value, yellow_threshold, red_threshold):
+    if value >= red_threshold: return 'red'
+    if value >= yellow_threshold: return 'yellow'
+    return 'green'
+
+
+def _capacity_recommendations(m):
+    recs = []
+    pg = m.get('postgres', {})
+    sb = m.get('supabase', {})
+    if pg.get('status') == 'yellow':
+        recs.append('Postgres approaching 4GB — plan to upgrade Railway tier in next 30 days.')
+    if pg.get('status') == 'red':
+        recs.append('Postgres OVER 4GB — upgrade Railway Postgres tier NOW.')
+    if pg.get('active_connections') and pg['active_connections'] > 60:
+        recs.append('Postgres connections >60% of limit. Consider raising DB_POOL_SIZE or adding pgBouncer.')
+    if sb.get('messages', 0) > 500_000:
+        recs.append('Chat messages >500K — run /admin/api/cleanup to archive old conversations.')
+    if sb.get('estimated_size_mb', 0) > 400:
+        recs.append('Supabase approaching 500MB free-tier limit — upgrade to Pro ($25/mo) or run cleanup.')
+    if not recs:
+        recs.append('All systems green. No action needed.')
+    return recs
+
+
+@admin_bp.route('/api/cleanup', methods=['POST'])
+@owner_required
+def run_cleanup():
+    """Archive old data:
+      • Mark chat_conversations resolved >90 days as 'archived' (status change)
+      • Delete voice_audit_log entries >365 days
+
+    Idempotent — safe to run repeatedly. In production wire this to a cron
+    (Railway scheduled job or cron-job.org pinging this endpoint daily).
+    """
+    from app.utils.supabase_client import supabase
+    from datetime import datetime, timezone, timedelta
+
+    summary = {'archived_conversations': 0, 'purged_audit_events': 0, 'errors': []}
+
+    cutoff_90 = (datetime.now(timezone.utc) - timedelta(days=90)).isoformat()
+    cutoff_365 = (datetime.now(timezone.utc) - timedelta(days=365)).isoformat()
+
+    # Archive conversations resolved >90 days
+    try:
+        # Find candidates
+        old_resolved = supabase.select(
+            'chat_conversations',
+            filters={'status': 'resolved'},
+            limit=1000
+        ) or []
+        # Filter client-side by date (PostgREST <lt> on dates is fiddly via our wrapper)
+        to_archive = [c for c in old_resolved if c.get('resolved_at', '') and c['resolved_at'] < cutoff_90]
+        for conv in to_archive:
+            try:
+                supabase.update('chat_conversations',
+                    filters={'id': conv['id']},
+                    data={'status': 'archived',
+                          'updated_at': datetime.now(timezone.utc).isoformat()})
+                summary['archived_conversations'] += 1
+            except Exception as e:
+                summary['errors'].append(f"conv {conv.get('id')}: {e}")
+    except Exception as e:
+        summary['errors'].append(f'list resolved: {e}')
+
+    # Purge audit log >365 days
+    try:
+        old_audit = supabase.select(
+            'voice_audit_log',
+            limit=10000
+        ) or []
+        to_delete = [a for a in old_audit if a.get('created_at', '') and a['created_at'] < cutoff_365]
+        for ev in to_delete:
+            try:
+                supabase.delete('voice_audit_log', filters={'id': ev['id']})
+                summary['purged_audit_events'] += 1
+            except Exception as e:
+                summary['errors'].append(f"audit {ev.get('id')}: {e}")
+    except Exception as e:
+        summary['errors'].append(f'list audit: {e}')
+
+    return jsonify(summary)
+
+
+# ── In-process API cost tracker ────────────────────────────────────
+# We track translate/transcribe/tts calls as they happen so we can show the
+# operator their API spend without scraping logs. State is in-memory (resets
+# on redeploy) — for V1 that's fine; persist to a `daily_costs` table if you
+# want history.
+
+import threading
+from collections import defaultdict
+from datetime import date as _date
+
+_API_COST_STATE = {
+    'lock': threading.Lock(),
+    'today_chars': defaultdict(int),     # provider -> chars (date-keyed)
+    'today_calls': defaultdict(int),     # provider -> calls
+    'today_seconds': defaultdict(float), # for whisper/tts duration-based pricing
+    'date': _date.today(),
+}
+
+_PROVIDER_COSTS = {
+    # Approx USD prices as of 2026 — update when providers change rates
+    'openai_tts':       {'per_1k_chars': 0.015},
+    'openai_whisper':   {'per_minute_audio': 0.006},
+    'deepl':            {'per_1m_chars': 25.0},  # Pro plan effective rate
+    'fish_speech':      {'per_second': 0.000725},  # RunPod (when re-enabled)
+}
+
+
+def track_api_cost(provider: str, chars: int = 0, seconds: float = 0):
+    """Call from the cloud_* services after a successful API call.
+
+    Example:  track_api_cost('openai_tts', chars=len(text))
+    """
+    with _API_COST_STATE['lock']:
+        # Reset counters at midnight UTC
+        if _date.today() != _API_COST_STATE['date']:
+            _API_COST_STATE['today_chars'].clear()
+            _API_COST_STATE['today_calls'].clear()
+            _API_COST_STATE['today_seconds'].clear()
+            _API_COST_STATE['date'] = _date.today()
+        _API_COST_STATE['today_calls'][provider] += 1
+        if chars: _API_COST_STATE['today_chars'][provider] += chars
+        if seconds: _API_COST_STATE['today_seconds'][provider] += seconds
+
+
+@admin_bp.route('/api/api-costs', methods=['GET'])
+@owner_required
+def get_api_costs():
+    """Estimated API spend today (in-process counters)."""
+    today_costs = {}
+    total = 0.0
+    with _API_COST_STATE['lock']:
+        for provider, cfg in _PROVIDER_COSTS.items():
+            chars = _API_COST_STATE['today_chars'].get(provider, 0)
+            calls = _API_COST_STATE['today_calls'].get(provider, 0)
+            secs = _API_COST_STATE['today_seconds'].get(provider, 0)
+            cost = 0.0
+            if 'per_1k_chars' in cfg and chars:
+                cost = (chars / 1000.0) * cfg['per_1k_chars']
+            elif 'per_1m_chars' in cfg and chars:
+                cost = (chars / 1_000_000.0) * cfg['per_1m_chars']
+            elif 'per_minute_audio' in cfg and secs:
+                cost = (secs / 60.0) * cfg['per_minute_audio']
+            elif 'per_second' in cfg and secs:
+                cost = secs * cfg['per_second']
+            today_costs[provider] = {
+                'calls': calls, 'chars': chars,
+                'seconds': round(secs, 1) if secs else 0,
+                'cost_usd': round(cost, 4),
+            }
+            total += cost
+    # Rough monthly projection: today × 30
+    return jsonify({
+        'date': _API_COST_STATE['date'].isoformat(),
+        'providers': today_costs,
+        'total_today_usd': round(total, 4),
+        'projected_monthly_usd': round(total * 30, 2),
+        'note': 'Counters reset on redeploy. For persistent history, add a daily_costs table.'
+    })

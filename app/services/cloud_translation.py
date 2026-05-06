@@ -107,6 +107,11 @@ class CloudTranslationService:
             detected = result.detected_source_lang
 
             print(f'[DeepL] Detected: {detected} | Result: "{translated[:50]}..."')
+            try:
+                from app.routes.admin import track_api_cost
+                track_api_cost('deepl', chars=len(text or ''))
+            except Exception:
+                pass
             return translated
 
         except deepl.DeepLException as e:

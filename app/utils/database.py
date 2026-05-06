@@ -26,6 +26,14 @@ else:
     # connections older than 30min — well below Railway's idle limit.
     engine_kwargs['pool_pre_ping'] = True
     engine_kwargs['pool_recycle'] = 1800
+    # Connection pool sizing — keep 10 persistent connections, allow up to 20
+    # bursts during traffic spikes. Railway's Postgres free/hobby tiers cap at
+    # ~100 concurrent connections, so this leaves plenty of headroom for
+    # multiple workers + admin queries. Bump these up when scaling past
+    # ~5K concurrent users.
+    engine_kwargs['pool_size'] = int(os.getenv('DB_POOL_SIZE', '10'))
+    engine_kwargs['max_overflow'] = int(os.getenv('DB_MAX_OVERFLOW', '20'))
+    engine_kwargs['pool_timeout'] = 30  # seconds to wait for a free conn
 
 print(f"[DB] Connecting to: {DATABASE_URL.split('@')[-1] if '@' in DATABASE_URL else DATABASE_URL}")
 
