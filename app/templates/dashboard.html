@@ -595,6 +595,250 @@ body {
 </div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════════
+// LF_I18N — client-side translation helper
+// ═══════════════════════════════════════════════════════════════════
+// All UI text is authored in English. When a customer picks a non-English
+// language during onboarding, we translate strings on demand via DeepL and
+// cache them aggressively in localStorage so the second page load is free.
+// Pages that want translation call lf_translateNode(rootEl) — every text
+// node and placeholder gets walked, sent in a batch to /api/translate, and
+// swapped in place. Same preferred_source_lang drives the support chat so
+// the agent already knows what language to reply in.
+// ═══════════════════════════════════════════════════════════════════
+
+const _LF_I18N = {
+  lang: null,
+  cache: {}, // text → translated
+  inflight: new Map(), // text → Promise (dedupe concurrent requests)
+};
+
+function _lfGetUserLang() {
+  try {
+    const sess = JSON.parse(sessionStorage.getItem('lf_session') || '{}');
+    if (sess.preferred_source_lang) return sess.preferred_source_lang.toLowerCase().slice(0,2);
+  } catch (e) {}
+  return 'en';
+}
+
+function _lfLoadCache(lang) {
+  if (lang === 'en') { _LF_I18N.cache = {}; return; }
+  try {
+    _LF_I18N.cache = JSON.parse(localStorage.getItem('lf_i18n_' + lang) || '{}');
+  } catch (e) { _LF_I18N.cache = {}; }
+}
+
+function _lfSaveCache(lang) {
+  if (lang === 'en') return;
+  try {
+    localStorage.setItem('lf_i18n_' + lang, JSON.stringify(_LF_I18N.cache));
+  } catch (e) {}
+}
+
+async function _lfTranslateBatch(texts, lang) {
+  // Skip empty / numeric / already-translated strings
+  const todo = [...new Set(texts)].filter(t => t && t.trim() && !_LF_I18N.cache[t] && !/^[\d\s\W]+$/.test(t));
+  if (!todo.length) return;
+  // Translate in parallel with caps to avoid rate limits
+  const token = sessionStorage.getItem('lf_token');
+  await Promise.all(todo.map(async (text) => {
+    if (_LF_I18N.cache[text]) return;
+    if (_LF_I18N.inflight.has(text)) return _LF_I18N.inflight.get(text);
+    const p = (async () => {
+      try {
+        const r = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text, source_lang: 'en', target_lang: lang, advanced: true })
+        });
+        const data = await r.json();
+        if (data && data.translated) _LF_I18N.cache[text] = data.translated;
+      } catch (e) {}
+    })();
+    _LF_I18N.inflight.set(text, p);
+    return p;
+  }));
+  _lfSaveCache(lang);
+}
+
+// Translate every text node and common placeholder/title attributes in `root`.
+// The DOM mutation is done in two passes: first collect strings (sync), then
+// replace once translations come back (async).
+async function lf_translateNode(root) {
+  const lang = _lfGetUserLang();
+  if (!lang || lang === 'en') return; // English is the source language
+  if (lang !== _LF_I18N.lang) {
+    _LF_I18N.lang = lang;
+    _lfLoadCache(lang);
+  }
+  if (!root) root = document.body;
+
+  // Collect text nodes (skip script/style/code; skip already-Spanish via re-walk dedup)
+  const SKIP_TAGS = new Set(['SCRIPT','STYLE','CODE','PRE','TEXTAREA','INPUT']);
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(n) {
+      if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+      if (n.parentElement && SKIP_TAGS.has(n.parentElement.tagName)) return NodeFilter.FILTER_REJECT;
+      if (n.parentElement && n.parentElement.dataset && n.parentElement.dataset.noI18n === '1') return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  const textNodes = [];
+  let n;
+  while ((n = walker.nextNode())) textNodes.push(n);
+  const placeholderEls = root.querySelectorAll('[placeholder]');
+  const titleEls = root.querySelectorAll('[title]');
+
+  const allStrings = [
+    ...textNodes.map(n => n.nodeValue.trim()),
+    ...Array.from(placeholderEls).map(e => e.getAttribute('placeholder') || ''),
+    ...Array.from(titleEls).map(e => e.getAttribute('title') || ''),
+  ];
+
+  await _lfTranslateBatch(allStrings, lang);
+
+  // Apply translations
+  for (const tn of textNodes) {
+    const orig = tn.nodeValue.trim();
+    const tr = _LF_I18N.cache[orig];
+    if (tr) tn.nodeValue = tn.nodeValue.replace(orig, tr);
+  }
+  for (const el of placeholderEls) {
+    const orig = el.getAttribute('placeholder');
+    if (orig && _LF_I18N.cache[orig]) el.setAttribute('placeholder', _LF_I18N.cache[orig]);
+  }
+  for (const el of titleEls) {
+    const orig = el.getAttribute('title');
+    if (orig && _LF_I18N.cache[orig]) el.setAttribute('title', _LF_I18N.cache[orig]);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// LANGUAGE ONBOARDING — first-visit modal
+// ═══════════════════════════════════════════════════════════════════
+const _LF_LANG_CHOICES = [
+  {code:'en', flag:'🇺🇸', label:'English'},
+  {code:'es', flag:'🇪🇸', label:'Español'},
+  {code:'fr', flag:'🇫🇷', label:'Français'},
+  {code:'de', flag:'🇩🇪', label:'Deutsch'},
+  {code:'it', flag:'🇮🇹', label:'Italiano'},
+  {code:'pt', flag:'🇵🇹', label:'Português'},
+  {code:'zh', flag:'🇨🇳', label:'中文'},
+  {code:'ja', flag:'🇯🇵', label:'日本語'},
+  {code:'ko', flag:'🇰🇷', label:'한국어'},
+  {code:'ar', flag:'🇸🇦', label:'العربية'},
+  {code:'hi', flag:'🇮🇳', label:'हिन्दी'},
+  {code:'ru', flag:'🇷🇺', label:'Русский'},
+  {code:'tr', flag:'🇹🇷', label:'Türkçe'},
+  {code:'nl', flag:'🇳🇱', label:'Nederlands'},
+  {code:'pl', flag:'🇵🇱', label:'Polski'},
+  {code:'th', flag:'🇹🇭', label:'ไทย'},
+  {code:'vi', flag:'🇻🇳', label:'Tiếng Việt'},
+  {code:'id', flag:'🇮🇩', label:'Indonesia'},
+  {code:'tl', flag:'🇵🇭', label:'Filipino'},
+  {code:'sv', flag:'🇸🇪', label:'Svenska'},
+];
+
+function _lfShowLanguageOnboarding() {
+  // Only show once per account. We persist the "user explicitly picked"
+  // signal in localStorage (survives logout/login + session expiry) keyed
+  // by user_id, so the picker doesn't re-appear after every login.
+  let session = {};
+  try { session = JSON.parse(sessionStorage.getItem('lf_session') || '{}'); } catch (e) {}
+  const userId = session.user_id || '';
+  const lsFlag = userId ? localStorage.getItem('lf_lang_picked_' + userId) : null;
+  if (lsFlag === '1') return;
+  if (session.lang_picked) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'lf-lang-onboard';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--gold-dim);border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 0 40px rgba(212,168,67,0.2);" data-no-i18n="1">
+      <div style="padding:28px 28px 16px;text-align:center;">
+        <div style="font-size:36px;margin-bottom:8px;">🌐</div>
+        <h2 style="margin:0;font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;color:var(--text);line-height:1.2;">Welcome! Pick your language</h2>
+        <p style="margin:8px 0 0;font-size:13px;color:var(--text-sub);">
+          We'll show your dashboard, FAQ, and support chat in this language.<br>
+          You can change it later from your account.
+        </p>
+      </div>
+      <div style="padding:8px 20px 24px;display:grid;grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));gap:8px;">
+        ${_LF_LANG_CHOICES.map(l =>
+          '<button onclick="_lfPickLanguage(\'' + l.code + '\')" style="padding:14px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;transition:transform 0.15s, background 0.15s;" onmouseover="this.style.background=\'var(--gold-dim)\';this.style.transform=\'translateY(-2px)\';" onmouseout="this.style.background=\'var(--bg3)\';this.style.transform=\'\';">' +
+            '<span style="font-size:18px;">' + l.flag + '</span>' +
+            '<span>' + l.label + '</span>' +
+          '</button>'
+        ).join('')}
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function _lfPickLanguage(code) {
+  const overlay = document.getElementById('lf-lang-onboard');
+  if (overlay) overlay.remove();
+
+  // Persist on the server (so dashboard + support agree across devices)
+  try {
+    await fetch('/api/auth/me', {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('lf_token'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preferred_source_lang: code })
+    });
+  } catch (e) {}
+
+  // Update the local session so subsequent renders pick the new lang
+  try {
+    const sess = JSON.parse(sessionStorage.getItem('lf_session') || '{}');
+    sess.preferred_source_lang = code;
+    sess.lang_picked = true;
+    sessionStorage.setItem('lf_session', JSON.stringify(sess));
+    if (sess.user_id) localStorage.setItem('lf_lang_picked_' + sess.user_id, '1');
+  } catch (e) {}
+
+  // Translate the page now
+  if (code !== 'en') {
+    await lf_translateNode(document.body);
+  } else {
+    // No-op for English; flag prevents the modal from re-appearing
+  }
+}
+
+// Run language onboarding + auto-translate AFTER the dashboard has fetched
+// the session and rendered itself. We use `load` so animations and initial
+// fetches don't block the modal.
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    _lfShowLanguageOnboarding();
+    // If lang is already picked, translate the current view
+    if (_lfGetUserLang() !== 'en') {
+      lf_translateNode(document.body);
+    }
+  }, 600);  // tiny delay so the welcome header animation finishes first
+});
+
+// Re-translate when navigation changes the main content (sidebar clicks).
+// MutationObserver watches the main panel and re-runs translation on swap.
+(function _lfWatchMain() {
+  const main = document.getElementById('main-content');
+  if (!main) return;
+  const obs = new MutationObserver(() => {
+    if (_lfGetUserLang() !== 'en') {
+      // Debounce — wait for the inner HTML to settle before walking
+      clearTimeout(window._lfRetranslateTimer);
+      window._lfRetranslateTimer = setTimeout(() => lf_translateNode(main), 80);
+    }
+  });
+  // Wait for the element to exist
+  const tryAttach = () => {
+    const m = document.getElementById('main-content');
+    if (m) obs.observe(m, { childList: true, subtree: true, characterData: false });
+    else setTimeout(tryAttach, 200);
+  };
+  tryAttach();
+})();
+
 // ── AUTH CHECK ──
 let currentSession = null;
 
