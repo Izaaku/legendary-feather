@@ -190,6 +190,7 @@ def sync_checkout_session():
         # Reset minutes_used only on a NEW plan (not on duplicate sync calls)
         if not already_synced:
             user.minutes_used = 0
+            user.seconds_used = 0  # billing source of truth — reset together
 
         # Upsert subscription record for recurring plans
         if subscription_id:
@@ -353,7 +354,8 @@ def _handle_checkout_completed(db, session_data):
         user.stripe_customer_id = customer_id
         user.plan = plan
         user.minutes_total = plan_details['minutes']
-        user.minutes_used = 0  # Reset on new subscription
+        user.minutes_used = 0
+        user.seconds_used = 0  # Reset on new subscription
 
     # Create subscription record
     sub = Subscription(
@@ -398,7 +400,8 @@ def _handle_payment_succeeded(db, invoice_data):
     user = db.query(User).filter_by(stripe_customer_id=customer_id).first()
     if user:
         plan_details = PRICING.get(user.plan, PRICING['basic'])
-        user.minutes_used = 0  # Reset minutes on renewal
+        user.minutes_used = 0
+        user.seconds_used = 0  # Reset on renewal
         user.minutes_total = plan_details['minutes']
         print(f"[Webhook] Payment succeeded, minutes reset for: {user.email}")
 

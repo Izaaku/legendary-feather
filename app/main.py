@@ -602,13 +602,10 @@ def handle_f2f_translate(data):
             print(f'[F2F-DEBUG] TTS EXCEPTION: {type(tts_err).__name__}: {tts_err}')
             print(_tb.format_exc())
 
-        # ── Track minutes used + record conversation for history ──
-        # Estimate from char count: ~750 chars/minute (~150 wpm * 5 chars/word).
-        # We use the char count of the TRANSLATED text since that's what the
-        # TTS actually synthesizes. Each F2F utterance is recorded as its own
-        # short Conversation row so the dashboard's "Recent Activity" / History
-        # views can pull real translation history (no more empty state when
-        # the user has actually been translating).
+        # ── Track usage + record conversation for history ──
+        # Billing is now in SECONDS (chars/12.5 ~= 150 wpm). A short "Hello"
+        # consumes ~0.4 sec instead of an entire minute. Free plan = 5 min =
+        # 300 sec. Minimum 1 sec per phrase to prevent empty-input abuse.
         user_plan_snapshot = None
         if user_id and audio_b64:
             try:
@@ -620,14 +617,13 @@ def handle_f2f_translate(data):
                 if user:
                     user_plan_snapshot = user.plan
                     chars = len(translated or '')
-                    # Round up so even short utterances count as at least 1 minute
-                    # of usage — prevents free abuse via tiny chunks.
-                    minutes_used = max(1, round(chars / 750.0 + 0.5))
+                    seconds_used = max(1, int(round(chars / 12.5)))
                     if not is_unlimited_user(user):
-                        user.minutes_used = (user.minutes_used or 0) + minutes_used
+                        user.seconds_used = (user.seconds_used or 0) + seconds_used
+                        # Keep legacy minutes_used roughly in sync (rounded
+                        # down) for any old code path that still reads it.
+                        user.minutes_used = int((user.seconds_used or 0) // 60)
 
-                    # Record this F2F utterance as a completed conversation so
-                    # it shows up in the customer dashboard history.
                     now = _dt.now(_tz.utc)
                     conv = Conversation(
                         conversation_id=str(_uuid.uuid4()),
@@ -635,8 +631,8 @@ def handle_f2f_translate(data):
                         mode='face_to_face',
                         source_lang=source,
                         target_lang=target,
-                        duration_seconds=int(round((minutes_used) * 60)),
-                        duration_minutes=float(minutes_used),
+                        duration_seconds=int(seconds_used),
+                        duration_minutes=round(seconds_used / 60.0, 2),
                         transcript_original=(text or '')[:2000],
                         transcript_translated=(translated or '')[:2000],
                         status='completed',
@@ -648,7 +644,7 @@ def handle_f2f_translate(data):
                     db.commit()
                 db.close()
             except Exception as e:
-                print(f'[F2F] minute-tracking / conversation insert failed: {e}')
+                print(f'[F2F] seconds-tracking / conversation insert failed: {e}')
 
         # ── Audit log + audio watermark hash (anti-fraud traceability) ──
         # Every TTS-generated audio gets a SHA-256 hash that's stored in

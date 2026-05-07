@@ -33,15 +33,24 @@ def calculate_cost(minutes_used, plan_name='free'):
     return plan['price'] + overage_cost
 
 
+def get_remaining_seconds(user):
+    """Get remaining seconds for a user. Source of truth for the minute gate."""
+    if is_unlimited_user(user):
+        return 999999 * 60
+    secs_used = int(getattr(user, 'seconds_used', 0) or 0)
+    secs_total = int((getattr(user, 'minutes_total', 0) or 0) * 60)
+    return max(0, secs_total - secs_used)
+
+
 def get_remaining_minutes(user):
-    """Get remaining minutes for a user."""
+    """Get remaining minutes for a user (derived from seconds for accuracy)."""
     if is_unlimited_user(user):
         return 999999
-    return max(0, user.minutes_total - user.minutes_used)
+    return round(get_remaining_seconds(user) / 60.0, 2)
 
 
 def has_minutes_available(user):
-    """Check if user has minutes available to translate.
+    """Check if user has minutes (really seconds) available to translate.
 
     Owners/admins are always allowed. Free-tier and one-time-purchase users
     (free, travel_pass, payg) are hard-stopped when their balance hits 0.
@@ -53,8 +62,6 @@ def has_minutes_available(user):
     if not user.is_active:
         return False
     plan = getattr(user, 'plan', '') or ''
-    # Subscription plans with overage: allow even at 0 remaining
     if plan in OVERAGE_ALLOWED_PLANS:
         return True
-    # Free / Travel Pass / Pay-as-you-go: hard stop at 0
-    return get_remaining_minutes(user) > 0
+    return get_remaining_seconds(user) > 0

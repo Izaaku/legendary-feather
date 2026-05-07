@@ -43,9 +43,38 @@ db_session = scoped_session(SessionLocal)
 
 
 def init_db():
-    """Create all database tables."""
+    """Create all database tables and run idempotent column migrations."""
     Base.metadata.create_all(bind=engine)
     print("[DB] Tables created successfully.")
+
+    # Run lightweight migrations for columns added after the initial schema.
+    # SQLAlchemy's create_all() doesn't ALTER existing tables, so we apply
+    # ADD COLUMN IF NOT EXISTS statements here. This is safe to run on every
+    # boot — Postgres is a no-op when the column already exists, and SQLite
+    # gracefully ignores duplicate-column errors via the try/except below.
+    from sqlalchemy import text as _sa_text
+    is_sqlite = DATABASE_URL.startswith('sqlite')
+    migrations = [
+        # 004: switch billing from minutes-rounded-up to seconds.
+        ("users.seconds_used",
+         "ALTER TABLE users ADD COLUMN seconds_used INTEGER NOT NULL DEFAULT 0"
+            if is_sqlite else
+         "ALTER TABLE users ADD COLUMN IF NOT EXISTS seconds_used INTEGER NOT NULL DEFAULT 0"),
+    ]
+    with engine.connect() as conn:
+        for label, ddl in migrations:
+            try:
+                conn.execute(_sa_text(ddl))
+                conn.commit()
+                print(f"[DB] Migration applied: {label}")
+            except Exception as e:
+                # SQLite raises if the column already exists; treat as a
+                # no-op. Postgres uses IF NOT EXISTS so it never errors here.
+                msg = str(e).lower()
+                if 'duplicate column' in msg or 'already exists' in msg:
+                    pass  # already applied — fine
+                else:
+                    print(f"[DB] Migration {label} failed (non-fatal): {e}")
 
 
 def get_db():

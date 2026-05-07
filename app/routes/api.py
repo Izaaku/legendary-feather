@@ -111,10 +111,12 @@ def stop_session():
             conv.duration_seconds = int(delta.total_seconds())
             conv.duration_minutes = delta.total_seconds() / 60.0
 
-        # Update user minutes (skip for unlimited/owner accounts)
+        # Update user usage in SECONDS (skip for unlimited/owner accounts).
         user = db.query(User).filter_by(user_id=conv.user_id).first()
         if user and not is_unlimited_user(user):
-            user.minutes_used += int(conv.duration_minutes) + (1 if conv.duration_minutes % 1 > 0 else 0)
+            secs = int(conv.duration_seconds or 0)
+            user.seconds_used = (user.seconds_used or 0) + secs
+            user.minutes_used = int((user.seconds_used or 0) // 60)
 
         db.commit()
 
@@ -714,14 +716,23 @@ def dashboard_stats():
             'category': plan_cfg.get('category', 'traveler'),
         }
 
+        # Usage in seconds is the billing source of truth; expose minutes
+        # as derived so the gauge can show fractional values (e.g. 0.3 / 5).
+        secs_used = int(user.seconds_used or 0)
+        secs_total = int((user.minutes_total or 0) * 60)
+        secs_remaining = max(0, secs_total - secs_used)
+
         return jsonify({
-            'minutes_used': user.minutes_used,
+            'minutes_used': round(secs_used / 60.0, 2),
             'minutes_total': user.minutes_total,
-            'minutes_remaining': max(0, (user.minutes_total or 0) - (user.minutes_used or 0)),
+            'minutes_remaining': round(secs_remaining / 60.0, 2),
+            'seconds_used': secs_used,
+            'seconds_total': secs_total,
+            'seconds_remaining': secs_remaining,
             'plan': user.plan,
             'plan_info': plan_info,
             'sessions_today': sessions_today,
-            'minutes_today': round(minutes_today, 1),
+            'minutes_today': round(minutes_today, 2),
             'top_langs': top_langs,
             'languages_used_count': languages_used_count,
             'recent': recent_list,

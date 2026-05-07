@@ -1118,7 +1118,7 @@ function showPlan(planKey) {
   document.getElementById('sidebar-plan').innerHTML = `
     <div class="sidebar-plan-name">${plan.name}</div>
     <div class="sidebar-plan-label">${plan.price}<span style="font-size:12px;color:var(--text-muted)">${billingLabel}</span></div>
-    <div class="sidebar-plan-price">${remaining} min remaining</div>
+    <div class="sidebar-plan-price">${(+remaining).toFixed(1)} min remaining</div>
     ${plan.upgradeTo ? `<button class="sidebar-upgrade">Upgrade to ${plan.upgradeTo}</button>` : ''}
   `;
 
@@ -1156,8 +1156,8 @@ function showPlan(planKey) {
         </svg>
       </div>
       <div style="text-align:center;">
-        <div style="font-size:13px;color:var(--text-sub);">${plan.used} of ${plan.minutes} minutes</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${remaining} min remaining</div>
+        <div style="font-size:13px;color:var(--text-sub);">${(+plan.used).toFixed(1)} of ${plan.minutes} min</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${(+remaining).toFixed(1)} min remaining (${Math.round(remaining*60)}s)</div>
       </div>
     </div>`;
 
