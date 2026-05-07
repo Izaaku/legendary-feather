@@ -681,13 +681,42 @@ async function lf_translateNode(root) {
   }
   if (!root) root = document.body;
 
-  // Collect text nodes (skip script/style/code; skip already-Spanish via re-walk dedup)
+  // Pass 1: translate elements explicitly marked as "block" — these have
+  // their textContent sent as ONE string to DeepL so split phrases like
+  // "Frequently Asked <em>Questions</em>" don't double-translate to
+  // "Preguntas frecuentes Preguntas". The element's plain text is replaced
+  // entirely (any <em>/<strong> styling is lost; use CSS classes for
+  // emphasis on these blocks).
+  const blockEls = Array.from(root.querySelectorAll('[data-i18n-block="1"]'));
+  if (blockEls.length) {
+    const blockOriginals = blockEls.map(e => (e.dataset.i18nOriginal || e.textContent || '').trim()).filter(Boolean);
+    await _lfTranslateBatch(blockOriginals, lang);
+    for (const el of blockEls) {
+      const orig = (el.dataset.i18nOriginal || el.textContent || '').trim();
+      // Remember the original so re-renders / language switches translate
+      // from the source string, not from a previously-translated value.
+      if (!el.dataset.i18nOriginal) el.dataset.i18nOriginal = orig;
+      const tr = _LF_I18N.cache[orig];
+      if (tr && tr !== orig) el.textContent = tr;
+    }
+  }
+
+  // Pass 2: collect remaining text nodes (skip script/style/code; skip
+  // user-data nodes marked data-no-i18n; skip block-translated subtrees).
   const SKIP_TAGS = new Set(['SCRIPT','STYLE','CODE','PRE','TEXTAREA','INPUT']);
+  const isInsideSkipped = (n) => {
+    let p = n.parentElement;
+    while (p) {
+      if (p.dataset && (p.dataset.noI18n === '1' || p.dataset.i18nBlock === '1')) return true;
+      p = p.parentElement;
+    }
+    return false;
+  };
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(n) {
       if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
       if (n.parentElement && SKIP_TAGS.has(n.parentElement.tagName)) return NodeFilter.FILTER_REJECT;
-      if (n.parentElement && n.parentElement.dataset && n.parentElement.dataset.noI18n === '1') return NodeFilter.FILTER_REJECT;
+      if (isInsideSkipped(n)) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     }
   });
@@ -771,7 +800,7 @@ function _lfShowLanguageOnboarding() {
           You can change it later from your account.
         </p>
       </div>
-      <div style="padding:8px 20px 24px;display:grid;grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));gap:8px;">
+      <div data-no-i18n="1" style="padding:8px 20px 24px;display:grid;grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));gap:8px;">
         ${_LF_LANG_CHOICES.map(l =>
           '<button onclick="_lfPickLanguage(\'' + l.code + '\')" style="padding:14px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;transition:transform 0.15s, background 0.15s;" onmouseover="this.style.background=\'var(--gold-dim)\';this.style.transform=\'translateY(-2px)\';" onmouseout="this.style.background=\'var(--bg3)\';this.style.transform=\'\';">' +
             '<span style="font-size:18px;">' + l.flag + '</span>' +
@@ -885,7 +914,7 @@ if (!currentSession || !getToken()) {
 if (currentSession) {
   const isOwner = currentSession.is_owner;
   document.getElementById('topBarUser').innerHTML =
-    `<strong>${currentSession.name}</strong> &middot; ${currentSession.plan.charAt(0).toUpperCase() + currentSession.plan.slice(1)}`;
+    `<strong data-no-i18n="1">${currentSession.name}</strong> &middot; ${currentSession.plan.charAt(0).toUpperCase() + currentSession.plan.slice(1)}`;
 
   // Show admin link only for owners (plan switcher removed in V1)
   if (isOwner) {
@@ -1100,7 +1129,7 @@ function showPlan(planKey) {
   html += `
   <div class="main-header animate-in">
     <div>
-      <div class="main-greeting">Welcome back, <em>${userName}</em></div>
+      <div class="main-greeting">Welcome back, <em data-no-i18n="1">${userName}</em></div>
       <div class="main-date">${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
     </div>
     <div class="user-badge">
@@ -1542,15 +1571,23 @@ function showHistoryView() {
     }).join('');
   };
 
+  const finishRender = async () => {
+    if (_lfGetUserLang() !== 'en') {
+      await lf_translateNode(document.getElementById('main-content'));
+    }
+  };
+
   if (dashboardStats && dashboardStats.recent) {
     renderList(dashboardStats.recent);
+    finishRender();
   } else {
     // Fetch on demand if we don't have it yet
     const token = sessionStorage.getItem('lf_token');
     fetch('/api/dashboard/stats', { headers: { 'Authorization': 'Bearer ' + token } })
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d) { dashboardStats = d; renderList(d.recent || []); } else { renderList([]); } })
-      .catch(() => renderList([]));
+      .catch(() => renderList([]))
+      .finally(finishRender);
   }
 }
 
@@ -1563,9 +1600,9 @@ function showSettingsView() {
     <div class="card animate-in delay-1">
       <div class="card-header"><div class="card-title">Account Info</div></div>
       <div style="font-size:13px;color:var(--text-sub);line-height:2;">
-        <div><strong style="color:var(--text);">Name:</strong> ${currentSession.name}</div>
-        <div><strong style="color:var(--text);">Email:</strong> ${currentSession.email}</div>
-        <div><strong style="color:var(--text);">Plan:</strong> ${currentSession.plan}</div>
+        <div><strong style="color:var(--text);">Name:</strong> <span data-no-i18n="1">${currentSession.name}</span></div>
+        <div><strong style="color:var(--text);">Email:</strong> <span data-no-i18n="1">${currentSession.email}</span></div>
+        <div><strong style="color:var(--text);">Plan:</strong> <span data-no-i18n="1">${currentSession.plan}</span></div>
       </div>
     </div>
     <div class="card animate-in delay-2">
@@ -1574,8 +1611,8 @@ function showSettingsView() {
         We'll show your dashboard, FAQ, and support chat in this language. The same value also tells our support team what language to reply to you in.
       </p>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;max-width:480px;">
-        <select id="settingsLangSelect" style="flex:1;min-width:200px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:Outfit;font-size:13px;">
-          ${_LF_LANG_CHOICES.map(l => '<option value="' + l.code + '">' + l.flag + ' ' + l.label + '</option>').join('')}
+        <select id="settingsLangSelect" data-no-i18n="1" style="flex:1;min-width:200px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:Outfit;font-size:13px;">
+          ${_LF_LANG_CHOICES.map(l => '<option value="' + l.code + '" data-no-i18n="1">' + l.flag + ' ' + l.label + '</option>').join('')}
         </select>
         <button class="quick-btn primary" onclick="changeDisplayLanguage()">Save</button>
       </div>
@@ -1600,6 +1637,12 @@ function showSettingsView() {
     const sel = document.getElementById('settingsLangSelect');
     if (sel) sel.value = _lfGetUserLang() || 'en';
   }, 50);
+
+  // Force i18n pass on the Settings view so headers translate immediately
+  // (the MutationObserver path can be slow on first render).
+  if (_lfGetUserLang() !== 'en') {
+    setTimeout(() => lf_translateNode(document.getElementById('main-content')), 80);
+  }
 }
 
 async function changeDisplayLanguage() {
@@ -1679,8 +1722,8 @@ function showSupportChat() {
   const mainContent = document.getElementById('main-content');
   mainContent.innerHTML = `
   <div class="welcome-header animate-in"><div>
-    <div class="welcome-name" style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;">
-      Customer <em style="color:var(--gold);font-style:italic;">Support</em>
+    <div class="welcome-name" data-i18n-block="1" style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--text);">
+      Customer Support
     </div>
     <div style="color:var(--muted);font-size:13px;margin-top:4px;">Chat with our team</div>
   </div></div>
@@ -1873,8 +1916,8 @@ async function showFAQView() {
   const mainContent = document.getElementById('main-content');
   mainContent.innerHTML = `
   <div class="welcome-header animate-in"><div>
-    <div class="welcome-name" style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;">
-      Frequently Asked <em style="color:var(--gold);font-style:italic;">Questions</em>
+    <div class="welcome-name" data-i18n-block="1" style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--text);">
+      Frequently Asked Questions
     </div>
   </div></div>
   <div style="margin:20px 0;">
@@ -1890,6 +1933,13 @@ async function showFAQView() {
     const resp = await fetch('/api/support/faq');
     const faqData = await resp.json();
     renderFAQ(faqData);
+    // Force a translation pass — FAQ content comes from the API after the
+    // initial mutation observer fired, so we need an explicit retranslate
+    // to catch the dynamic categories / questions. Without this the FAQ
+    // stays in English even when the rest of the dashboard is in Spanish.
+    if (_lfGetUserLang() !== 'en') {
+      await lf_translateNode(document.getElementById('main-content'));
+    }
   } catch (err) {
     document.getElementById('faqContainer').innerHTML = '<div style="color:var(--red);padding:20px;">Failed to load FAQ</div>';
   }
