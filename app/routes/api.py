@@ -187,16 +187,18 @@ def translate_batch():
     if source_lang == target_lang:
         return jsonify({'translations': list(texts)})
 
-    out = []
-    for t in texts:
-        try:
-            if not t or not isinstance(t, str):
-                out.append('')
-                continue
-            tr = translator.translate(t, source_lang, target_lang)
-            out.append(tr or t)
-        except Exception:
-            out.append(t or '')
+    # Single DeepL request for the whole batch — was previously a per-string
+    # loop that took ~300ms each (=> 30s for 100 strings on -w 1 gevent worker
+    # and would block i18n batches behind each other).
+    try:
+        out = translator.translate_batch(
+            [t if isinstance(t, str) else '' for t in texts],
+            source_lang=source_lang,
+            target_lang=target_lang,
+        )
+    except Exception as e:
+        print(f'[translate-batch] failed: {e}')
+        out = [t if isinstance(t, str) else '' for t in texts]
     return jsonify({'translations': out})
 
 
