@@ -649,6 +649,11 @@ async function _lfTranslateBatch(texts, lang) {
         body: JSON.stringify({ texts: slice, source_lang: 'en', target_lang: lang })
       });
       if (!r.ok) {
+        // 401 = stale token (e.g. SECRET_KEY rotated, token expired) → force
+        // re-login so the dashboard isn't stuck silently in English.
+        if (r.status === 401 && window._lfMaybeLogoutOn401 && window._lfMaybeLogoutOn401(r)) {
+          return;
+        }
         // 403 (WAF) / 429 (rate limit) / 5xx — back off and skip this batch
         // silently. The page stays in English, much better UX than a broken
         // page or a flood of errors. Next page-load will retry from cache.
@@ -897,13 +902,32 @@ function logout() {
   window.location.href = '/auth';
 }
 
-// Helper for authenticated API calls
+// Helper for authenticated API calls. If the server returns 401 we force a
+// re-login — otherwise the dashboard fails silently (i18n stays in English,
+// PATCH /me returns "Could not save", etc.) and the user has no idea why.
 function authFetch(url, options = {}) {
   const token = getToken();
   if (!token) { logout(); return; }
   options.headers = { ...options.headers, 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
-  return fetch(url, options);
+  return fetch(url, options).then(r => {
+    if (r.status === 401) {
+      console.warn('[auth] Token rejected — logging out');
+      logout();
+    }
+    return r;
+  });
 }
+
+// Watch for 401 from the i18n batch endpoint too — same reason: a stale
+// token would cause the entire dashboard to silently stay in English.
+window._lfMaybeLogoutOn401 = function(resp) {
+  if (resp && resp.status === 401) {
+    console.warn('[i18n] Token rejected — logging out');
+    logout();
+    return true;
+  }
+  return false;
+};
 
 currentSession = getSession();
 if (!currentSession || !getToken()) {
