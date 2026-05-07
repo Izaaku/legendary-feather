@@ -638,10 +638,111 @@ def ocr_image():
 def dashboard_stats():
     """Real dashboard stats — replaces mock numbers in the customer dashboard.
 
-    Returns: minutes used/total, sessions today, top languages used, and
-    the most recent translation sessions for the Recent Activity card.
-    No mock data — all values come from the conversations table.
+    Returns: minutes used/total, sessions today, top languages used, the
+    most recent translation sessions for the Recent Activity card, AND the
+    user's real plan info from PRICING (name, price, features) so the
+    sidebar can show the actual plan instead of mock "Premium €24.99".
     """
     from sqlalchemy import func, desc
+    from app.config import PRICING
     user_id = g.current_user['user_id']
-    db = d
+    db = db_session()
+    try:
+        user = db.query(User).filter_by(user_id=user_id).first()
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Sessions today (UTC)
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        sessions_today = db.query(Conversation).filter(
+            Conversation.user_id == user_id,
+            Conversation.started_at >= today_start
+        ).count()
+
+        # Total minutes today
+        minutes_today = db.query(func.coalesce(func.sum(Conversation.duration_minutes), 0.0)).filter(
+            Conversation.user_id == user_id,
+            Conversation.started_at >= today_start
+        ).scalar() or 0.0
+
+        # Top languages used (last 30 days, distinct target_lang counts)
+        from datetime import timedelta
+        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+        lang_rows = db.query(
+            Conversation.target_lang,
+            func.count(Conversation.conversation_id).label('cnt')
+        ).filter(
+            Conversation.user_id == user_id,
+            Conversation.started_at >= thirty_days_ago
+        ).group_by(Conversation.target_lang).order_by(desc('cnt')).limit(8).all()
+
+        top_langs = [{'lang': r[0], 'count': r[1]} for r in lang_rows]
+        languages_used_count = len(top_langs)
+
+        # Recent activity (last 5 completed sessions)
+        recent = db.query(Conversation).filter(
+            Conversation.user_id == user_id
+        ).order_by(desc(Conversation.started_at)).limit(5).all()
+
+        recent_list = []
+        for c in recent:
+            recent_list.append({
+                'conversation_id': c.conversation_id,
+                'source_lang': c.source_lang,
+                'target_lang': c.target_lang,
+                'mode': c.mode,
+                'duration_minutes': round(c.duration_minutes or 0, 1),
+                'started_at': c.started_at.isoformat() if c.started_at else None,
+                'status': c.status,
+            })
+
+        # Real plan info from PRICING — used by sidebar so we never show
+        # mock prices/names like "Premium €24.99" to a user who's on
+        # Tourist Pro (€14.99) or Travel Pass.
+        plan_cfg = PRICING.get(user.plan or 'free', PRICING.get('free', {}))
+        eur = (plan_cfg.get('prices') or {}).get('eur', 0)
+        usd = (plan_cfg.get('prices') or {}).get('usd', 0)
+        billing = plan_cfg.get('billing', 'monthly')
+        plan_info = {
+            'slug': user.plan,
+            'name': plan_cfg.get('name', (user.plan or 'Free').title()),
+            'tagline': plan_cfg.get('tagline', ''),
+            'price_eur': eur,
+            'price_usd': usd,
+            'billing': billing,
+            'features': plan_cfg.get('features', []),
+            'category': plan_cfg.get('category', 'traveler'),
+        }
+
+        return jsonify({
+            'minutes_used': user.minutes_used,
+            'minutes_total': user.minutes_total,
+            'minutes_remaining': max(0, (user.minutes_total or 0) - (user.minutes_used or 0)),
+            'plan': user.plan,
+            'plan_info': plan_info,
+            'sessions_today': sessions_today,
+            'minutes_today': round(minutes_today, 1),
+            'top_langs': top_langs,
+            'languages_used_count': languages_used_count,
+            'recent': recent_list,
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+@api_bp.route('/health', methods=['GET'])
+def health_check():
+    """Check health of all services."""
+    tts_health = tts_engine.health_check()
+    return jsonify({
+        'status': 'ok',
+        'mode': 'cloud',
+        'services': {
+            'whisper_api': whisper.is_available(),
+            'deepl': translator.health_check(),
+            'openai_tts': tts_health.get('openai_tts', False),
+            'elevenlabs': tts_health.get('elevenlabs', False),
+        }
+    })

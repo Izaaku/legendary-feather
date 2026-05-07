@@ -602,27 +602,53 @@ def handle_f2f_translate(data):
             print(f'[F2F-DEBUG] TTS EXCEPTION: {type(tts_err).__name__}: {tts_err}')
             print(_tb.format_exc())
 
-        # ── Track minutes used ──
+        # ── Track minutes used + record conversation for history ──
         # Estimate from char count: ~750 chars/minute (~150 wpm * 5 chars/word).
         # We use the char count of the TRANSLATED text since that's what the
-        # TTS actually synthesizes.
+        # TTS actually synthesizes. Each F2F utterance is recorded as its own
+        # short Conversation row so the dashboard's "Recent Activity" / History
+        # views can pull real translation history (no more empty state when
+        # the user has actually been translating).
         user_plan_snapshot = None
         if user_id and audio_b64:
             try:
+                from app.models.conversation import Conversation
+                from datetime import datetime as _dt, timezone as _tz
+                import uuid as _uuid
                 db = db_session()
                 user = db.query(User).filter_by(user_id=user_id).first()
                 if user:
                     user_plan_snapshot = user.plan
+                    chars = len(translated or '')
+                    # Round up so even short utterances count as at least 1 minute
+                    # of usage — prevents free abuse via tiny chunks.
+                    minutes_used = max(1, round(chars / 750.0 + 0.5))
                     if not is_unlimited_user(user):
-                        chars = len(translated or '')
-                        # Round up so even short utterances count as at least 1 minute
-                        # of usage — prevents free abuse via tiny chunks.
-                        minutes_used = max(1, round(chars / 750.0 + 0.5))
                         user.minutes_used = (user.minutes_used or 0) + minutes_used
-                        db.commit()
+
+                    # Record this F2F utterance as a completed conversation so
+                    # it shows up in the customer dashboard history.
+                    now = _dt.now(_tz.utc)
+                    conv = Conversation(
+                        conversation_id=str(_uuid.uuid4()),
+                        user_id=user_id,
+                        mode='face_to_face',
+                        source_lang=source,
+                        target_lang=target,
+                        duration_seconds=int(round((minutes_used) * 60)),
+                        duration_minutes=float(minutes_used),
+                        transcript_original=(text or '')[:2000],
+                        transcript_translated=(translated or '')[:2000],
+                        status='completed',
+                        started_at=now,
+                        ended_at=now,
+                        created_at=now,
+                    )
+                    db.add(conv)
+                    db.commit()
                 db.close()
             except Exception as e:
-                print(f'[F2F] minute-tracking DB update failed: {e}')
+                print(f'[F2F] minute-tracking / conversation insert failed: {e}')
 
         # ── Audit log + audio watermark hash (anti-fraud traceability) ──
         # Every TTS-generated audio gets a SHA-256 hash that's stored in
@@ -704,12 +730,12 @@ def handle_transcribe(data):
 
         # ── Clamp detection to the F2F language pair ──────────────
         # Whisper auto-detection occasionally picks a language outside the two
-        # the user is actively translating between (e.g. detects French when
-        # the user said "How are you" with a mild accent). When language_pair
-        # is provided, we re-run Whisper forcing each candidate language and
-        # keep whichever returns the longest non-empty text — this is a
-        # reliable heuristic since the wrong-language forced run typically
-        # yields garbled / empty output.
+        # the user is actively translating between. When detection is wrong
+        # AND we have a known language pair, we pick the FIRST language in
+        # the pair as the assumed language (cheap fallback) instead of doing
+        # a second Whisper API call (which doubled F2F latency from ~5s to
+        # ~10-15s). The downside (occasional wrong direction) is fixed by
+        # the next utterance — much better UX than 30s wait.
         try:
             normalized_pair = [str(l).lower()[:2] for l in (language_pair or []) if l]
             detected = (result.get('detected_language') or '').lower()[:2]
@@ -718,19 +744,8 @@ def handle_transcribe(data):
                     and len(normalized_pair) == 2
                     and detected
                     and detected not in normalized_pair):
-                print(f'[Whisper] Detected {detected!r} not in pair {normalized_pair} — re-running per language')
-                candidates = []
-                for lang in normalized_pair:
-                    retry = whisper.transcribe(audio_bytes, language=lang) or {}
-                    txt = (retry.get('text') or '').strip()
-                    if txt:
-                        candidates.append((lang, retry, len(txt)))
-                if candidates:
-                    candidates.sort(key=lambda x: x[2], reverse=True)
-                    chosen_lang, chosen_result, chars = candidates[0]
-                    chosen_result['detected_language'] = chosen_lang
-                    result = chosen_result
-                    print(f'[Whisper] Clamped to {chosen_lang!r} ({chars} chars wins)')
+                print(f'[Whisper] Detected {detected!r} not in pair {normalized_pair} — clamping to first lang (no re-run)')
+                result['detected_language'] = normalized_pair[0]
         except Exception as clamp_err:
             print(f'[Whisper] Pair clamp failed (non-fatal): {clamp_err}')
 

@@ -525,12 +525,7 @@ body {
   </div>
 </div>
 
-<!-- PLAN SWITCHER (owner/demo only) -->
-<div class="plan-switcher" id="planSwitcher">
-  <button class="active" onclick="switchPlanView('personal', this)">Personal &mdash; &euro;9.99</button>
-  <button onclick="switchPlanView('premium', this)">Premium &mdash; &euro;24.99</button>
-  <button onclick="switchPlanView('business', this)">Business &mdash; &euro;89.99</button>
-</div>
+<!-- (Plan switcher removed in V1: customers see their real plan only.) -->
 
 <div class="layout" id="mainLayout">
 <!-- ════════════════════════════════════════════ -->
@@ -831,23 +826,28 @@ window.addEventListener('load', () => {
   }, 600);  // tiny delay so the welcome header animation finishes first
 });
 
-// Re-translate when navigation changes the main content (sidebar clicks).
-// MutationObserver watches the main panel and re-runs translation on swap.
+// Re-translate when navigation changes the main content OR the sidebar
+// plan card (showPlan re-renders both async after /api/dashboard/stats
+// returns). MutationObserver triggers a debounced retranslate on swap.
 (function _lfWatchMain() {
-  const main = document.getElementById('main-content');
-  if (!main) return;
   const obs = new MutationObserver(() => {
     if (_lfGetUserLang() !== 'en') {
-      // Debounce — wait for the inner HTML to settle before walking
       clearTimeout(window._lfRetranslateTimer);
-      window._lfRetranslateTimer = setTimeout(() => lf_translateNode(main), 80);
+      window._lfRetranslateTimer = setTimeout(() => {
+        // Translate the whole dashboard, not just main-content, so the
+        // sidebar plan card, stat numbers, etc. all switch to the user's
+        // language together.
+        lf_translateNode(document.body);
+      }, 80);
     }
   });
-  // Wait for the element to exist
   const tryAttach = () => {
     const m = document.getElementById('main-content');
-    if (m) obs.observe(m, { childList: true, subtree: true, characterData: false });
-    else setTimeout(tryAttach, 200);
+    const s = document.getElementById('sidebar-plan');
+    let attached = false;
+    if (m) { obs.observe(m, { childList: true, subtree: true, characterData: false }); attached = true; }
+    if (s) { obs.observe(s, { childList: true, subtree: true, characterData: false }); attached = true; }
+    if (!attached) setTimeout(tryAttach, 200);
   };
   tryAttach();
 })();
@@ -887,19 +887,10 @@ if (currentSession) {
   document.getElementById('topBarUser').innerHTML =
     `<strong>${currentSession.name}</strong> &middot; ${currentSession.plan.charAt(0).toUpperCase() + currentSession.plan.slice(1)}`;
 
-  // Show plan switcher and admin link only for owners
+  // Show admin link only for owners (plan switcher removed in V1)
   if (isOwner) {
-    document.getElementById('planSwitcher').classList.add('visible');
-    document.getElementById('mainLayout').classList.add('with-switcher');
-    document.querySelector('.sidebar').style.top = '82px';
     document.getElementById('nav-admin').style.display = 'flex';
   }
-}
-
-function switchPlanView(planKey, btn) {
-  document.querySelectorAll('.plan-switcher button').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  showPlan(planKey);
 }
 
 // ── DATA ──
@@ -1047,6 +1038,22 @@ function showPlan(planKey) {
   if (dashboardStats) {
     plan.used = dashboardStats.minutes_used || 0;
     if (typeof dashboardStats.minutes_total === 'number') plan.minutes = dashboardStats.minutes_total;
+
+    // Real plan info from PRICING — overrides mock plan name/price so the
+    // sidebar shows what the customer actually pays for, not the legacy
+    // Personal/Premium/Business mock labels.
+    if (dashboardStats.plan_info) {
+      const pi = dashboardStats.plan_info;
+      if (pi.name) plan.name = pi.name;
+      if (typeof pi.price_eur === 'number') {
+        const billing = pi.billing === 'one_time' ? '' :
+                        pi.billing === 'monthly' ? ' / month' : '';
+        plan.price = '€' + (pi.price_eur || 0).toFixed(2);
+        plan.billingLabel = billing;
+      }
+      if (Array.isArray(pi.features) && pi.features.length) plan.features = pi.features;
+    }
+
     plan.history = (dashboardStats.recent || []).map(r => {
       const src = (r.source_lang || '').toUpperCase();
       const tgt = (r.target_lang || '').toUpperCase();
@@ -1077,12 +1084,13 @@ function showPlan(planKey) {
   // Show/hide sidebar items — use resolvedKey so 'team' and 'scale' also unlock these
   document.getElementById('history-badge').textContent = plan.history.length;
 
-  // Sidebar plan card
+  // Sidebar plan card — uses real plan name/price/billing from plan_info
+  const billingLabel = (plan.billingLabel !== undefined) ? plan.billingLabel : ' / month';
   document.getElementById('sidebar-plan').innerHTML = `
-    <div class="sidebar-plan-name">${plan.name} Plan</div>
-    <div class="sidebar-plan-label">${plan.price}<span style="font-size:12px;color:var(--text-muted)"> / month</span></div>
+    <div class="sidebar-plan-name">${plan.name}</div>
+    <div class="sidebar-plan-label">${plan.price}<span style="font-size:12px;color:var(--text-muted)">${billingLabel}</span></div>
     <div class="sidebar-plan-price">${remaining} min remaining</div>
-    ${plan.upgradeTo ? `<button class="sidebar-upgrade">Upgrade to ${plan.upgradeTo}</button>` : '<div style="font-size:11px;color:var(--green);text-align:center;">Your best plan</div>'}
+    ${plan.upgradeTo ? `<button class="sidebar-upgrade">Upgrade to ${plan.upgradeTo}</button>` : ''}
   `;
 
   // Build main content
@@ -1354,14 +1362,7 @@ const userPlan = currentSession ? currentSession.plan : 'free';
 showPlan(mapPlanToMockKey(userPlan));
 loadDashboardStats();
 
-// Highlight the correct switcher button for owners
-if (currentSession && currentSession.is_owner) {
-  const planBtns = document.querySelectorAll('.plan-switcher button');
-  planBtns.forEach(b => b.classList.remove('active'));
-  const planIndex = { personal: 0, premium: 1, business: 2 };
-  const viewPlan = mapPlanToMockKey(userPlan);
-  if (planBtns[planIndex[viewPlan]]) planBtns[planIndex[viewPlan]].classList.add('active');
-}
+// (Owner plan-switcher highlight removed in V1 — switcher itself is gone.)
 
 // ── SIDEBAR NAVIGATION (id-based) ──
 const sidebarItems = document.querySelectorAll('.sidebar-item');

@@ -1722,30 +1722,29 @@ function processF2FUtterance(text){
         session_id: getF2FSessionId(),
     });
 
-    // Show "warming up voice clone..." after 8s so the user knows it's
-    // still working through a cold start and doesn't think it's broken.
+    // Soft notice at 6s if translation is still pending (cold container start
+    // on Railway can add a few seconds before OpenAI / DeepL respond).
     const warmupNotice = setTimeout(() => {
         const el = document.getElementById(bubbleId);
         if(el && el.querySelector('.cb-translated').textContent === 'Translating...') {
-            el.querySelector('.cb-translated').textContent = 'Warming up voice clone… (~30s on first request)';
+            el.querySelector('.cb-translated').textContent = 'Still translating…';
             el.querySelector('.cb-translated').style.color = 'var(--gold)';
         }
-    }, 8000);
+    }, 6000);
 
-    // Safety timeout — if translation doesn't come back in 200s, mark the
-    // bubble as failed. Voice cloning cold start can take 30-90s on
-    // RunPod's first request; we give 180s server-side + buffer here.
+    // Safety timeout — fail the bubble after 60s. With OpenAI APIs only
+    // (no voice clone, no RunPod cold start), end-to-end should be ~3-8s.
     const translateTimer = setTimeout(() => {
         clearTimeout(warmupNotice);
         const el = document.getElementById(bubbleId);
         if(el) {
             const trEl = el.querySelector('.cb-translated');
-            if(trEl && (trEl.textContent === 'Translating...' || trEl.textContent.startsWith('Warming up'))) {
+            if(trEl && (trEl.textContent === 'Translating...' || trEl.textContent.startsWith('Still'))) {
                 trEl.textContent = '(translation failed — try again)';
                 trEl.style.color = 'var(--error)';
             }
         }
-    }, 200000);
+    }, 60000);
 
     socket.once('f2f_translation', (data)=>{
         clearTimeout(translateTimer);
