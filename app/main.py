@@ -479,6 +479,23 @@ def handle_f2f_translate(data):
         emit('error', {'message': 'No text provided'})
         return
 
+    # API budget gate: emergency kill switch + global / per-user spending
+    # caps. Returns 503 (service unavailable) so the frontend shows a clear
+    # error instead of the request hanging behind a worker that's been
+    # blocked from making the API call.
+    try:
+        from app.routes.admin import check_api_budget
+        gate = check_api_budget(user_id=user_id or None)
+        if not gate.get('allowed'):
+            emit('f2f_translation', {
+                'error': 'Service temporarily limited: ' + gate.get('reason', 'API budget reached'),
+                'budget_blocked': True,
+            })
+            return
+    except Exception as _be:
+        # Never fail the whole request if budget bookkeeping breaks
+        print(f'[F2F] budget check failed (non-fatal): {_be}')
+
     # Minute gate: block if the user is out of minutes (Free / Travel Pass)
     db_user = None
     user_plan_obj = None

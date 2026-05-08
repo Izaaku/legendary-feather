@@ -698,11 +698,16 @@ async function lf_translateNode(root) {
     await _lfTranslateBatch(blockOriginals, lang);
     for (const el of blockEls) {
       const orig = (el.dataset.i18nOriginal || el.textContent || '').trim();
-      // Remember the original so re-renders / language switches translate
-      // from the source string, not from a previously-translated value.
       if (!el.dataset.i18nOriginal) el.dataset.i18nOriginal = orig;
       const tr = _LF_I18N.cache[orig];
-      if (tr && tr !== orig) el.textContent = tr;
+      // CRITICAL: skip the assignment when the visible text already matches.
+      // Setting textContent always fires a childList mutation (even with the
+      // same string), which the MutationObserver picks up, schedules another
+      // lf_translateNode pass, and we loop forever — saturating the gevent
+      // worker with translate-batch requests.
+      if (tr && tr !== orig && el.textContent.trim() !== tr) {
+        el.textContent = tr;
+      }
     }
   }
 
@@ -739,11 +744,14 @@ async function lf_translateNode(root) {
 
   await _lfTranslateBatch(allStrings, lang);
 
-  // Apply translations
+  // Apply translations — only assign when the value actually changes.
   for (const tn of textNodes) {
     const orig = tn.nodeValue.trim();
     const tr = _LF_I18N.cache[orig];
-    if (tr) tn.nodeValue = tn.nodeValue.replace(orig, tr);
+    if (tr && tr !== orig) {
+      const next = tn.nodeValue.replace(orig, tr);
+      if (next !== tn.nodeValue) tn.nodeValue = next;
+    }
   }
   for (const el of placeholderEls) {
     const orig = el.getAttribute('placeholder');
@@ -861,18 +869,31 @@ window.addEventListener('load', () => {
 });
 
 // Re-translate when navigation changes the main content OR the sidebar
-// plan card (showPlan re-renders both async after /api/dashboard/stats
-// returns). MutationObserver triggers a debounced retranslate on swap.
+// plan card. Important guards: (a) re-entrancy flag so a translation pass
+// can't trigger itself by mutating the DOM, (b) generous 600ms debounce so
+// the support-chat 5s poll doesn't fire one translate-batch per cycle, (c)
+// max 1 in-flight retranslate at a time.
+window._lfTranslating = false;
+window._lfPendingRetranslate = false;
+async function _lfRunRetranslate() {
+  if (window._lfTranslating) { window._lfPendingRetranslate = true; return; }
+  window._lfTranslating = true;
+  try { await lf_translateNode(document.body); }
+  finally {
+    window._lfTranslating = false;
+    if (window._lfPendingRetranslate) {
+      window._lfPendingRetranslate = false;
+      // small jitter so we don't immediately recurse
+      setTimeout(_lfRunRetranslate, 200);
+    }
+  }
+}
+
 (function _lfWatchMain() {
   const obs = new MutationObserver(() => {
-    if (_lfGetUserLang() !== 'en') {
+    if (_lfGetUserLang() !== 'en' && !window._lfTranslating) {
       clearTimeout(window._lfRetranslateTimer);
-      window._lfRetranslateTimer = setTimeout(() => {
-        // Translate the whole dashboard, not just main-content, so the
-        // sidebar plan card, stat numbers, etc. all switch to the user's
-        // language together.
-        lf_translateNode(document.body);
-      }, 80);
+      window._lfRetranslateTimer = setTimeout(_lfRunRetranslate, 600);
     }
   });
   const tryAttach = () => {
@@ -2050,34 +2071,4 @@ function filterFAQ(query) {
   function drawStars(t){
     ctx.clearRect(0,0,canvas.width,canvas.height);
     stars.forEach(s=>{
-      s.x += s.vx + Math.sin(t * s.wobbleSpeed + s.phase) * s.wobbleAmp * 0.1;
-      s.y += s.vy;
-      if(s.y < -10) { s.y = canvas.height + 10; s.x = Math.random()*canvas.width; }
-      if(s.x < -10) s.x = canvas.width + 10;
-      if(s.x > canvas.width+10) s.x = -10;
-      const opacity = s.o * (0.5 + 0.5*Math.sin(t*s.speed + s.phase));
-      ctx.save();
-      ctx.globalAlpha = opacity * 0.3;
-      ctx.shadowColor = 'hsla(' + s.h + ',' + s.s + '%,' + s.l + '%,0.6)';
-      ctx.shadowBlur = s.glowSize;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r * 1.5, 0, Math.PI*2);
-      ctx.fillStyle = 'hsla(' + s.h + ',' + s.s + '%,' + s.l + '%,' + opacity + ')';
-      ctx.fill();
-      ctx.restore();
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
-      ctx.fillStyle = 'rgba(212,168,67,' + opacity + ')';
-      ctx.fill();
-    });
-    requestAnimationFrame(drawStars);
-  }
-
-  resizeCanvas(); createStars();
-  requestAnimationFrame(drawStars);
-  addEventListener('resize',()=>{resizeCanvas();createStars();});
-})();
-</script>
-
-</body>
-</html>
+      s.x += s.vx + Math.sin(t * s.wobbleSpeed +

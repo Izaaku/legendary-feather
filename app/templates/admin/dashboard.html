@@ -307,6 +307,8 @@
   <!-- ═══════════ API METRICS ═══════════ -->
   <div class="view" id="view-api">
     <div class="grid grid-4" id="api-kpis"></div>
+    <div id="api-budget-card" style="margin-top:16px;"></div>
+    <div id="api-top-users-card" style="margin-top:16px;"></div>
     <div class="grid grid-2" style="margin-top:16px;">
       <div class="card">
         <div class="section-title"><span>🔥</span> Top Endpoints (last hour)</div>
@@ -1222,6 +1224,79 @@ async function loadAPI() {
   document.getElementById('top-ips').innerHTML = data.top_ips.map(e =>
     `<tr><td style="font-family:monospace;">${esc(e.ip)}</td><td>${e.count}</td></tr>`
   ).join('') || '<tr><td colspan="2">No data yet</td></tr>';
+
+  // ── Budget & cost card ──
+  // We fetch /admin/api/api-costs separately so a slow cost lookup doesn't
+  // block the rest of the API metrics view.
+  apiFetch('/admin/api/api-costs').then(costs => {
+    if (!costs) return;
+    const b = costs.budget || {};
+    const used = costs.total_today_usd || 0;
+    const pct = b.global_pct_used || 0;
+    const barColor = pct < 60 ? '#7fc97f' : (pct < 85 ? '#d4a843' : '#e64545');
+    const killBadge = b.emergency_disabled
+      ? '<span style="background:#e64545;color:#fff;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;">EMERGENCY DISABLED</span>'
+      : '';
+    let providerRows = '';
+    for (const [name, p] of Object.entries(costs.providers || {})) {
+      providerRows += `<tr>
+        <td style="font-family:monospace;">${esc(name)}</td>
+        <td>${p.calls}</td>
+        <td>${p.chars ? p.chars.toLocaleString() : '—'}</td>
+        <td>${p.seconds ? p.seconds.toFixed(1) + 's' : '—'}</td>
+        <td>$${p.cost_usd.toFixed(4)}</td>
+      </tr>`;
+    }
+    document.getElementById('api-budget-card').innerHTML = `
+      <div class="card">
+        <div class="section-title" style="display:flex;align-items:center;gap:8px;">
+          <span>💰</span> API Budget &amp; Spend (today, UTC) ${killBadge}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0;">
+          <div><div style="font-size:11px;color:var(--text-sub);">Spent today</div>
+               <div style="font-size:22px;color:#d4a843;font-weight:600;">$${used.toFixed(4)}</div>
+               <div style="font-size:11px;color:var(--text-sub);">of $${b.global_usd.toFixed(2)} cap (${pct.toFixed(1)}%)</div></div>
+          <div><div style="font-size:11px;color:var(--text-sub);">Remaining</div>
+               <div style="font-size:22px;color:#7fc97f;font-weight:600;">$${(b.global_remaining_usd||0).toFixed(4)}</div></div>
+          <div><div style="font-size:11px;color:var(--text-sub);">Per-user daily cap</div>
+               <div style="font-size:22px;color:var(--text);font-weight:600;">$${b.user_daily_usd.toFixed(2)}</div></div>
+          <div><div style="font-size:11px;color:var(--text-sub);">Per-user hourly calls</div>
+               <div style="font-size:22px;color:var(--text);font-weight:600;">${b.user_hourly_calls}</div></div>
+          <div><div style="font-size:11px;color:var(--text-sub);">30-day projection</div>
+               <div style="font-size:22px;color:var(--text);font-weight:600;">$${(costs.projected_monthly_usd||0).toFixed(2)}</div></div>
+        </div>
+        <div style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin:8px 0 14px;">
+          <div style="height:100%;width:${Math.min(100, pct).toFixed(1)}%;background:${barColor};transition:width .3s;"></div>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Provider</th><th>Calls</th><th>Chars</th><th>Seconds</th><th>Cost</th></tr></thead>
+          <tbody>${providerRows || '<tr><td colspan="5">No spend recorded today</td></tr>'}</tbody>
+        </table></div>
+        <div style="font-size:10px;color:var(--text-sub);margin-top:8px;">${esc(costs.note || '')}</div>
+      </div>`;
+
+    // Top spenders today (catches a single user burning through cost — usual
+    // sign of a runaway client-side bug or abuse).
+    const tu = costs.top_users_today || [];
+    if (tu.length) {
+      let userRows = tu.map(u => `<tr>
+        <td style="font-family:monospace;font-size:11px;">${esc(u.user_id)}</td>
+        <td>$${u.cost_usd.toFixed(4)}</td>
+        <td>${u.calls_today}</td>
+        <td>${u.calls_last_hour}</td>
+      </tr>`).join('');
+      document.getElementById('api-top-users-card').innerHTML = `
+        <div class="card">
+          <div class="section-title"><span>👤</span> Top Users by Spend (today)</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>User ID</th><th>Cost</th><th>Calls today</th><th>Calls last hour</th></tr></thead>
+            <tbody>${userRows}</tbody>
+          </table></div>
+        </div>`;
+    } else {
+      document.getElementById('api-top-users-card').innerHTML = '';
+    }
+  }).catch(() => {});
 
   // RPM chart
   if (data.rpm_chart) {

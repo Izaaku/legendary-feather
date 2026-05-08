@@ -639,75 +639,200 @@ def run_cleanup():
 # on redeploy) — for V1 that's fine; persist to a `daily_costs` table if you
 # want history.
 
-import threading
-from collections import defaultdict
-from datetime import date as _date
+import threading, os
+from collections import defaultdict, deque
+from datetime import date as _date, datetime as _dt, timezone as _tz
+
+# ============================================================================
+# COST TRACKING + SAFETY CAPS
+# ============================================================================
+# Three layers of protection so a runaway bug (i18n loop, voice spam, etc.)
+# can never empty the OpenAI / DeepL wallet:
+#
+#  1) Global daily budget   — total spend across all users < $X/day
+#  2) Per-user daily budget — single user can't burn > $Y/day
+#  3) Per-user hourly call cap — a tight loop in one user's tab gets cut
+#     within minutes, not hours. Catches bugs faster than spend caps.
+#  4) EMERGENCY_API_DISABLED env var — instant kill switch
+#
+# All limits are configurable via env vars so we can tighten or relax
+# without a code deploy.
+# ============================================================================
 
 _API_COST_STATE = {
     'lock': threading.Lock(),
-    'today_chars': defaultdict(int),     # provider -> chars (date-keyed)
-    'today_calls': defaultdict(int),     # provider -> calls
-    'today_seconds': defaultdict(float), # for whisper/tts duration-based pricing
+    'today_chars': defaultdict(int),
+    'today_calls': defaultdict(int),
+    'today_seconds': defaultdict(float),
     'date': _date.today(),
+    # Per-user counters
+    'user_today_cost': defaultdict(float),       # user_id -> USD today
+    'user_today_calls': defaultdict(int),        # user_id -> calls today
+    # Per-user hour bucket — list of (timestamp, cost) within the last hour.
+    # We use a deque for cheap left-pop on cleanup.
+    'user_hour_calls': defaultdict(lambda: deque()),
 }
 
 _PROVIDER_COSTS = {
-    # Approx USD prices as of 2026 — update when providers change rates
     'openai_tts':       {'per_1k_chars': 0.015},
     'openai_whisper':   {'per_minute_audio': 0.006},
-    'deepl':            {'per_1m_chars': 25.0},  # Pro plan effective rate
-    'fish_speech':      {'per_second': 0.000725},  # RunPod (when re-enabled)
+    'deepl':            {'per_1m_chars': 25.0},
+    'fish_speech':      {'per_second': 0.000725},
 }
 
 
-def track_api_cost(provider: str, chars: int = 0, seconds: float = 0):
+def _budget_global_usd():
+    return float(os.getenv('API_DAILY_BUDGET_USD', '50'))
+
+def _budget_user_usd():
+    return float(os.getenv('USER_DAILY_BUDGET_USD', '5'))
+
+def _budget_user_hour_calls():
+    return int(os.getenv('USER_HOURLY_API_CALLS', '300'))
+
+def _emergency_disabled():
+    return os.getenv('EMERGENCY_API_DISABLED', '').lower() in ('1', 'true', 'yes')
+
+
+def _estimate_cost(provider: str, chars: int = 0, seconds: float = 0) -> float:
+    cfg = _PROVIDER_COSTS.get(provider, {})
+    if 'per_1k_chars' in cfg and chars:    return (chars / 1000.0) * cfg['per_1k_chars']
+    if 'per_1m_chars' in cfg and chars:    return (chars / 1_000_000.0) * cfg['per_1m_chars']
+    if 'per_minute_audio' in cfg and seconds: return (seconds / 60.0) * cfg['per_minute_audio']
+    if 'per_second' in cfg and seconds:    return seconds * cfg['per_second']
+    return 0.0
+
+
+def _maybe_reset_daily(now=None):
+    if _date.today() != _API_COST_STATE['date']:
+        _API_COST_STATE['today_chars'].clear()
+        _API_COST_STATE['today_calls'].clear()
+        _API_COST_STATE['today_seconds'].clear()
+        _API_COST_STATE['user_today_cost'].clear()
+        _API_COST_STATE['user_today_calls'].clear()
+        _API_COST_STATE['date'] = _date.today()
+
+
+def check_api_budget(user_id: str = None) -> dict:
+    """Returns {'allowed': bool, 'reason': str|None}. Call BEFORE making an
+    expensive API call so we can short-circuit instead of paying the bill.
+
+    Owners (passed user_id == 'owner' or any unlimited check upstream) can
+    skip this — but it's safer to call regardless and have them be exempt
+    via a much higher per-user limit (still protects against runaway bugs).
+    """
+    if _emergency_disabled():
+        return {'allowed': False, 'reason': 'EMERGENCY_API_DISABLED is set — all paid APIs blocked'}
+    now = _dt.now(_tz.utc).timestamp()
+    with _API_COST_STATE['lock']:
+        _maybe_reset_daily()
+
+        # 1) Global daily budget
+        total_today = 0.0
+        for provider, cfg in _PROVIDER_COSTS.items():
+            total_today += _estimate_cost(
+                provider,
+                chars=_API_COST_STATE['today_chars'].get(provider, 0),
+                seconds=_API_COST_STATE['today_seconds'].get(provider, 0),
+            )
+        if total_today >= _budget_global_usd():
+            return {'allowed': False,
+                    'reason': f'Daily global budget reached (${total_today:.2f} >= ${_budget_global_usd():.2f})'}
+
+        if user_id:
+            # 2) Per-user daily cost
+            user_cost = _API_COST_STATE['user_today_cost'].get(user_id, 0.0)
+            if user_cost >= _budget_user_usd():
+                return {'allowed': False,
+                        'reason': f'User daily limit reached (${user_cost:.2f} >= ${_budget_user_usd():.2f})'}
+
+            # 3) Per-user hourly call cap — clean expired entries first
+            bucket = _API_COST_STATE['user_hour_calls'][user_id]
+            cutoff = now - 3600
+            while bucket and bucket[0] < cutoff:
+                bucket.popleft()
+            if len(bucket) >= _budget_user_hour_calls():
+                return {'allowed': False,
+                        'reason': f'User hourly call cap reached ({len(bucket)} >= {_budget_user_hour_calls()})'}
+
+    return {'allowed': True, 'reason': None}
+
+
+def track_api_cost(provider: str, chars: int = 0, seconds: float = 0, user_id: str = None):
     """Call from the cloud_* services after a successful API call.
 
-    Example:  track_api_cost('openai_tts', chars=len(text))
+    Example:  track_api_cost('openai_tts', chars=len(text), user_id=u.user_id)
+
+    user_id is optional but recommended — without it, we can't enforce
+    per-user limits.
     """
+    cost = _estimate_cost(provider, chars=chars, seconds=seconds)
+    now = _dt.now(_tz.utc).timestamp()
     with _API_COST_STATE['lock']:
-        # Reset counters at midnight UTC
-        if _date.today() != _API_COST_STATE['date']:
-            _API_COST_STATE['today_chars'].clear()
-            _API_COST_STATE['today_calls'].clear()
-            _API_COST_STATE['today_seconds'].clear()
-            _API_COST_STATE['date'] = _date.today()
+        _maybe_reset_daily()
         _API_COST_STATE['today_calls'][provider] += 1
         if chars: _API_COST_STATE['today_chars'][provider] += chars
         if seconds: _API_COST_STATE['today_seconds'][provider] += seconds
+        if user_id:
+            _API_COST_STATE['user_today_cost'][user_id] += cost
+            _API_COST_STATE['user_today_calls'][user_id] += 1
+            _API_COST_STATE['user_hour_calls'][user_id].append(now)
 
 
 @admin_bp.route('/api/api-costs', methods=['GET'])
 @owner_required
 def get_api_costs():
-    """Estimated API spend today (in-process counters)."""
+    """Estimated API spend today + budget status + top spenders."""
     today_costs = {}
     total = 0.0
     with _API_COST_STATE['lock']:
+        _maybe_reset_daily()
         for provider, cfg in _PROVIDER_COSTS.items():
             chars = _API_COST_STATE['today_chars'].get(provider, 0)
             calls = _API_COST_STATE['today_calls'].get(provider, 0)
             secs = _API_COST_STATE['today_seconds'].get(provider, 0)
-            cost = 0.0
-            if 'per_1k_chars' in cfg and chars:
-                cost = (chars / 1000.0) * cfg['per_1k_chars']
-            elif 'per_1m_chars' in cfg and chars:
-                cost = (chars / 1_000_000.0) * cfg['per_1m_chars']
-            elif 'per_minute_audio' in cfg and secs:
-                cost = (secs / 60.0) * cfg['per_minute_audio']
-            elif 'per_second' in cfg and secs:
-                cost = secs * cfg['per_second']
+            cost = _estimate_cost(provider, chars=chars, seconds=secs)
             today_costs[provider] = {
                 'calls': calls, 'chars': chars,
                 'seconds': round(secs, 1) if secs else 0,
                 'cost_usd': round(cost, 4),
             }
             total += cost
-    # Rough monthly projection: today × 30
+
+        # Top 10 user spenders today (so the owner can see if one user is
+        # eating the budget — most likely sign of a bug or abuse).
+        user_costs = sorted(
+            _API_COST_STATE['user_today_cost'].items(),
+            key=lambda kv: kv[1], reverse=True
+        )[:10]
+        top_users = [
+            {
+                'user_id': uid,
+                'cost_usd': round(c, 4),
+                'calls_today': _API_COST_STATE['user_today_calls'].get(uid, 0),
+                'calls_last_hour': len(_API_COST_STATE['user_hour_calls'].get(uid, [])),
+            }
+            for uid, c in user_costs
+        ]
+
+    global_budget = _budget_global_usd()
+    user_budget = _budget_user_usd()
+    user_hour_cap = _budget_user_hour_calls()
+    pct_global = (total / global_budget * 100) if global_budget > 0 else 0
+
     return jsonify({
         'date': _API_COST_STATE['date'].isoformat(),
         'providers': today_costs,
         'total_today_usd': round(total, 4),
         'projected_monthly_usd': round(total * 30, 2),
-        'note': 'Counters reset on redeploy. For persistent history, add a daily_costs table.'
+        'budget': {
+            'global_usd': global_budget,
+            'global_pct_used': round(pct_global, 1),
+            'global_remaining_usd': round(max(0, global_budget - total), 4),
+            'user_daily_usd': user_budget,
+            'user_hourly_calls': user_hour_cap,
+            'emergency_disabled': _emergency_disabled(),
+        },
+        'top_users_today': top_users,
+        'note': 'In-memory counters; reset on redeploy. Caps configurable via API_DAILY_BUDGET_USD, USER_DAILY_BUDGET_USD, USER_HOURLY_API_CALLS, EMERGENCY_API_DISABLED env vars.'
     })
