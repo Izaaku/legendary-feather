@@ -374,9 +374,21 @@
               <div class="form-section">
                 <div class="checkbox-group">
                   <input type="checkbox" id="terms" name="terms" required>
-                  <label for="terms">I agree to the Terms of Service and Privacy Policy</label>
+                  <label for="terms">I agree to the <a href="/terms" target="_blank">Terms of Service</a>, <a href="/privacy" target="_blank">Privacy Policy</a>, and <a href="/refund" target="_blank">Refund Policy</a>.</label>
                 </div>
                 <div class="error-message" id="terms-error"></div>
+
+                <!-- EU consumer rights waiver — required for digital services
+                     under Directive 2011/83/EU. Without explicit consent here,
+                     EU users keep their 14-day cooling-off right and can
+                     dispute any charge within that window. -->
+                <div class="checkbox-group" style="margin-top:14px;">
+                  <input type="checkbox" id="eu-consent" name="eu-consent" required>
+                  <label for="eu-consent" style="font-size:12px;line-height:1.5;color:rgba(160,160,176,0.9);">
+                    I understand the service starts immediately upon payment and I expressly request immediate performance. I acknowledge that doing so waives my 14-day right of withdrawal under EU consumer law. The 7-day money-back guarantee in our <a href="/refund" target="_blank">Refund Policy</a> still applies if I have used less than 10% of my plan.
+                  </label>
+                </div>
+                <div class="error-message" id="eu-consent-error"></div>
               </div>
 
               <!-- Submit Button -->
@@ -400,10 +412,11 @@
       <h3>Legendary Feather</h3>
       <p>&copy; 2026 Legendary Feather. All rights reserved.</p>
       <ul>
-        <li><a href="/about">About</a></li>
-        <li><a href="/contact">Contact</a></li>
-        <li><a href="/privacy">Privacy Policy</a></li>
-        <li><a href="/terms">Terms of Service</a></li>
+        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/privacy">Privacy</a></li>
+        <li><a href="/terms">Terms</a></li>
+        <li><a href="/refund">Refunds</a></li>
+        <li><a href="mailto:legal@legendaryfeather.com">Contact</a></li>
       </ul>
     </div>
   </footer>
@@ -480,6 +493,28 @@
     // Form submission
     document.getElementById('checkout-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      // Both consent boxes must be ticked. The EU one is required so we can
+      // legally start the digital service immediately and avoid the 14-day
+      // cooling-off / chargeback window.
+      const termsBox = document.getElementById('terms');
+      const euBox = document.getElementById('eu-consent');
+      const termsErr = document.getElementById('terms-error');
+      const euErr = document.getElementById('eu-consent-error');
+      let blocked = false;
+      if (termsBox && !termsBox.checked) {
+        if (termsErr) termsErr.textContent = 'You must accept the Terms, Privacy and Refund policies.';
+        blocked = true;
+      } else if (termsErr) {
+        termsErr.textContent = '';
+      }
+      if (euBox && !euBox.checked) {
+        if (euErr) euErr.textContent = 'Please confirm immediate service start to proceed.';
+        blocked = true;
+      } else if (euErr) {
+        euErr.textContent = '';
+      }
+      if (blocked) return;
 
       const submitBtn = document.getElementById('submit-btn');
       const spinner = document.getElementById('loading-spinner');

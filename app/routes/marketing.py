@@ -58,6 +58,45 @@ def pricing_page():
 
 
 # ──────────────────────────────────────────────────────────────────────────
+# Legal pages — Privacy Policy, Terms of Service, Refund Policy.
+# Required for Stripe live + GDPR/PROFECO compliance. Plain static pages
+# extending a shared base template, served at /privacy, /terms, /refund.
+# Effective date is hard-coded; bump it when you ship a material change so
+# users see "Last updated".
+# ──────────────────────────────────────────────────────────────────────────
+
+# Effective date applies to all 3 docs together. When you change any of them
+# materially, update this date and announce the change to users via email
+# at least 14 days before relying on the new terms.
+_LEGAL_EFFECTIVE = '2026-05-08'
+_LEGAL_UPDATED = '2026-05-08'
+
+
+def _legal_ctx(title):
+    return {
+        'doc_title': title,
+        'effective_date': _LEGAL_EFFECTIVE,
+        'updated_date': _LEGAL_UPDATED,
+        'year': datetime.now(timezone.utc).year,
+    }
+
+
+@marketing_bp.route('/privacy', methods=['GET'])
+def privacy_page():
+    return render_template('legal/privacy.html', **_legal_ctx('Privacy Policy'))
+
+
+@marketing_bp.route('/terms', methods=['GET'])
+def terms_page():
+    return render_template('legal/terms.html', **_legal_ctx('Terms of Service'))
+
+
+@marketing_bp.route('/refund', methods=['GET'])
+def refund_page():
+    return render_template('legal/refund.html', **_legal_ctx('Refund Policy'))
+
+
+# ──────────────────────────────────────────────────────────────────────────
 # Enterprise leads API
 # ──────────────────────────────────────────────────────────────────────────
 

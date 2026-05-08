@@ -1,0 +1,126 @@
+{% extends "legal/_legal_base.html" %}
+
+{% block content %}
+
+<p>This Privacy Policy explains how <strong>Isaak Uribe</strong>, operating as <strong>Legendary Feather</strong> ("we", "us", "our"), collects, uses, and protects information when you use our real-time AI translation service available at <a href="https://legendaryfeather.com">legendaryfeather.com</a> and related applications (the "Service").</p>
+
+<p>We operate from <strong>Mexico</strong> as a registered individual with business activity (Persona Física con Actividad Empresarial) and serve users worldwide. This policy is designed to comply with the EU General Data Protection Regulation (GDPR), the Mexican Federal Law on Protection of Personal Data Held by Private Parties (LFPDPPP), the California Consumer Privacy Act (CCPA), and similar regulations.</p>
+
+<div class="callout">
+  <strong>TL;DR.</strong> We collect the minimum data needed to translate your conversations and run your account. We never sell your data. Your voice recordings are processed in real time and not stored unless you explicitly create a voice profile (V2 feature, currently disabled). You can request deletion at any time by emailing <a href="mailto:legal@legendaryfeather.com">legal@legendaryfeather.com</a>.
+</div>
+
+<h2>1. Data Controller</h2>
+<p><strong>Isaak Uribe</strong> (Persona Física con Actividad Empresarial), operating as Legendary Feather, is the controller of your personal data.</p>
+<p>Contact: <a href="mailto:legal@legendaryfeather.com">legal@legendaryfeather.com</a></p>
+
+<h2>2. What We Collect</h2>
+
+<h3>2.1 Account information</h3>
+<ul>
+  <li>Email address and full name (you provide these at sign-up).</li>
+  <li>Hashed password (bcrypt; we never see your plaintext password).</li>
+  <li>Selected display language and translation language preferences.</li>
+  <li>Plan tier (Free, Travel Pass, Tourist, Tourist Pro).</li>
+</ul>
+
+<h3>2.2 Usage data</h3>
+<ul>
+  <li>Number of translation sessions, duration in seconds, source/target language pairs, and timestamps.</li>
+  <li>Approximate IP address (for rate limiting and abuse prevention; not stored long-term).</li>
+  <li>Browser/device user-agent string (only when an error is logged).</li>
+</ul>
+
+<h3>2.3 Voice and text data</h3>
+<ul>
+  <li><strong>Microphone audio</strong> is captured locally in your browser, sent to our backend, transcribed via OpenAI Whisper, translated via DeepL, and synthesized via OpenAI Text-to-Speech. The original audio is processed in real time and <strong>not retained</strong> after the response is returned.</li>
+  <li><strong>Transcripts and translations</strong> of each utterance are stored on our database (PostgreSQL on Railway) so you can see your conversation history. We retain these for as long as your account is active or as required by law.</li>
+  <li><strong>Voice profiles for cloning</strong>: this feature is currently disabled and deferred to V2. When re-enabled, voice samples will be stored only with your explicit consent and watermarked for traceability.</li>
+</ul>
+
+<h3>2.4 Payment information</h3>
+<ul>
+  <li>Payment is handled exclusively by <strong>Stripe</strong>. We never see or store your full card number.</li>
+  <li>We retain only the Stripe customer ID, the last 4 digits of your card, plan slug, and subscription status.</li>
+</ul>
+
+<h3>2.5 Cookies and local storage</h3>
+<p>We use minimal client-side storage:</p>
+<ul>
+  <li><code>lf_token</code> (session token, signed JWT) — stored in browser sessionStorage, expires in 24 hours.</li>
+  <li><code>lf_session</code> (your account details for the dashboard) — sessionStorage, deleted on sign-out.</li>
+  <li><code>lf_lang_picked_*</code> (UI language preference) — localStorage, persists across sessions.</li>
+</ul>
+<p>We do not use third-party advertising cookies, tracking pixels, or social-media plugins.</p>
+
+<h2>3. Why We Use Your Data (Legal Bases)</h2>
+<table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:14px;color:var(--text-sub);">
+  <tr><th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text);">Purpose</th><th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text);">Legal basis (GDPR Art. 6)</th></tr>
+  <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Provide translation, account access, billing</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Performance of contract (6(1)(b))</td></tr>
+  <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Prevent fraud, abuse, security incidents</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Legitimate interest (6(1)(f))</td></tr>
+  <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Send service emails (password reset, billing)</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Performance of contract (6(1)(b))</td></tr>
+  <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Voice cloning (V2, opt-in)</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Explicit consent (6(1)(a) + Art. 9 special)</td></tr>
+  <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Comply with tax / accounting law</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Legal obligation (6(1)(c))</td></tr>
+</table>
+
+<h2>4. Third-Party Sub-Processors</h2>
+<p>We use the following service providers to operate the Service. Each is bound by their own privacy policy and a Data Processing Agreement (DPA) where applicable:</p>
+<ul>
+  <li><strong>OpenAI, L.L.C.</strong> (USA) — speech-to-text (Whisper) and text-to-speech. Audio bytes are sent over TLS and not retained by OpenAI per their API terms.</li>
+  <li><strong>DeepL SE</strong> (Germany) — translation. GDPR-compliant.</li>
+  <li><strong>Stripe, Inc.</strong> (USA) — payment processing. PCI-DSS Level 1.</li>
+  <li><strong>Railway Corp.</strong> (USA) — application hosting and PostgreSQL database.</li>
+  <li><strong>Supabase, Inc.</strong> (USA) — auxiliary storage for FAQ, support templates, and audit logs.</li>
+  <li><strong>Cloudflare, Inc.</strong> (USA) — DNS and edge protection.</li>
+</ul>
+<p>Where data is transferred outside the EEA, we rely on Standard Contractual Clauses (SCCs) and our providers' adequacy mechanisms.</p>
+
+<h2>5. Data Retention</h2>
+<ul>
+  <li><strong>Account data</strong>: kept while your account is active and for up to 6 months after deletion (in case of dispute or legal hold).</li>
+  <li><strong>Translation transcripts</strong>: retained for the lifetime of your account; deleted on request.</li>
+  <li><strong>Voice samples (V2)</strong>: when re-enabled, retained for the lifetime of the voice profile; deleted on request.</li>
+  <li><strong>Audit logs</strong>: 90 days, then automatically purged.</li>
+  <li><strong>Billing records</strong>: 5 years (Mexican fiscal law) or 6 years (UK/EU equivalents).</li>
+</ul>
+
+<h2>6. Your Rights</h2>
+<p>Regardless of where you live, you have the right to:</p>
+<ul>
+  <li><strong>Access</strong> — get a copy of the data we hold about you.</li>
+  <li><strong>Rectification</strong> — correct inaccurate or incomplete data.</li>
+  <li><strong>Erasure ("right to be forgotten")</strong> — request deletion of your account and data.</li>
+  <li><strong>Portability</strong> — receive your data in a structured, machine-readable format.</li>
+  <li><strong>Restriction / objection</strong> — limit or object to certain processing.</li>
+  <li><strong>Withdraw consent</strong> — at any time, where processing is based on consent.</li>
+  <li><strong>Lodge a complaint</strong> with your local supervisory authority (e.g., the Spanish AEPD, French CNIL, Mexican INAI, or California Attorney General).</li>
+</ul>
+<p>To exercise any right, email <a href="mailto:legal@legendaryfeather.com">legal@legendaryfeather.com</a> from the address associated with your account. We respond within 30 days.</p>
+
+<h2>7. Security</h2>
+<ul>
+  <li>All traffic is encrypted in transit (TLS 1.2+).</li>
+  <li>Passwords are hashed with bcrypt (12 rounds).</li>
+  <li>Session tokens are signed with HMAC-SHA256 and rotate on every login.</li>
+  <li>Database connections use TLS and connection pooling with pre-ping verification.</li>
+  <li>Rate limiting, IP blacklisting, and a Web Application Firewall (WAF) protect against common attacks.</li>
+  <li>API budget caps prevent runaway usage from compromising service availability.</li>
+</ul>
+<p>No system is perfectly secure. If you believe your account has been compromised, email <a href="mailto:legal@legendaryfeather.com">legal@legendaryfeather.com</a> immediately.</p>
+
+<h2>8. Children</h2>
+<p>The Service is not intended for users under 16. We do not knowingly collect personal data from children under 16. If you believe we have, contact us and we will delete the account.</p>
+
+<h2>9. International Transfers</h2>
+<p>By using the Service you consent to the transfer of your data to the United States and other countries where our sub-processors operate. We use Standard Contractual Clauses where required by EU law.</p>
+
+<h2>10. Automated Decision-Making</h2>
+<p>The Service performs automated translation and language detection but does not make decisions that produce legal or significant effects on you. You can request a manual review of any automated output by emailing support.</p>
+
+<h2>11. Changes to This Policy</h2>
+<p>We may update this policy. Material changes will be announced by email or in-app notice at least 14 days before they take effect. Continued use of the Service after the change constitutes acceptance.</p>
+
+<h2>12. Contact</h2>
+<p>Privacy questions, complaints, or rights requests: <a href="mailto:legal@legendaryfeather.com">legal@legendaryfeather.com</a></p>
+
+{% endblock %}
