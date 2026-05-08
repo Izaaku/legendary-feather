@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Page not found — Legendary Feather</title>
+<link rel="icon" href="/static/favicon.ico">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --text: #f0f0f5;
+    --text-sub: #a0a0b0;
+    --text-muted: #6b6b80;
+    --gold: #d4a843;
+    --gold-dim: rgba(212,168,67,0.1);
+    --border: rgba(255,255,255,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: radial-gradient(ellipse at center top, rgba(212,168,67,0.06), transparent 60%), var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header a.brand {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--gold);
+    text-decoration: none;
+    letter-spacing: 0.5px;
+  }
+  header nav a {
+    color: var(--text-sub);
+    text-decoration: none;
+    margin-left: 22px;
+    font-size: 13px;
+    transition: color 0.2s;
+  }
+  header nav a:hover { color: var(--gold); }
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    text-align: center;
+  }
+  .err-code {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 110px;
+    font-weight: 300;
+    color: var(--gold);
+    letter-spacing: 4px;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 32px;
+    font-weight: 400;
+    margin-bottom: 14px;
+  }
+  p {
+    color: var(--text-sub);
+    font-size: 15px;
+    max-width: 520px;
+    line-height: 1.7;
+    margin-bottom: 32px;
+  }
+  .actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .btn {
+    padding: 12px 24px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: transform 0.15s, background 0.15s;
+    border: 1px solid transparent;
+  }
+  .btn-primary {
+    background: var(--gold);
+    color: #1a1a25;
+  }
+  .btn-primary:hover { transform: translateY(-1px); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border-color: var(--border);
+  }
+  .btn-secondary:hover { background: var(--gold-dim); border-color: var(--gold); color: var(--gold); }
+  footer {
+    padding: 20px 32px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  footer a { color: var(--text-muted); text-decoration: none; margin: 0 10px; }
+  footer a:hover { color: var(--gold); }
+</style>
+</head>
+<body>
+<header>
+  <a href="/" class="brand">Legendary Feather</a>
+  <nav>
+    <a href="/pricing">Pricing</a>
+    <a href="/auth">Sign in</a>
+  </nav>
+</header>
+<main>
+  <div class="err-code">404</div>
+  <h1>This page wandered off</h1>
+  <p>The page you tried to reach doesn't exist or was moved. Maybe a typo, maybe an old link &mdash; either way, here's the way home.</p>
+  <div class="actions">
+    <a href="/" class="btn btn-primary">Go to home</a>
+    <a href="/dashboard" class="btn btn-secondary">My dashboard</a>
+    <a href="/pricing" class="btn btn-secondary">See pricing</a>
+  </div>
+</main>
+<footer>
+  &copy; 2026 Legendary Feather
+  &middot; <a href="/privacy">Privacy</a>
+  &middot; <a href="/terms">Terms</a>
+  &middot; <a href="/refund">Refunds</a>
+  &middot; <a href="mailto:legal@legendaryfeather.com">Contact</a>
+</footer>
+</body>
+</html>

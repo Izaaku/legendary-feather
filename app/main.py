@@ -258,9 +258,12 @@ def forbidden(e):
 
 @app.errorhandler(404)
 def not_found(e):
+    # API consumers expect JSON, everyone else gets the branded 404 page
+    # (instead of being kicked to /auth, which previously caused logged-in
+    # users to bounce back to /app on any unknown URL like /privacy).
     if request.path.startswith('/api/'):
         return jsonify({'error': 'Not found'}), 404
-    return render_template('auth.html'), 404
+    return render_template('404.html'), 404
 
 @app.errorhandler(413)
 def request_too_large(e):
