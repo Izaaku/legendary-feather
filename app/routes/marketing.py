@@ -96,6 +96,27 @@ def refund_page():
     return render_template('legal/refund.html', **_legal_ctx('Refund Policy'))
 
 
+@marketing_bp.route('/polyglot-privacy', methods=['GET'])
+def polyglot_privacy_page():
+    """Privacy Policy specific to the Polyglot Desk Chrome extension.
+    Linked from the Chrome Web Store listing and from the extension's
+    popup. Distinct from /privacy (which covers the legendaryfeather.com
+    web app) because the extension's data flow is different — BYOK direct
+    to providers in the Free tier, backend proxy only in Team tier."""
+    return render_template('legal/polyglot-privacy.html',
+                           **_legal_ctx('Polyglot Desk — Privacy Policy'))
+
+
+@marketing_bp.route('/teams', methods=['GET'])
+def teams_page():
+    """Landing for The Polyglot Desk by Legendary Feather — B2B sub-brand
+    targeting boutique BPO founders / contact center operators (5-50 agents)
+    who can't afford CallMiner-tier enterprise tools but lose contracts when
+    a client demands multilingual support. Sales-led: the page funnels into
+    a 'Book a demo' contact form, not self-serve checkout."""
+    return render_template('teams.html', app_url=Config.APP_URL)
+
+
 # ──────────────────────────────────────────────────────────────────────────
 # Enterprise leads API
 # ──────────────────────────────────────────────────────────────────────────

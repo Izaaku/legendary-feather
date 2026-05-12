@@ -1,0 +1,138 @@
+{% extends "legal/_legal_base.html" %}
+
+{% block content %}
+
+<p>This Privacy Policy explains how the <strong>Polyglot Desk</strong> browser extension ("the Extension") handles data on your behalf. The Extension is published by <strong>Isaak Uribe</strong>, operating as <strong>Legendary Feather</strong>, a Mexican individual with business activity (Persona Física con Actividad Empresarial). It is offered through the Chrome Web Store and other extension marketplaces.</p>
+
+<p>This policy applies <strong>specifically to the Polyglot Desk browser extension</strong>. The Legendary Feather web application (legendaryfeather.com) is governed by its own <a href="/privacy">Privacy Policy</a>.</p>
+
+<div class="callout">
+  <strong>TL;DR.</strong> Polyglot Desk is a "Bring Your Own Keys" (BYOK) extension by default. Your API keys, settings, and saved phrases are stored only in your local browser. Audio you dictate and text you select are sent directly from your browser to the AI providers you choose (Ollama, Deepgram, Cartesia, ElevenLabs) — they do not pass through our servers. We do not run telemetry, analytics, or trackers in the Free tier. The Team tier (managed mode) is a separate offering and routes calls through our servers — see Section 7.
+</div>
+
+<h2>1. Data Controller</h2>
+<p><strong>Isaak Uribe</strong> (Persona Física con Actividad Empresarial), operating as Legendary Feather, is the controller of any personal data processed in connection with the Extension.</p>
+<p>Contact: <a href="mailto:legal@legendaryfeather.com">legal@legendaryfeather.com</a></p>
+
+<h2>2. What the Extension Stores Locally</h2>
+<p>Everything below is stored only in <code>chrome.storage.local</code> on your device. It never leaves your browser unless you explicitly enable the Team (managed) tier. We have no access to it.</p>
+
+<h3>2.1 API keys you provide</h3>
+<ul>
+  <li><strong>Ollama Cloud key</strong> — used by you to call Ollama's LLM endpoint for grammar correction, rewriting, and translation.</li>
+  <li><strong>Deepgram key</strong> — used for real-time speech-to-text (voice dictation) and speaker diarization.</li>
+  <li><strong>Cartesia key</strong> (recommended) — used for text-to-speech of translations. ~300ms latency, unlimited cloning at $49/month.</li>
+  <li><strong>ElevenLabs key</strong> (optional fallback) — used when Cartesia key is empty.</li>
+</ul>
+<p>Your API keys are <em>your</em> credentials — you obtain them from each provider directly, you pay each provider directly, and you can revoke them at any time. We never see them.</p>
+
+<h3>2.2 Your settings</h3>
+<ul>
+  <li>Preferred languages (source / target).</li>
+  <li>Real-time grammar checking toggle.</li>
+  <li>Address-hover toggle.</li>
+  <li>Translation underlines toggle.</li>
+  <li>Agent name + company (for personalized reply suggestions).</li>
+  <li>Agent tone preference (formal / casual).</li>
+  <li>Dashboard language.</li>
+</ul>
+
+<h3>2.3 Content you create</h3>
+<ul>
+  <li><strong>Phrase bank</strong> — canned response templates you compose.</li>
+  <li><strong>Teach rules</strong> — custom corrections you define.</li>
+  <li><strong>Translation memory</strong> — past translations you saved for reuse.</li>
+  <li><strong>Clipboard history</strong> — copy/paste items captured by the extension.</li>
+</ul>
+
+<h2>3. What the Extension Sends to Third Parties (and Where)</h2>
+<p>When you trigger a feature, the Extension makes a direct HTTPS request from your browser to the provider whose service powers that feature. <strong>Your data does not pass through Legendary Feather servers in the Free (BYOK) tier.</strong></p>
+
+<table style="width:100%;border-collapse:collapse;margin:14px 0;font-size:14px;color:var(--text-sub);">
+  <tr><th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text);">Feature</th><th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text);">Provider</th><th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text);">Data sent</th></tr>
+  <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Grammar / translation / rewrite</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Ollama Cloud</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Selected text only</td></tr>
+  <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Voice dictation (streaming STT)</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Deepgram</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Microphone audio bytes (16 kHz PCM) while you hold the dictation key</td></tr>
+  <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Text-to-speech of translation</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Cartesia / ElevenLabs</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Translated text only</td></tr>
+  <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Address preview (geocoding)</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Nominatim / Overpass (OpenStreetMap)</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">Detected address string, free, no key</td></tr>
+</table>
+
+<p>Each provider has its own privacy policy and data-handling terms:</p>
+<ul>
+  <li>Ollama: <a href="https://ollama.com/legal/privacy" target="_blank">ollama.com/legal/privacy</a></li>
+  <li>Deepgram: <a href="https://deepgram.com/privacy" target="_blank">deepgram.com/privacy</a></li>
+  <li>Cartesia: <a href="https://cartesia.ai/legal/privacy-policy" target="_blank">cartesia.ai/legal/privacy-policy</a></li>
+  <li>ElevenLabs: <a href="https://elevenlabs.io/privacy" target="_blank">elevenlabs.io/privacy</a></li>
+  <li>OpenStreetMap (Nominatim): <a href="https://wiki.osmfoundation.org/wiki/Privacy_Policy" target="_blank">osmfoundation.org/wiki/Privacy_Policy</a></li>
+</ul>
+
+<h2>4. What the Extension Does NOT Do</h2>
+<ul>
+  <li><strong>No telemetry</strong>: we don't track which features you use, when, or how often.</li>
+  <li><strong>No analytics</strong>: no Google Analytics, no PostHog, no Mixpanel, no Sentry crash reporter calling home.</li>
+  <li><strong>No advertising</strong>: we don't sell, share, or rent your data to advertisers. We don't display ads.</li>
+  <li><strong>No browsing history</strong>: although the Extension's manifest declares <code>&lt;all_urls&gt;</code> access (required for the content script that paints underlines on any page), we do <strong>not</strong> read, store, or transmit the pages you visit.</li>
+  <li><strong>No background scraping</strong>: the Extension only acts when you trigger it (right-click, hover, hold mic key, etc.).</li>
+</ul>
+
+<h2>5. Permissions Explained</h2>
+<p>The Extension requests the following Chrome permissions. Each one is needed for a specific feature and is used only for that feature:</p>
+<ul>
+  <li><code>contextMenus</code> — adds the "Correct selection" right-click entry.</li>
+  <li><code>storage</code> — saves your settings, API keys, and phrase bank to <code>chrome.storage.local</code>.</li>
+  <li><code>activeTab</code> — interacts with the page you're currently viewing.</li>
+  <li><code>scripting</code> — injects the content script into pages where the static content script didn't run (e.g. Google Docs).</li>
+  <li><code>windows</code> — opens the detached translator window.</li>
+  <li><code>tabs</code> — sends messages to the right tab for translation results.</li>
+  <li><code>&lt;all_urls&gt;</code> host permission — required so the underline-on-hover feature works on any site where you want corrections (your CRM, Gmail, Front, etc.). We never read content on pages where you don't actively trigger a feature.</li>
+</ul>
+
+<h2>6. Microphone Access</h2>
+<p>When you activate voice dictation, the Extension requests microphone access via the browser's standard <code>getUserMedia()</code> prompt. The mic is active only while you hold the dictation hotkey. Audio is streamed in real time to Deepgram (your account) and never stored locally or remotely by the Extension. Releasing the hotkey terminates the WebSocket and the mic stream.</p>
+
+<h2>7. The Team (Managed) Tier — Different Data Flow</h2>
+<p>If you upgrade to the Polyglot Desk Team tier (paid, optional), the Extension routes calls through Legendary Feather's backend (legendaryfeather.com) instead of calling Ollama/Cartesia/Deepgram directly. In that mode:</p>
+<ul>
+  <li>You do <strong>not</strong> provide your own API keys — your organization's admin pairs each agent with a managed account.</li>
+  <li>Calls go: <em>Extension → Legendary Feather backend → AI provider</em>.</li>
+  <li>We log call metadata (timestamp, agent ID, language pair, duration in seconds, character count) for billing and quota enforcement.</li>
+  <li>We do <strong>not</strong> retain the audio or the text of your conversations beyond what's needed to return the response. Transcripts are written to your organization's account history only if the admin enables that feature.</li>
+  <li>Detailed governance of the Team tier is in the main <a href="/privacy">Legendary Feather Privacy Policy</a>.</li>
+</ul>
+<p>The Team tier is opt-in. Users on the Free (BYOK) tier never have data routed through our servers.</p>
+
+<h2>8. Cookies and Trackers in the Extension</h2>
+<p>The Extension does not set cookies. The popup, content script, and detached window store data exclusively in <code>chrome.storage.local</code>, which is sandboxed to the Extension itself and inaccessible to web pages.</p>
+
+<h2>9. Data Retention</h2>
+<p>Because the Extension stores data locally:</p>
+<ul>
+  <li>Uninstalling the Extension removes all <code>chrome.storage.local</code> data for the Extension. There is nothing left on our servers (in BYOK mode) to retain or delete.</li>
+  <li>You can clear individual settings, keys, or stored phrases anytime from the Extension's popup → Settings.</li>
+  <li>If you ever paired the Extension with a Team account, your call metadata follows the retention rules of the main Legendary Feather privacy policy.</li>
+</ul>
+
+<h2>10. Children</h2>
+<p>The Extension is not intended for users under 16. We do not knowingly collect personal data from children under 16.</p>
+
+<h2>11. Your Rights</h2>
+<p>If you've never paired the Extension with a Team account, we have <strong>no data about you on our servers</strong> — there's nothing to access, correct, port, or delete. If you did pair it, your rights are described in the main <a href="/privacy">Legendary Feather Privacy Policy</a>: access, rectification, erasure, portability, restriction, objection, and complaint to your local supervisory authority.</p>
+
+<h2>12. Security</h2>
+<ul>
+  <li>All third-party API calls are made over TLS 1.2+ HTTPS.</li>
+  <li>The Extension uses Chrome Manifest V3 — service worker isolation, no remote code execution, declarative content scripts.</li>
+  <li>The Extension's Content Security Policy restricts outbound connections to a strict allowlist (Ollama, Deepgram, Cartesia, ElevenLabs, OpenStreetMap).</li>
+  <li>API keys are stored in <code>chrome.storage.local</code>, which is sandboxed per-extension and not accessible from web pages.</li>
+</ul>
+
+<h2>13. International Transfers</h2>
+<p>By using the Extension you direct it to make HTTPS calls to the providers you choose, which may operate servers in the United States and other countries. Because the data flow is direct from your browser to those providers, the international transfer happens between you and them — not through Legendary Feather. Each provider lists its own data residency in their privacy policy.</p>
+
+<h2>14. Changes to This Policy</h2>
+<p>We will update this policy when the Extension's data handling changes (new third-party provider, new optional feature, new tier). Material changes are announced in the Extension's release notes on the Chrome Web Store and via a notification in the popup the first time you open the new version.</p>
+
+<h2>15. Contact</h2>
+<p>Privacy questions, complaints, or rights requests related specifically to the Polyglot Desk extension:<br>
+<a href="mailto:legal@legendaryfeather.com">legal@legendaryfeather.com</a> (subject line: <em>"Polyglot Desk privacy"</em>)</p>
+
+{% endblock %}
