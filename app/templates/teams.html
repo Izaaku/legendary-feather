@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Polyglot Desk — Take the contracts you've been turning down | Legendary Feather</title>
+<meta name="description" content="Real-time multilingual translation for boutique BPOs and contact centers. Your agents handle French, German, Portuguese clients tomorrow — without enterprise pricing.">
+<link rel="icon" href="/static/favicon.ico">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #151520;
+    --surface-2: #1d1d2a;
+    --text: #f0f0f5;
+    --text-sub: #a0a0b0;
+    --text-muted: #6b6b80;
+    --gold: #d4a843;
+    --gold-dim: rgba(212,168,67,0.1);
+    --border: rgba(255,255,255,0.08);
+    --green: #6bc785;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  a { color: var(--gold); text-decoration: none; }
+  .container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* Topbar */
+  header.top {
+    padding: 18px 0; border-bottom: 1px solid var(--border);
+    background: rgba(10,10,15,0.95); backdrop-filter: blur(8px);
+    position: sticky; top: 0; z-index: 10;
+  }
+  header.top .container { display: flex; align-items: center; justify-content: space-between; }
+  .brand { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 22px; font-weight: 600; color: var(--gold); }
+  .brand small { color: var(--text-sub); font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 400; margin-left: 4px; }
+  header nav a { color: var(--text-sub); margin-left: 22px; font-size: 14px; }
+  header nav a:hover { color: var(--gold); }
+
+  /* Hero */
+  .hero { padding: 80px 0 60px; text-align: center; }
+  .hero-tag { display: inline-block; background: var(--gold-dim); color: var(--gold);
+    padding: 6px 14px; border-radius: 999px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 24px; }
+  .hero h1 { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 56px; font-weight: 400; line-height: 1.1; margin-bottom: 20px; }
+  .hero h1 em { color: var(--gold); font-style: italic; }
+  .hero p.lead { font-size: 18px; color: var(--text-sub); max-width: 720px; margin: 0 auto 32px; }
+  .hero-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn { padding: 14px 28px; border-radius: 999px; font-size: 15px; font-weight: 500; transition: transform 0.15s; display: inline-block; }
+  .btn-primary { background: var(--gold); color: #1a1a25; }
+  .btn-primary:hover { transform: translateY(-1px); }
+  .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+  .hero-trust { font-size: 13px; color: var(--text-muted); margin-top: 18px; }
+
+  /* Section */
+  section { padding: 60px 0; }
+  .section-label { display: inline-block; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
+  .section-title { font-family: 'Cormorant Garamond', Georgia, serif; font-size: 38px; font-weight: 400; margin-bottom: 14px; line-height: 1.2; }
+  .section-title em { color: var(--gold); font-style: italic; }
+  .section-sub { font-size: 16px; color: var(--text-sub); max-width: 640px; margin-bottom: 40px; }
+
+  /* Pain points grid */
+  .pain-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-top: 28px; }
+  .pain-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; }
+  .pain-num { font-family: 'Cormorant Garamond', serif; font-size: 28px; color: var(--gold); margin-bottom: 6px; }
+  .pain-title { font-size: 17px; font-weight: 500; margin-bottom: 8px; }
+  .pain-desc { font-size: 14px; color: var(--text-sub); line-height: 1.6; }
+
+  /* Compare table */
+  .compare-wrap { overflow-x: auto; margin-top: 32px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+  table.compare { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.compare th, table.compare td { padding: 14px 18px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.compare th { color: var(--text-muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  table.compare th.us { color: var(--gold); }
+  table.compare td.checkmark { color: var(--green); font-weight: 500; }
+  table.compare td.cross { color: var(--text-muted); }
+
+  /* CTA block */
+  .cta-block { background: var(--surface); border: 1px solid var(--gold-dim); border-radius: 18px; padding: 48px 32px; text-align: center; margin: 40px 0; }
+  .cta-block h2 { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 400; margin-bottom: 12px; }
+  .cta-block h2 em { color: var(--gold); font-style: italic; }
+  .cta-block p { color: var(--text-sub); max-width: 540px; margin: 0 auto 24px; }
+
+  /* Form */
+  form.demo { max-width: 540px; margin: 0 auto; display: grid; gap: 12px; }
+  form.demo input, form.demo select, form.demo textarea {
+    width: 100%; padding: 14px 16px; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 14px; font-family: inherit;
+  }
+  form.demo input:focus, form.demo select:focus, form.demo textarea:focus { outline: none; border-color: var(--gold); }
+  form.demo button { padding: 14px 24px; background: var(--gold); color: #1a1a25; border: none; border-radius: 999px; font-size: 15px; font-weight: 500; cursor: pointer; }
+  .form-msg { text-align: center; font-size: 14px; margin-top: 14px; }
+  .form-msg.ok { color: var(--green); }
+  .form-msg.err { color: #e84545; }
+
+  /* Footer */
+  footer { padding: 40px 0; border-top: 1px solid var(--border); text-align: center; color: var(--text-muted); font-size: 13px; }
+  footer a { color: var(--text-muted); margin: 0 12px; }
+  footer a:hover { color: var(--gold); }
+
+  @media (max-width: 720px) {
+    .hero h1 { font-size: 40px; }
+    .section-title { font-size: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="container">
+    <a href="/" class="brand">Legendary Feather <small>· The Polyglot Desk</small></a>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#compare">vs CallMiner</a>
+      <a href="#demo" class="btn btn-ghost" style="padding:8px 16px;font-size:13px;">Book a demo</a>
+    </nav>
+  </div>
+</header>
+
+<!-- Hero — speaks directly to Carlos: BPO owner, 8-40 agents, losing contracts to language gaps. -->
+<section class="hero">
+  <div class="container">
+    <span class="hero-tag">For boutique BPOs &amp; contact centers</span>
+    <h1>Take the contracts<br>you've been <em>turning down</em>.</h1>
+    <p class="lead">Real-time multilingual translation for your contact center. Your Spanish-speaking agents handle French, German, Portuguese clients tomorrow — without enterprise pricing or a 3-month rollout.</p>
+    <div class="hero-ctas">
+      <a href="#demo" class="btn btn-primary">Book a 30-min demo →</a>
+      <a href="#pricing" class="btn btn-ghost">See pricing</a>
+    </div>
+    <div class="hero-trust">From $35/agent/mo · 14-day pilot · Pay only for what you use</div>
+  </div>
+</section>
+
+<!-- The 5 pain points Carlos lives with daily -->
+<section>
+  <div class="container">
+    <span class="section-label">The reality of running a small BPO in 2026</span>
+    <h2 class="section-title">You've heard <em>"do you support French?"</em> too many times.</h2>
+    <p class="section-sub">If you run a 10-40 agent contact center, you already know what's costing you contracts. We built The Polyglot Desk for exactly these moments:</p>
+
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="pain-num">01</div>
+        <div class="pain-title">Lost contracts to language gaps</div>
+        <div class="pain-desc">Your prospect needed Portuguese support for their Brazilian customers. You said "we'll figure it out." They went elsewhere.</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-num">02</div>
+        <div class="pain-title">Enterprise tools out of reach</div>
+        <div class="pain-desc">CallMiner quoted $80/agent/month plus $20K setup. For your 25-agent shop that's $44K/year — before you've sold the contract.</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-num">03</div>
+        <div class="pain-title">Training takes forever</div>
+        <div class="pain-desc">A new bilingual agent needs 3 weeks of ramp. Then 30% of them quit within 12 months. You start over.</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-num">04</div>
+        <div class="pain-title">CSAT drops on hard conversations</div>
+        <div class="pain-desc">Your B2-level English agents are fine for FAQs. They struggle with refunds, complaints, technical detail. The client notices.</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-num">05</div>
+        <div class="pain-title">Inconsistent voice across the team</div>
+        <div class="pain-desc">One agent writes formal, another casual, another with errors. Your client's brand suffers and you can't QA every message.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section id="how" style="background: var(--surface);">
+  <div class="container">
+    <span class="section-label">How The Polyglot Desk works</span>
+    <h2 class="section-title">A translation layer that lives <em>next to your softphone.</em></h2>
+    <p class="section-sub">Your agents keep their existing workflow — Genesys, Zoom, RingCentral, Aircall, whatever you use. The Polyglot Desk runs in the browser tab next to it, listening only when they let it.</p>
+
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="pain-num">→</div>
+        <div class="pain-title">Customer speaks French</div>
+        <div class="pain-desc">Real-time transcription + translation appears on the agent's screen in their working language. Latency &lt;2s.</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-num">→</div>
+        <div class="pain-title">Agent reads &amp; replies in their language</div>
+        <div class="pain-desc">Their reply is synthesized in the customer's language with a natural voice — not a robot. The customer never knows.</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-num">→</div>
+        <div class="pain-title">QA &amp; analytics built in</div>
+        <div class="pain-desc">Every conversation is transcribed in both languages. You QA quality, spot training gaps, prove SLA compliance.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Pricing — metered tiers, B2B context. Lives between "how it works" and
+     the comparison table so Carlos can size his bill before he gets to the
+     "vs CallMiner" justification. -->
+<section id="pricing" style="background: var(--surface);">
+  <div class="container">
+    <span class="section-label">Pricing</span>
+    <h2 class="section-title">Predictable base, <em>pay-per-use</em> after.</h2>
+    <p class="section-sub">Every plan includes a usage allowance per agent so you can budget. If an agent goes over, the overage is metered cheaply — no surprise bills, no enterprise minimums.</p>
+
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="pain-num">Starter</div>
+        <div class="pain-title">$35 / agent / month</div>
+        <div class="pain-desc" style="margin-top:8px;">
+          Includes per agent: 2,000 min STT + 50K chars TTS + 1,500 AI calls<br>
+          <strong style="color:var(--gold);">Overage:</strong> $0.05/min, $5/100K chars, $0.01/call<br>
+          Min 5 agents · 14-day pilot · No annual contract
+        </div>
+      </div>
+      <div class="pain-card" style="border-color:rgba(212,168,67,0.4);">
+        <div class="pain-num">Growth</div>
+        <div class="pain-title">$75 / agent / month</div>
+        <div class="pain-desc" style="margin-top:8px;">
+          Includes per agent: 6,000 min STT + 150K chars TTS + 5,000 AI calls<br>
+          Best fit for full-time agents with 4-6 hours/day of active dictation<br>
+          Phone/Slack support · Admin QA dashboard
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-num">Enterprise</div>
+        <div class="pain-title">Custom</div>
+        <div class="pain-desc" style="margin-top:8px;">
+          Volume discount for 100+ agents · Annual contract<br>
+          SAML SSO · On-prem self-hosted option · 99.9% SLA<br>
+          Dedicated account manager
+        </div>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:18px;">All prices in USD. Includes Polyglot Desk-managed API access — no separate accounts with Ollama, Deepgram, or Cartesia required.</p>
+  </div>
+</section>
+
+<!-- Comparison vs the alternatives -->
+<section id="compare">
+  <div class="container">
+    <span class="section-label">vs the alternatives</span>
+    <h2 class="section-title">Built for the agencies enterprise vendors <em>ignore.</em></h2>
+
+    <div class="compare-wrap">
+      <table class="compare">
+        <thead>
+          <tr>
+            <th></th>
+            <th>CallMiner / ConnectLingua</th>
+            <th>Hire bilingual agents</th>
+            <th class="us">The Polyglot Desk</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Price per agent</strong></td>
+            <td class="cross">$80-150/mo + $20K setup</td>
+            <td class="cross">+30-50% salary premium</td>
+            <td class="checkmark">From $35/agent/mo (metered)</td>
+          </tr>
+          <tr>
+            <td><strong>Time to live</strong></td>
+            <td class="cross">2-3 months</td>
+            <td class="cross">3-12 weeks per hire</td>
+            <td class="checkmark">Same week</td>
+          </tr>
+          <tr>
+            <td><strong>Languages supported</strong></td>
+            <td>20-40 (depending on plan)</td>
+            <td class="cross">1-2 per agent</td>
+            <td class="checkmark">100+, switch per call</td>
+          </tr>
+          <tr>
+            <td><strong>Self-hosted option</strong></td>
+            <td class="cross">No (cloud only)</td>
+            <td>—</td>
+            <td class="checkmark">Yes (for finance / health)</td>
+          </tr>
+          <tr>
+            <td><strong>Pilot trial</strong></td>
+            <td class="cross">Annual contract required</td>
+            <td>—</td>
+            <td class="checkmark">14 days, no contract</td>
+          </tr>
+          <tr>
+            <td><strong>Built for</strong></td>
+            <td>500+ agent enterprises</td>
+            <td>—</td>
+            <td class="checkmark">5-50 agent boutique BPOs</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- Demo CTA + form -->
+<section id="demo">
+  <div class="container">
+    <div class="cta-block">
+      <h2>Find out if you'd <em>actually save</em> contracts.</h2>
+      <p>30-minute demo with a working agent setup. We'll show you a live translation against your specific use case (the language pair, the call platform you use). No deck, no sales pressure.</p>
+
+      <form class="demo" id="demoForm">
+        <input type="text" name="name" placeholder="Your name" required maxlength="80">
+        <input type="email" name="email" placeholder="Work email" required maxlength="120">
+        <input type="text" name="company" placeholder="Company / agency" required maxlength="100">
+        <input type="text" name="num_agents" placeholder="Approx. number of agents (e.g. 12)" maxlength="20">
+        <textarea name="use_case" placeholder="What languages would you need to support? Which contact-center platform do you use? (Optional)" rows="3" maxlength="600"></textarea>
+        <button type="submit">Request demo →</button>
+        <div class="form-msg" id="demoMsg"></div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    The Polyglot Desk is a product of Legendary Feather (Isaak Uribe, Persona Física con Actividad Empresarial, Mexico).<br>
+    <a href="/">Consumer / travelers</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="mailto:hello@legendaryfeather.com">hello@legendaryfeather.com</a>
+  </div>
+</footer>
+
+<script>
+// Submit demo request — reuses the existing /api/enterprise-leads endpoint
+// that's already there for B2B leads. We map the form fields to its schema.
+document.getElementById('demoForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const msg = document.getElementById('demoMsg');
+  const btn = f.querySelector('button[type=submit]');
+  msg.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  const payload = {
+    name: f.name.value.trim(),
+    email: f.email.value.trim(),
+    company: f.company.value.trim(),
+    num_agents: parseInt(f.num_agents.value, 10) || null,
+    use_case: f.use_case.value.trim(),
+    source_plan: 'polyglot_desk_landing',
+  };
+  try {
+    const r = await fetch('/api/enterprise-leads', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    if (r.ok) {
+      msg.className = 'form-msg ok';
+      msg.textContent = 'Got it — we will reach out within 1 business day.';
+      f.reset();
+    } else {
+      const d = await r.json().catch(() => ({}));
+      msg.className = 'form-msg err';
+      msg.textContent = d.error || 'Something went wrong. Email hello@legendaryfeather.com directly.';
+    }
+  } catch (err) {
+    msg.className = 'form-msg err';
+    msg.textContent = 'Network error. Email hello@legendaryfeather.com directly.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Request demo →';
+  }
+});
+</script>
+</body>
+</html>
