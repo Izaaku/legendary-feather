@@ -1,0 +1,81 @@
+{% extends "legal/_legal_base.html" %}
+
+{% block content %}
+
+<p style="font-size:17px;margin-bottom:30px;">We're here to help. Find answers to common questions below, or contact us directly if you need a hand.</p>
+
+<div class="callout">
+  <strong>📧 Quick contact:</strong> <a href="mailto:hello@legendaryfeather.com">hello@legendaryfeather.com</a> — we typically respond within 1 business day. For privacy or legal matters, write to <a href="mailto:legal@legendaryfeather.com">legal@legendaryfeather.com</a>.
+</div>
+
+<h2>Polyglot Desk — Browser Extension</h2>
+
+<h3>How do I set up my API keys?</h3>
+<p>Polyglot Desk uses a Bring-Your-Own-Keys (BYOK) model. After installing the extension:</p>
+<ol>
+  <li>Click the Polyglot Desk icon in your Chrome toolbar to open the popup.</li>
+  <li>Click <strong>API Keys</strong> at the top.</li>
+  <li>Paste your keys for the providers you want to use:
+    <ul>
+      <li><strong>Ollama Cloud</strong> (required for grammar, rewriting, translation) — <a href="https://ollama.com/settings/keys" target="_blank">get a key here</a></li>
+      <li><strong>Deepgram</strong> (required for voice dictation) — <a href="https://console.deepgram.com" target="_blank">get a key here</a> — $200 free credit on signup</li>
+      <li><strong>Cartesia</strong> (recommended for TTS) — <a href="https://play.cartesia.ai" target="_blank">get a key here</a> — fastest voice synthesis</li>
+      <li><strong>ElevenLabs</strong> (optional TTS fallback) — <a href="https://elevenlabs.io" target="_blank">get a key here</a></li>
+      <li><strong>Mapbox</strong> (optional — better address geocoding) — <a href="https://account.mapbox.com" target="_blank">get a key here</a> — 100K reqs/mo free</li>
+    </ul>
+  </li>
+  <li>Click <strong>Save</strong> after each key. Your keys are stored only in your browser's local storage and never sent to our servers.</li>
+</ol>
+
+<h3>How do I use voice dictation?</h3>
+<p>Press <code>Alt + Shift + M</code> (Windows/Linux) or <code>Ctrl + Shift + M</code> (Mac) on any web page with a text field. A dictation popup appears and begins recording immediately. Press the same shortcut again or click <strong>Stop</strong> to end. Your transcript appears in the popup and can be inserted into the focused field with the <strong>Insert</strong> button.</p>
+
+<h3>How does Universal Translator work?</h3>
+<p>Inside the dictation popup, click <strong>🌐 Universal Translator</strong>, choose your target language (Spanish, English, French, German, Italian, Portuguese, Russian, Japanese, Chinese, Korean, Hindi, Arabic, and 18 more), and start speaking. Your speech is transcribed, translated, and read aloud in the target language — useful for live multilingual conversations and customer service calls.</p>
+
+<h3>Why isn't grammar correction working?</h3>
+<p>Most often this is because the Ollama key is missing or invalid. Open the extension popup, check <strong>API Keys</strong>, and confirm your Ollama key shows a green ✓. If it's red, paste a fresh key from <a href="https://ollama.com/settings/keys" target="_blank">ollama.com/settings/keys</a> and save again. If the issue persists, open DevTools (F12) on any page and look for any red <code>[Polyglot ...]</code> errors — share them with us.</p>
+
+<h3>The microphone isn't picking up my voice</h3>
+<p>Chrome requires explicit microphone permission per site. When the dictation popup says "Mic access denied":</p>
+<ol>
+  <li>Click the <strong>🔒 padlock</strong> in Chrome's URL bar.</li>
+  <li>Click <strong>Site settings</strong>.</li>
+  <li>Change <strong>Microphone</strong> from "Ask" or "Block" to <strong>"Allow"</strong> (not "Allow this time" — that expires when you reload).</li>
+  <li>Close and reopen the tab.</li>
+</ol>
+
+<h3>Why doesn't it work in Google Docs?</h3>
+<p>Google Docs uses a <code>&lt;canvas&gt;</code>-based editor rather than the standard HTML text fields, which means live grammar underlines and hover-to-translate can't paint inside the document. The extension shows a one-time banner in Docs explaining this. The features that DO work in Docs: right-click → <strong>Polyglot Desk: Correct Selection</strong>, and voice dictation via <code>Alt+Shift+M</code> (the transcript goes to your clipboard so you can paste it).</p>
+
+<h3>What languages does Polyglot Desk support?</h3>
+<p>Voice dictation supports 30 languages via Deepgram. Translation supports any major world language (limited only by what the Ollama model knows). The hover-to-translate language picker shows: Spanish, English, French, German, Italian, Portuguese, Russian, Japanese, Chinese, Korean, Hindi, Arabic, Dutch, Polish, Turkish, Swedish, Indonesian, Vietnamese, Thai, Greek, Hebrew, Filipino, Norwegian, Danish, Finnish, Romanian, Czech, Hungarian, Ukrainian, Malay. Need another? <a href="mailto:hello@legendaryfeather.com?subject=Polyglot Desk — Language request">Let us know</a>.</p>
+
+<h3>Are my conversations stored on your servers?</h3>
+<p><strong>No.</strong> In the Free (BYOK) tier, your audio, text, and translations are sent directly from your browser to the AI providers you configured (Ollama, Deepgram, Cartesia, ElevenLabs). They don't pass through Legendary Feather's servers at all. We have zero telemetry, zero analytics, zero trackers in the Free tier. See our <a href="/polyglot-privacy">Polyglot Desk Privacy Policy</a> for the full details.</p>
+
+<h3>I'm running a BPO / contact center — how do I deploy for my team?</h3>
+<p>The Team tier (coming soon) is built for contact centers with 5+ agents. It includes managed API access (no per-agent BYOK to chase), an admin dashboard with per-agent usage and quota controls, consolidated billing, and an SLA. Starts at $35/agent/mo metered. Visit <a href="/teams">legendaryfeather.com/teams</a> or email <a href="mailto:hello@legendaryfeather.com?subject=Polyglot Desk Team tier — demo">hello@legendaryfeather.com</a> to book a demo.</p>
+
+<h2>Legendary Feather Web App (legendaryfeather.com)</h2>
+
+<h3>I can't sign in / forgot my password</h3>
+<p>Click <strong>Sign in</strong> in the top bar, then <strong>"Forgot password?"</strong> under the login form. We'll send a reset link to your registered email. If you don't receive it within 5 minutes, check your spam folder. Still no luck? Email <a href="mailto:hello@legendaryfeather.com">hello@legendaryfeather.com</a> from the same address you registered with.</p>
+
+<h3>How do I cancel my subscription?</h3>
+<p>Open your dashboard, click your profile menu, then <strong>Manage subscription</strong>. You can cancel anytime with one click. Your access continues until the end of the current billing period. See our <a href="/refund">Refund Policy</a> for details on prorated refunds.</p>
+
+<h3>I was charged but my plan didn't upgrade</h3>
+<p>Stripe usually syncs within 30 seconds, but occasionally takes a few minutes. Reload the dashboard once. If the plan still shows the old tier after 10 minutes, email <a href="mailto:hello@legendaryfeather.com">hello@legendaryfeather.com</a> with your transaction ID (visible in the Stripe receipt email) — we'll fix it manually within one business day.</p>
+
+<h2>Still need help?</h2>
+
+<div class="callout">
+  <p style="margin-bottom:8px;"><strong>Email:</strong> <a href="mailto:hello@legendaryfeather.com">hello@legendaryfeather.com</a></p>
+  <p style="margin-bottom:8px;"><strong>Legal / privacy / data requests:</strong> <a href="mailto:legal@legendaryfeather.com">legal@legendaryfeather.com</a></p>
+  <p style="margin-bottom:0;"><strong>Response time:</strong> typically within 1 business day. Worst case 3 business days. Mexico time zone (UTC-6).</p>
+</div>
+
+<p style="margin-top:30px;font-size:13px;color:var(--text-muted);">When emailing about a Polyglot Desk issue, please include: (1) which page/site you were on, (2) what you were trying to do, (3) what happened instead, (4) any red errors in DevTools (F12 → Console). That gets us to a fix fastest.</p>
+
+{% endblock %}

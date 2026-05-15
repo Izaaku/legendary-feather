@@ -107,6 +107,19 @@ def polyglot_privacy_page():
                            **_legal_ctx('Polyglot Desk — Privacy Policy'))
 
 
+@marketing_bp.route('/support', methods=['GET'])
+def support_page():
+    """Public Help Center / FAQ. Linked from:
+      - Polyglot Desk extension popup (Settings -> "Need help? Contact support")
+      - Chrome Web Store listing (Support URL field)
+      - Footer of other legal pages
+    Covers both the Polyglot Desk extension and the Legendary Feather web app.
+    Required to exist before Chrome Web Store submission — Chrome reviewers
+    follow the Support URL and reject if it 404s."""
+    return render_template('legal/support.html',
+                           **_legal_ctx('Help Center & Support'))
+
+
 @marketing_bp.route('/teams', methods=['GET'])
 def teams_page():
     """Landing for The Polyglot Desk by Legendary Feather — B2B sub-brand
