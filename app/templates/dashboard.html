@@ -1899,10 +1899,30 @@ function appendChatMessage(m) {
 async function sendChatMessage() {
   const input = document.getElementById('chatInput');
   const message = input.value.trim();
-  if (!message || !currentConvId) return;
+  if (!message) return;
 
   const token = sessionStorage.getItem('lf_token');
-  if (!token) { input.focus(); return; }
+  if (!token) {
+    console.warn('[Support] No auth token — user must sign in again');
+    showChatError('Tu sesión expiró. Vuelve a iniciar sesión.');
+    return;
+  }
+
+  // Bug #LF-send: if currentConvId never got set (conversation creation
+  // failed silently on init), the previous code returned and the input
+  // was cleared with no feedback. Now we re-init and retry transparently.
+  if (!currentConvId) {
+    console.log('[Support] No conv ID — re-initialising conversation before send');
+    try {
+      await initSupportChat();
+    } catch (e) {
+      console.error('[Support] re-init failed:', e);
+    }
+    if (!currentConvId) {
+      showChatError('No se pudo iniciar la conversación. Intenta recargar la página.');
+      return;
+    }
+  }
 
   // Optimistic UI: show the message immediately so the customer sees their
   // own typing without waiting for the round-trip. The server response
@@ -1919,14 +1939,40 @@ async function sendChatMessage() {
   // earlier WebSocket emit silently no-op'd and messages were lost. REST is
   // simpler and reliable; we poll for new replies below.
   try {
-    await fetch('/api/support/conversations/' + currentConvId + '/messages', {
+    const resp = await fetch('/api/support/conversations/' + currentConvId + '/messages', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: message })
     });
+    if (!resp.ok) {
+      const errBody = await resp.text().catch(() => '');
+      console.error('[Support] sendChatMessage HTTP ' + resp.status + ':', errBody.substring(0, 300));
+      showChatError('No se pudo enviar (HTTP ' + resp.status + '). Reintenta en un momento.');
+      // Restore the message to the input so the user doesn't lose it
+      input.value = message;
+    }
   } catch (e) {
     console.error('[Support] sendChatMessage error:', e);
+    showChatError('Error de red. Verifica tu conexión.');
+    input.value = message; // restore so user can retry
   }
+}
+
+// Small inline error toast at the top of the chat container.
+function showChatError(text) {
+  const container = document.getElementById('chatMessages');
+  if (!container) { console.warn('[Support]', text); return; }
+  let err = document.getElementById('chatErrorToast');
+  if (!err) {
+    err = document.createElement('div');
+    err.id = 'chatErrorToast';
+    err.style.cssText = 'background:#3a1a1a;border:1px solid #d44;color:#ff9b9b;padding:8px 12px;border-radius:8px;margin:8px 0;font-size:13px;';
+    container.parentNode.insertBefore(err, container);
+  }
+  err.textContent = '⚠ ' + text;
+  err.style.display = 'block';
+  clearTimeout(showChatError._t);
+  showChatError._t = setTimeout(() => { if (err) err.style.display = 'none'; }, 5000);
 }
 
 // Poll for new agent replies every 5 seconds while the support view is open.
