@@ -3,15 +3,19 @@
 -- Adds 4 tables for Polyglot Talk (video/audio call rooms + transcripts + contacts).
 -- Additive only — does not alter existing tables.
 --
--- Run via Supabase SQL Editor (or psql):
---   psql $DATABASE_URL < migrations/007_polyglot_talk_tables.sql
+-- NOTE: user_id columns are uuid without FK constraints, matching the
+-- pattern used by chat_conversations / chat_messages (Supabase Auth users
+-- live in the auth schema and we reference them by ID only).
+--
+-- Run via Supabase SQL Editor:
+--   Paste this whole file and click Run.
 
 -- ──────────────────────────────────────────────────────────────────────
 -- 1. talk_rooms — one row per Talk call session
 -- ──────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS talk_rooms (
     id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    host_user_id    uuid REFERENCES users(id) ON DELETE SET NULL,
+    host_user_id    uuid,
     livekit_room    text NOT NULL UNIQUE,
     status          text NOT NULL DEFAULT 'waiting'
                     CHECK (status IN ('waiting', 'active', 'ended')),
@@ -22,9 +26,9 @@ CREATE TABLE IF NOT EXISTS talk_rooms (
     created_at      timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS talk_rooms_host_idx        ON talk_rooms (host_user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS talk_rooms_status_idx      ON talk_rooms (status) WHERE status != 'ended';
-CREATE INDEX IF NOT EXISTS talk_rooms_livekit_idx     ON talk_rooms (livekit_room);
+CREATE INDEX IF NOT EXISTS talk_rooms_host_idx    ON talk_rooms (host_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS talk_rooms_status_idx  ON talk_rooms (status) WHERE status != 'ended';
+CREATE INDEX IF NOT EXISTS talk_rooms_livekit_idx ON talk_rooms (livekit_room);
 
 -- ──────────────────────────────────────────────────────────────────────
 -- 2. talk_participants — one row per person in a room
@@ -32,7 +36,7 @@ CREATE INDEX IF NOT EXISTS talk_rooms_livekit_idx     ON talk_rooms (livekit_roo
 CREATE TABLE IF NOT EXISTS talk_participants (
     id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     room_id         uuid NOT NULL REFERENCES talk_rooms(id) ON DELETE CASCADE,
-    user_id         uuid REFERENCES users(id) ON DELETE SET NULL,
+    user_id         uuid,
     display_name    text NOT NULL,
     spoken_lang     text NOT NULL,
     reading_lang    text,
@@ -42,8 +46,8 @@ CREATE TABLE IF NOT EXISTS talk_participants (
                     CHECK (role IN ('host', 'guest', 'agent'))
 );
 
-CREATE INDEX IF NOT EXISTS talk_participants_room_idx   ON talk_participants (room_id, joined_at);
-CREATE INDEX IF NOT EXISTS talk_participants_user_idx   ON talk_participants (user_id) WHERE user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS talk_participants_room_idx ON talk_participants (room_id, joined_at);
+CREATE INDEX IF NOT EXISTS talk_participants_user_idx ON talk_participants (user_id) WHERE user_id IS NOT NULL;
 
 -- ──────────────────────────────────────────────────────────────────────
 -- 3. talk_transcripts — saved per-utterance transcript + translation
@@ -68,7 +72,7 @@ CREATE INDEX IF NOT EXISTS talk_transcripts_participant_idx ON talk_transcripts 
 -- ──────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS talk_contacts (
     id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    owner_user_id   uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    owner_user_id   uuid NOT NULL,
     contact_name    text NOT NULL,
     contact_email   text,
     contact_phone   text,
@@ -83,22 +87,12 @@ CREATE INDEX IF NOT EXISTS talk_contacts_owner_idx ON talk_contacts (owner_user_
 -- ──────────────────────────────────────────────────────────────────────
 -- Row-level security policies
 -- ──────────────────────────────────────────────────────────────────────
+-- We enable RLS on all 4 tables. The Flask backend uses the service_role
+-- key which bypasses RLS by design, so all backend operations work fine.
+-- If we later expose direct PostgREST access to clients, we'd add
+-- per-user policies. For V1 service-role-only is sufficient.
 
 ALTER TABLE talk_rooms        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE talk_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE talk_transcripts  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE talk_contacts     ENABLE ROW LEVEL SECURITY;
-
--- For now, since we use service_role from the Flask backend, RLS is
--- effectively bypassed. Service-role bypasses RLS by design. We'll add
--- granular policies if/when we expose direct PostgREST access to clients.
-
--- Allow service role to do everything (the Flask backend uses service_role).
-CREATE POLICY service_role_all_talk_rooms        ON talk_rooms
-    FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY service_role_all_talk_participants ON talk_participants
-    FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY service_role_all_talk_transcripts  ON talk_transcripts
-    FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY service_role_all_talk_contacts     ON talk_contacts
-    FOR ALL TO service_role USING (true) WITH CHECK (true);
