@@ -92,6 +92,39 @@ def send_message(conv_id):
         data={'updated_at': datetime.now(timezone.utc).isoformat()}
     )
 
+    # If an agent just replied to a customer's conversation, email the
+    # customer so they don't have to keep refreshing the dashboard. We
+    # only notify on agent->customer direction; customer->agent is
+    # handled by the admin's existing /admin/conversations refresh.
+    if sender_type == 'agent':
+        try:
+            from app.services.email import send_support_reply_notification
+            from app.models.user import User
+            from app.utils.database import db_session as _db_session
+            import os as _os
+            # Look up the conversation's owner (the customer) — it's the
+            # user_id field on chat_conversations, NOT the sender of this
+            # message. We need to email THAT user, not the agent.
+            convs = supabase.select('chat_conversations',
+                                    filters={'id': conv_id}, limit=1) or []
+            customer_user_id = (convs[0] or {}).get('user_id') if convs else None
+            if customer_user_id:
+                _db = _db_session()
+                try:
+                    customer = _db.query(User).filter_by(user_id=customer_user_id).first()
+                    if customer and customer.email and customer.email != user.get('email'):
+                        app_url = _os.getenv('APP_URL', 'https://legendaryfeather.com').rstrip('/')
+                        send_support_reply_notification(
+                            to=customer.email,
+                            customer_name=customer.name or '',
+                            snippet=message_text,
+                            dashboard_url=f'{app_url}/dashboard',
+                        )
+                finally:
+                    _db.close()
+        except Exception as _se:
+            print(f'[Support] Reply notification skipped (non-fatal): {_se}')
+
     return jsonify(msg), 201
 
 

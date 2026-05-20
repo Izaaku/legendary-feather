@@ -139,6 +139,21 @@ def signup():
         token = create_token(user.user_id, user.email, user.is_owner)
         alert_new_signup(name, email, plan)
 
+        # Welcome email — non-blocking, best-effort. If the email service
+        # isn't configured we just log and move on; signup itself never
+        # fails because of email delivery.
+        try:
+            from app.services.email import send_welcome_email
+            import os as _os
+            send_welcome_email(
+                to=user.email,
+                name=user.name,
+                plan=user.plan,
+                app_url=_os.getenv('APP_URL', 'https://legendaryfeather.com').rstrip('/'),
+            )
+        except Exception as _we:
+            print(f'[Signup] Welcome email skipped (non-fatal): {_we}')
+
         return jsonify({
             'token': token,
             'user': user.to_dict(),
@@ -287,30 +302,14 @@ def forgot_password():
         app_url = os.getenv('APP_URL', 'http://localhost:5000').rstrip('/')
         reset_link = f'{app_url}/reset-password?token={token}'
 
-        # Send email with the link
-        subject = 'Reset your Legendary Feather password'
-        body_html = f"""
-        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;background:#0f0f0f;color:#e8e2d1;">
-          <h2 style="color:#d4a843;font-family:Georgia,serif;font-weight:300;">Reset your password</h2>
-          <p>Hi {user.name or 'there'},</p>
-          <p>We received a request to reset the password for your Legendary Feather account ({user.email}).</p>
-          <p>Click the button below to choose a new password. This link expires in <strong>30 minutes</strong>.</p>
-          <p style="text-align:center;margin:28px 0;">
-            <a href="{reset_link}"
-               style="display:inline-block;padding:14px 28px;background:#d4a843;color:#000;text-decoration:none;border-radius:8px;font-weight:600;letter-spacing:0.5px;">
-              Reset Password
-            </a>
-          </p>
-          <p style="font-size:12px;color:#a0998a;">If the button does not work, copy this URL into your browser:<br>
-            <span style="color:#d4a843;word-break:break-all;">{reset_link}</span>
-          </p>
-          <p style="font-size:12px;color:#a0998a;margin-top:24px;border-top:1px solid #333;padding-top:16px;">
-            If you did not request this reset, you can safely ignore this email — your password will stay the same.
-          </p>
-          <p style="font-size:11px;color:#666;margin-top:16px;">— Legendary Feather Team</p>
-        </div>
-        """
-        sent = send_user_email(user.email, subject, body_html)
+        # Send the reset email using the branded helper. Helper picks up
+        # Resend / SMTP automatically based on env vars.
+        from app.services.email import send_password_reset_email
+        sent = send_password_reset_email(
+            to=user.email,
+            name=user.name or 'there',
+            reset_link=reset_link,
+        )
         if not sent:
             # SECURITY: never log the reset link in production. Reset tokens
             # in stdout become permanent account-takeover artifacts in any log

@@ -79,15 +79,14 @@ def _timestamp():
     return datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
 
 
-def send_user_email(recipient: str, subject: str, body_html: str) -> bool:
-    """Send an email to an arbitrary user (not the admin alert inbox).
-
-    Used for password resets, signup welcome, etc. Returns True if the send
-    was queued, False if email is not configured (caller can use this to
-    decide whether to surface a "check your email" message vs an error).
+def _send_user_email_smtp(recipient: str, subject: str, body_html: str,
+                              from_addr: str = None, reply_to: str = None) -> bool:
+    """Internal SMTP backend for transactional email — used as a fallback by
+    app.services.email when Resend is not configured. Same code path as the
+    legacy send_user_email; refactored out so the new service can call it.
     """
     if not (EMAIL_FROM and EMAIL_PASSWORD):
-        print(f'[EMAIL] Not configured — would send to {recipient}: {subject}')
+        print(f'[EMAIL/smtp] Not configured — would send to {recipient}: {subject}')
         return False
     if not recipient:
         return False
@@ -96,8 +95,10 @@ def send_user_email(recipient: str, subject: str, body_html: str) -> bool:
         try:
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
-            msg['From'] = f'Legendary Feather <{EMAIL_FROM}>'
+            msg['From'] = from_addr or f'Legendary Feather <{EMAIL_FROM}>'
             msg['To'] = recipient
+            if reply_to:
+                msg['Reply-To'] = reply_to
 
             import re
             plain = body_html.replace('<br>', '\n').replace('</p>', '\n')
@@ -111,12 +112,28 @@ def send_user_email(recipient: str, subject: str, body_html: str) -> bool:
                 server.login(EMAIL_FROM, EMAIL_PASSWORD)
                 server.send_message(msg)
 
-            print(f'[EMAIL] Sent to {recipient}: {subject}')
+            print(f'[EMAIL/smtp] Sent to {recipient}: {subject}')
         except Exception as e:
-            print(f'[EMAIL] Failed to send to {recipient}: {e}')
+            print(f'[EMAIL/smtp] Failed to send to {recipient}: {e}')
 
     threading.Thread(target=_send, daemon=True).start()
     return True
+
+
+def send_user_email(recipient: str, subject: str, body_html: str) -> bool:
+    """Send a transactional email to a user. Delegates to app.services.email
+    which prefers Resend (when RESEND_API_KEY is set) and falls back to the
+    SMTP path above. Kept under this name so legacy callers (e.g. the
+    forgot-password route) don't need to change.
+    """
+    try:
+        from app.services.email import send_email as _send_email
+        return _send_email(recipient, subject, body_html)
+    except Exception as e:
+        # If the new service module can't import for any reason, fall back
+        # to SMTP directly so the password-reset flow doesn't break.
+        print(f'[EMAIL] Service import failed, using SMTP directly: {e}')
+        return _send_user_email_smtp(recipient, subject, body_html)
 
 
 # ── Alert Types ─────────────────────────────────────

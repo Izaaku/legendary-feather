@@ -535,16 +535,22 @@ footer a:hover { color: var(--gold); }
   </ul>
 </nav>
 
-<!-- Hero -->
+<!-- Hero — written for the "solo adventure traveler" ICP. Speaks to Maya:
+     32-year-old who travels 3-5 times a year, hates Google Translate's
+     walkie-talkie awkwardness, will pay €9.99 for a trip without thinking. -->
 <section class="hero">
   <img src="/static/images/golden-feather-hero.png" class="hero-feather" alt="Legendary Feather">
-  <div class="hero-tag">Real-time AI Translation</div>
-  <h1 class="hero-h1">Speak freely.<br><em>Translate instantly.</em></h1>
-  <p class="hero-sub">A simultaneous AI interpreter for travelers, expats, and anyone who needs to communicate across languages in person. 100+ languages, natural voice, zero friction.</p>
+  <div class="hero-tag">For solo travelers heading somewhere they don't speak the language</div>
+  <h1 class="hero-h1">Speak freely.<br><em>They'll understand.</em></h1>
+  <p class="hero-sub">Real conversations with locals — no walkie-talkie awkwardness, no robot voice, no app to install on their phone. Just open your browser, hold the button, talk. Their reply comes back in your language, instantly.</p>
   <div class="hero-ctas">
-    <a href="/auth?signup=1&amp;next=/app" class="btn-primary" onclick="trackCta('Hero - Try Free')">Try free →</a>
+    <a href="/auth?signup=1&amp;next=/app" class="btn-primary" onclick="trackCta('Hero - Try Free')">Try free in 30 seconds →</a>
   </div>
-  <div class="hero-trust">No credit card · 5 free minutes · 100+ languages</div>
+  <div class="hero-trust">5 free minutes · No credit card · Works on any phone</div>
+  <div class="hero-teams-link" style="margin-top:32px;font-size:13px;color:rgba(160,160,176,0.7);">
+    Running a contact center or BPO with multilingual clients?
+    <a href="/teams" style="color:#d4a843;text-decoration:none;font-weight:500;">See The Polyglot Desk →</a>
+  </div>
 </section>
 
 <!-- Two Modes -->
@@ -553,20 +559,21 @@ footer a:hover { color: var(--gold); }
   <h2 class="section-title">Built for every <em>conversation</em></h2>
 
   <div class="modes-grid">
-    <!-- Mode 1: Face-to-Face (LIVE) -->
+    <!-- Mode 1: Face-to-Face (LIVE) — copy speaks to a solo traveler about
+         to land in a country where they don't know the language. -->
     <div class="mode-card">
       <div class="mode-num">01</div>
       <span class="mode-status status-live">● Live now</span>
       <h3 class="mode-title" style="margin-top:14px;">Face-to-Face Mode</h3>
-      <div class="mode-tagline">Travelers, expats, hospitality</div>
-      <p class="mode-desc">Two people, one phone. You speak — the AI instantly translates and replies in the other language through your phone's speaker. Perfect for travel, business meetings, hospitality, expats settling abroad.</p>
+      <div class="mode-tagline">For your next trip — solo, couple, or family</div>
+      <p class="mode-desc">Real conversations with the homestay host in Vietnam. Asking the abuela in Oaxaca about her recipe. Negotiating with the taxi driver in Istanbul. You speak, they hear it in their language. They reply, you hear it in yours. No app for them to install.</p>
       <ul class="mode-bullets">
-        <li>~2s average latency</li>
-        <li>100+ languages with regional dialects</li>
-        <li>Mobile PWA (iPhone &amp; Android)</li>
-        <li>Studio-quality natural voices</li>
+        <li>~2s average latency — feels like a real conversation</li>
+        <li>100+ languages with regional dialects (MX vs ES, BR vs PT)</li>
+        <li>Works on any phone browser — iPhone, Android, no install</li>
+        <li>Natural voices, not robot Siri</li>
       </ul>
-      <a href="/auth?signup=1&amp;next=/app" class="mode-cta mode-cta-primary" onclick="trackCta('Mode 01 - Try Travel')">Try Face-to-Face free →</a>
+      <a href="/auth?signup=1&amp;next=/app" class="mode-cta mode-cta-primary" onclick="trackCta('Mode 01 - Try Travel')">Try free for your next conversation →</a>
     </div>
 </section>
 
