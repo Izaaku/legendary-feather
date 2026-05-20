@@ -1,0 +1,623 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   POLYGLOT TALK — STYLES
+   Branded dark theme with gold accents, consistent with Legendary Feather.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --bg-deep:       #0B1929;
+  --bg-card:       #112236;
+  --bg-card-2:     #18324d;
+  --gold:          #D4A843;
+  --gold-bright:   #EEC96A;
+  --gold-soft:     rgba(212, 168, 67, 0.16);
+  --gold-glow:     rgba(238, 201, 106, 0.45);
+  --text:          #EAE4D8;
+  --text-muted:    #8a9bc8;
+  --border:        rgba(212, 168, 67, 0.22);
+  --border-soft:   rgba(255, 255, 255, 0.06);
+  --err:           #ff7878;
+  --ok:            #6FE38A;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+
+a { color: var(--gold); text-decoration: none; }
+a:hover { color: var(--gold-bright); }
+
+/* ─────────────────────────────────────────────────────────────────────── */
+/* /talk/new — landing/create page                                          */
+/* ─────────────────────────────────────────────────────────────────────── */
+
+.talk-header {
+  padding: 32px 24px 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.talk-logo {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.talk-brand { color: var(--text); }
+.talk-brand-accent {
+  color: var(--gold);
+  background: linear-gradient(135deg, #C9972A 0%, #D4A843 25%, #EEC96A 50%, #D4A843 75%, #C9972A 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: sfGoldIris 5s ease infinite;
+}
+
+@keyframes sfGoldIris {
+  0%,100% { background-position: 0% 50%; }
+  50%     { background-position: 100% 50%; }
+}
+
+.talk-tagline {
+  color: var(--text-muted);
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+.talk-main {
+  max-width: 600px;
+  margin: 48px auto;
+  padding: 0 24px;
+}
+
+.talk-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px 32px;
+  box-shadow: 0 4px 40px rgba(0,0,0,0.4), 0 0 60px rgba(212,168,67,0.04);
+}
+
+.talk-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 32px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+
+.talk-subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0 0 28px;
+}
+
+.talk-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.talk-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.talk-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.talk-label em {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-style: normal;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.talk-form input[type="text"],
+.talk-form select {
+  background: var(--bg-card-2);
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.18s;
+}
+
+.talk-form input[type="text"]:focus,
+.talk-form select:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-soft);
+}
+
+.talk-form select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='%23D4A843'><polygon points='0,0 12,0 6,8'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 10px;
+  padding-right: 36px;
+}
+
+.talk-btn-primary {
+  background: linear-gradient(135deg, #C9972A 0%, #D4A843 25%, #EEC96A 50%, #D4A843 75%, #C9972A 100%);
+  background-size: 200% 100%;
+  animation: sfGoldIris 4s ease infinite;
+  color: #1a1410;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(212,168,67,0.25);
+  transition: transform 0.12s, box-shadow 0.12s;
+  margin-top: 8px;
+}
+
+.talk-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(212,168,67,0.4);
+}
+
+.talk-btn-primary:active { transform: translateY(0); }
+
+.talk-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  animation-play-state: paused;
+}
+
+.btn-icon { width: 18px; height: 18px; }
+
+.talk-error {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: rgba(255, 120, 120, 0.1);
+  border: 1px solid rgba(255, 120, 120, 0.4);
+  color: var(--err);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.talk-divider {
+  text-align: center;
+  margin: 28px 0 18px;
+  position: relative;
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.talk-divider::before,
+.talk-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: calc(50% - 30px);
+  height: 1px;
+  background: var(--border-soft);
+}
+
+.talk-divider::before { left: 0; }
+.talk-divider::after  { right: 0; }
+
+.talk-join-existing {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.talk-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.feature {
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.feature-icon { font-size: 28px; margin-bottom: 8px; }
+.feature-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+.feature-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+.talk-footer {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 12px;
+  border-top: 1px solid var(--border-soft);
+  margin-top: 60px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────── */
+/* /talk/<room_id> — active call view                                       */
+/* ─────────────────────────────────────────────────────────────────────── */
+
+.talk-body-room {
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+/* PRE-JOIN OVERLAY (guest enters name + lang) */
+.prejoin-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 24px;
+}
+
+.prejoin-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px 32px;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: 0 4px 40px rgba(0,0,0,0.5);
+}
+
+.prejoin-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 30px;
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.prejoin-subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0 0 24px;
+}
+
+/* CONNECTING OVERLAY */
+.connecting-overlay {
+  position: fixed; inset: 0;
+  background: var(--bg-deep);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  z-index: 90;
+}
+
+.connecting-spinner {
+  width: 48px; height: 48px;
+  border: 3px solid var(--border-soft);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.connecting-text {
+  font-size: 18px;
+  color: var(--text);
+  letter-spacing: 0.5px;
+}
+
+.connecting-detail {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* CALL VIEW */
+.call-view {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.call-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+
+.call-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.call-room-label {
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.call-room-id {
+  color: var(--gold);
+  font-family: 'DM Mono', monospace;
+  font-weight: 600;
+}
+
+.call-status {
+  color: var(--ok);
+  font-size: 12px;
+  margin-left: 12px;
+}
+
+.call-btn-secondary {
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.18s;
+}
+
+.call-btn-secondary:hover { background: var(--gold-soft); }
+.call-btn-secondary svg { stroke: var(--gold); }
+
+/* VIDEO GRID */
+.video-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  padding: 16px;
+  overflow: auto;
+  align-content: center;
+  background: var(--bg-deep);
+}
+
+.video-tile {
+  position: relative;
+  background: #000;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  min-height: 200px;
+}
+
+.video-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-tile.is-local video {
+  transform: scaleX(-1);  /* Mirror local camera (more natural) */
+}
+
+.video-tile-label {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(0,0,0,0.65);
+  color: var(--text);
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.video-tile-lang {
+  color: var(--gold);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.video-tile-muted {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(180, 30, 30, 0.85);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  display: none;
+}
+
+.video-tile.is-muted .video-tile-muted { display: block; }
+
+.video-tile.no-video {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card-2);
+}
+
+.video-tile.no-video::before {
+  content: attr(data-initial);
+  color: var(--gold);
+  font-size: 56px;
+  font-weight: 700;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+
+/* CAPTIONS AREA */
+.captions-area {
+  padding: 12px 24px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-soft);
+  min-height: 56px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.captions-hint {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+}
+
+.caption-line {
+  padding: 4px 0;
+  font-size: 14px;
+}
+
+.caption-speaker {
+  color: var(--gold);
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.caption-text { color: var(--text); }
+
+/* CONTROL BAR */
+.call-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+
+.ctrl-btn {
+  background: var(--bg-card-2);
+  border: 1px solid var(--border-soft);
+  color: var(--text);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  position: relative;
+}
+
+.ctrl-btn svg { width: 22px; height: 22px; }
+
+.ctrl-btn:hover {
+  background: var(--gold-soft);
+  border-color: var(--gold);
+  transform: scale(1.05);
+}
+
+.ctrl-btn[data-on="false"] {
+  background: rgba(180, 30, 30, 0.25);
+  border-color: rgba(255, 80, 80, 0.5);
+}
+
+.ctrl-btn[data-on="false"] svg { stroke: #ff7878; }
+
+.ctrl-label {
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  position: absolute;
+  bottom: -22px;
+}
+
+.ctrl-btn-hangup {
+  background: rgba(180, 30, 30, 0.8);
+  border-color: rgba(255, 80, 80, 0.8);
+}
+
+.ctrl-btn-hangup:hover {
+  background: rgba(220, 30, 30, 0.95);
+  border-color: rgba(255, 80, 80, 1);
+}
+
+.ctrl-btn-hangup svg { stroke: white; }
+
+/* TOAST NOTIFICATION */
+.toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-card);
+  border: 1px solid var(--gold);
+  color: var(--text);
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  z-index: 200;
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.5s forwards;
+}
+
+@keyframes toastIn  { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes toastOut { to   { opacity: 0; transform: translate(-50%, -20px); } }
+
+/* MOBILE RESPONSIVENESS */
+@media (max-width: 600px) {
+  .talk-main { margin: 24px auto; padding: 0 16px; }
+  .talk-card { padding: 28px 20px; }
+  .talk-title { font-size: 26px; }
+  .talk-features { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .feature { padding: 14px; }
+  .feature-icon { font-size: 22px; }
+
+  .video-grid { grid-template-columns: 1fr; padding: 8px; gap: 8px; }
+  .ctrl-btn { width: 56px; height: 56px; }
+  .ctrl-btn svg { width: 18px; height: 18px; }
+  .call-controls { gap: 8px; padding: 12px; }
+  .call-topbar { padding: 10px 14px; }
+  .call-room-id { font-size: 12px; }
+  .call-btn-secondary { padding: 6px 10px; }
+}

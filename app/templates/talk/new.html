@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polyglot Talk — Real-time Translated Calls</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='talk/talk.css') }}">
+</head>
+<body>
+
+<header class="talk-header">
+  <div class="talk-logo">
+    <span class="talk-brand">Polyglot</span>
+    <span class="talk-brand-accent">Talk</span>
+  </div>
+  <div class="talk-tagline">Real-time translated video calls — 30 languages</div>
+</header>
+
+<main class="talk-main">
+  <div class="talk-card">
+    <h1 class="talk-title">Start a Translated Call</h1>
+    <p class="talk-subtitle">
+      Speak in your own language. Your partner hears you in theirs. Both see live captions.
+    </p>
+
+    <form id="newRoomForm" class="talk-form">
+      <label class="talk-field">
+        <span class="talk-label">Your name</span>
+        <input type="text" id="hostName" required maxlength="80"
+               placeholder="e.g. Isaak" autocomplete="name" autofocus>
+      </label>
+
+      <label class="talk-field">
+        <span class="talk-label">Your language</span>
+        <select id="hostLang" required>
+          <option value="es">🇲🇽 Español</option>
+          <option value="en">🇺🇸 English</option>
+          <option value="fr">🇫🇷 Français</option>
+          <option value="de">🇩🇪 Deutsch</option>
+          <option value="it">🇮🇹 Italiano</option>
+          <option value="pt">🇧🇷 Português</option>
+          <option value="ja">🇯🇵 日本語</option>
+          <option value="zh">🇨🇳 中文</option>
+          <option value="ko">🇰🇷 한국어</option>
+          <option value="ar">🇸🇦 العربية</option>
+          <option value="hi">🇮🇳 हिन्दी</option>
+          <option value="ru">🇷🇺 Русский</option>
+          <option value="nl">🇳🇱 Nederlands</option>
+          <option value="pl">🇵🇱 Polski</option>
+          <option value="tr">🇹🇷 Türkçe</option>
+          <option value="vi">🇻🇳 Tiếng Việt</option>
+          <option value="th">🇹🇭 ไทย</option>
+          <option value="he">🇮🇱 עברית</option>
+          <option value="id">🇮🇩 Bahasa Indonesia</option>
+          <option value="fil">🇵🇭 Filipino</option>
+        </select>
+      </label>
+
+      <label class="talk-field">
+        <span class="talk-label">Call topic <em>(optional)</em></span>
+        <input type="text" id="topic" maxlength="200"
+               placeholder="e.g. Q4 strategy review">
+      </label>
+
+      <button type="submit" id="startBtn" class="talk-btn-primary">
+        <span class="btn-text">Start Call</span>
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+        </svg>
+      </button>
+    </form>
+
+    <div id="errorBox" class="talk-error" style="display:none;"></div>
+
+    <div class="talk-divider">
+      <span>or</span>
+    </div>
+
+    <div class="talk-join-existing">
+      Have an invite link? Just click it — no signup required.
+    </div>
+  </div>
+
+  <div class="talk-features">
+    <div class="feature">
+      <div class="feature-icon">🌐</div>
+      <div class="feature-title">30 Languages</div>
+      <div class="feature-desc">Speak your native language. The system translates in real time.</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Under 2s Latency</div>
+      <div class="feature-desc">Natural conversation flow — no awkward waiting.</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📺</div>
+      <div class="feature-title">Video + Captions</div>
+      <div class="feature-desc">See faces, read captions, understand everything.</div>
+    </div>
+  </div>
+</main>
+
+<footer class="talk-footer">
+  <a href="https://legendaryfeather.com" target="_blank">Legendary Feather</a> ·
+  <a href="/privacy">Privacy</a> ·
+  <a href="/terms">Terms</a>
+</footer>
+
+<script src="{{ url_for('static', filename='talk/talk_new.js') }}"></script>
+</body>
+</html>

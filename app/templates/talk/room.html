@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polyglot Talk Call</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='talk/talk.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.10/dist/livekit-client.umd.min.js"></script>
+</head>
+<body class="talk-body-room">
+
+<!-- ────────────────────────────────────────────────────────────────────── -->
+<!-- STAGE 1: Pre-join form — guest enters name + language before joining   -->
+<!-- ────────────────────────────────────────────────────────────────────── -->
+<div id="preJoinView" class="prejoin-overlay" style="display:none;">
+  <div class="prejoin-card">
+    <h1 class="prejoin-title">Join Call</h1>
+    <p class="prejoin-subtitle">
+      You've been invited to a <strong>Polyglot Talk</strong> call.
+      Just enter your name and language — no signup needed.
+    </p>
+
+    <form id="joinForm" class="talk-form">
+      <label class="talk-field">
+        <span class="talk-label">Your name</span>
+        <input type="text" id="guestName" required maxlength="80"
+               placeholder="How others will see you" autocomplete="name" autofocus>
+      </label>
+
+      <label class="talk-field">
+        <span class="talk-label">Your language</span>
+        <select id="guestLang" required>
+          <option value="">— Choose your language —</option>
+          <option value="es">🇲🇽 Español</option>
+          <option value="en">🇺🇸 English</option>
+          <option value="fr">🇫🇷 Français</option>
+          <option value="de">🇩🇪 Deutsch</option>
+          <option value="it">🇮🇹 Italiano</option>
+          <option value="pt">🇧🇷 Português</option>
+          <option value="ja">🇯🇵 日本語</option>
+          <option value="zh">🇨🇳 中文</option>
+          <option value="ko">🇰🇷 한국어</option>
+          <option value="ar">🇸🇦 العربية</option>
+          <option value="hi">🇮🇳 हिन्दी</option>
+          <option value="ru">🇷🇺 Русский</option>
+          <option value="nl">🇳🇱 Nederlands</option>
+          <option value="pl">🇵🇱 Polski</option>
+          <option value="tr">🇹🇷 Türkçe</option>
+          <option value="vi">🇻🇳 Tiếng Việt</option>
+          <option value="th">🇹🇭 ไทย</option>
+          <option value="he">🇮🇱 עברית</option>
+          <option value="id">🇮🇩 Bahasa Indonesia</option>
+          <option value="fil">🇵🇭 Filipino</option>
+        </select>
+      </label>
+
+      <button type="submit" id="joinBtn" class="talk-btn-primary">
+        <span class="btn-text">Join Call</span>
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+    </form>
+
+    <div id="joinErrorBox" class="talk-error" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- ────────────────────────────────────────────────────────────────────── -->
+<!-- STAGE 2: Connecting spinner — while LiveKit handshake completes        -->
+<!-- ────────────────────────────────────────────────────────────────────── -->
+<div id="connectingView" class="connecting-overlay" style="display:flex;">
+  <div class="connecting-spinner"></div>
+  <div class="connecting-text">Connecting to call…</div>
+  <div id="connectingDetail" class="connecting-detail">Loading…</div>
+</div>
+
+<!-- ────────────────────────────────────────────────────────────────────── -->
+<!-- STAGE 3: Active call — video grid + controls                            -->
+<!-- ────────────────────────────────────────────────────────────────────── -->
+<div id="callView" class="call-view" style="display:none;">
+
+  <!-- Top bar: room info + leave button -->
+  <div class="call-topbar">
+    <div class="call-topbar-left">
+      <span class="call-room-label">Room</span>
+      <span class="call-room-id">{{ room_id[:8] }}</span>
+      <span class="call-status" id="callStatus">● Connected</span>
+    </div>
+    <div class="call-topbar-right">
+      <button id="copyInviteBtn" class="call-btn-secondary" title="Copy invite link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <rect x="9" y="9" width="13" height="13" rx="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Copy invite
+      </button>
+    </div>
+  </div>
+
+  <!-- Video grid: dynamically populated with participant tiles -->
+  <div id="videoGrid" class="video-grid">
+    <!-- Tiles inserted by talk_room.js -->
+  </div>
+
+  <!-- Live captions overlay (placeholder for Phase 2 translation) -->
+  <div id="captionsArea" class="captions-area">
+    <div class="captions-hint">Captions will appear here when someone speaks (coming in Phase 2).</div>
+  </div>
+
+  <!-- Bottom control bar -->
+  <div class="call-controls">
+    <button id="micToggleBtn" class="ctrl-btn" data-on="true" aria-label="Toggle microphone">
+      <svg class="icon-mic-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+        <line x1="8" y1="23" x2="16" y2="23"/>
+      </svg>
+      <svg class="icon-mic-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+        <line x1="1" y1="1" x2="23" y2="23"/>
+        <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+        <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/>
+        <line x1="12" y1="19" x2="12" y2="23"/>
+      </svg>
+      <span class="ctrl-label">Mic</span>
+    </button>
+
+    <button id="camToggleBtn" class="ctrl-btn" data-on="true" aria-label="Toggle camera">
+      <svg class="icon-cam-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="23 7 16 12 23 17 23 7"/>
+        <rect x="1" y="5" width="15" height="14" rx="2"/>
+      </svg>
+      <svg class="icon-cam-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+        <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/>
+        <line x1="1" y1="1" x2="23" y2="23"/>
+      </svg>
+      <span class="ctrl-label">Cam</span>
+    </button>
+
+    <button id="hangupBtn" class="ctrl-btn ctrl-btn-hangup" aria-label="Leave call">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/>
+        <line x1="23" y1="1" x2="1" y2="23"/>
+      </svg>
+      <span class="ctrl-label">Leave</span>
+    </button>
+  </div>
+</div>
+
+<!-- Pass server config to JS -->
+<script>
+window.TALK_CONFIG = {
+  roomId: "{{ room_id }}",
+  inviteToken: {{ invite_token | tojson }},
+  prefilledToken: {{ prefilled_token | tojson }},
+  liveKitUrl: "{{ livekit_url }}",
+  apiBase: "/api/talk"
+};
+</script>
+<script src="{{ url_for('static', filename='talk/talk_room.js') }}"></script>
+</body>
+</html>

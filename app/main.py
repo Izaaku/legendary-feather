@@ -355,6 +355,31 @@ def dashboard():
     return render_template('dashboard.html')
 
 
+# ── Polyglot Talk routes ───────────────────────────────
+# /talk          → create-new-call landing (requires host signin)
+# /talk/<id>     → guest pre-join + active call room
+#
+# The /api/talk/* JSON endpoints live in app/routes/talk.py.
+# These page routes just serve HTML; all the work happens in JS.
+
+@app.route('/talk')
+def talk_new():
+    """Landing page where a host creates a new call."""
+    return render_template('talk/new.html')
+
+
+@app.route('/talk/<room_id>')
+def talk_room(room_id):
+    """Active call room — guests join here, host lands here after creating."""
+    from app.services import livekit_service
+    invite_token = request.args.get('t', '')
+    return render_template('talk/room.html',
+                           room_id=room_id,
+                           invite_token=invite_token,
+                           prefilled_token=None,
+                           livekit_url=livekit_service.LIVEKIT_URL)
+
+
 @app.route('/watch')
 def watch():
     """Smartwatch web interface — compact translator control."""
