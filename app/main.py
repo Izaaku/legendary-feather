@@ -210,7 +210,7 @@ def add_security_headers(response):
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    response.headers['Permissions-Policy'] = 'camera=(), microphone=(self), geolocation=()'
+    response.headers['Permissions-Policy'] = 'camera=(self), microphone=(self), geolocation=(), display-capture=(self)'
 
     # Content Security Policy — blocks unauthorized scripts, styles, connections
     csp_parts = [
