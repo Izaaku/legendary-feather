@@ -20,6 +20,11 @@ class Config:
     DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///legendary_feather.db')
     APP_URL = os.getenv('APP_URL', 'http://localhost:5000')
 
+    # PostHog product analytics. POSTHOG_KEY is a PUBLIC project key (safe to
+    # embed in the page). The env vars allow overriding without a code change.
+    POSTHOG_KEY  = os.getenv('POSTHOG_KEY',  'phc_n8XoeANaTe8zRig6pwVyeSbfnAeY2bJMxSbaZDagCsZW')
+    POSTHOG_HOST = os.getenv('POSTHOG_HOST', 'https://us.i.posthog.com')
+
     # Stripe — supports test/live toggle via STRIPE_MODE.
     # If you set STRIPE_MODE=test, the code reads STRIPE_*_TEST vars.
     # If you set STRIPE_MODE=live, the code reads STRIPE_*_LIVE vars.

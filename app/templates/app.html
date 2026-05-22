@@ -2885,6 +2885,8 @@ async function syncCheckoutSessionIfPresent(){
             }catch(e){}
             const planName = (data.plan || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
             showStatus(`Welcome to ${planName}! Your plan is active.`, 'success');
+            // PostHog funnel event — fires once on a confirmed paid conversion.
+            if (window.posthog) posthog.capture('subscription_started', { plan: data.plan || planName });
             // Clean up the URL so a refresh doesn't try to sync again
             try{ history.replaceState({}, '', window.location.pathname); }catch(e){}
         } else {

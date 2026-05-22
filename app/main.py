@@ -31,7 +31,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from app.config import Config, LANGUAGES
-from app.routes import api_bp, auth_bp, payments_bp, admin_bp, support_bp, marketing_bp, talk_bp
+# talk_bp removed — Polyglot Talk extracted to its own separate app.
+from app.routes import api_bp, auth_bp, payments_bp, admin_bp, support_bp, marketing_bp
 from app.utils.database import init_db
 from app.utils.alerts import (
     alert_waf_block, alert_ip_blacklisted,
@@ -54,7 +55,10 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 ALLOWED_ORIGINS = os.getenv('ALLOWED_ORIGINS', '*').split(',')
 CORS(app, resources={r"/api/*": {"origins": ALLOWED_ORIGINS}})
 async_mode = 'gevent' if os.name != 'nt' else 'threading'
-socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS, async_mode=async_mode)
+# max_http_buffer_size raised to 16 MB (default is 1 MB) so large F2F audio
+# sent over Socket.IO as base64 isn't rejected. Matches MAX_CONTENT_LENGTH.
+socketio = SocketIO(app, cors_allowed_origins=ALLOWED_ORIGINS, async_mode=async_mode,
+                    max_http_buffer_size=16 * 1024 * 1024)
 
 # Register route blueprints
 app.register_blueprint(auth_bp)
@@ -63,7 +67,7 @@ app.register_blueprint(payments_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(support_bp)
 app.register_blueprint(marketing_bp)
-app.register_blueprint(talk_bp)
+# app.register_blueprint(talk_bp)  — disabled: Polyglot Talk moved to its own app
 
 
 # ── WAF — Web Application Firewall (Mejora #2) ─────
@@ -215,11 +219,11 @@ def add_security_headers(response):
     # Content Security Policy — blocks unauthorized scripts, styles, connections
     csp_parts = [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://js.stripe.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://js.stripe.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://us-assets.i.posthog.com",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:",
         "img-src 'self' data: blob: https:",
-        "connect-src 'self' data: https://api.stripe.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://tessdata.projectnaptha.com wss: ws:",
+        "connect-src 'self' data: https://api.stripe.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://tessdata.projectnaptha.com https://us.i.posthog.com https://us-assets.i.posthog.com wss: ws:",
         "worker-src 'self' blob: https://cdn.jsdelivr.net https://unpkg.com",
         "frame-src https://js.stripe.com",
         "media-src 'self' blob: data:",
@@ -229,6 +233,26 @@ def add_security_headers(response):
         "upgrade-insecure-requests",
     ]
     response.headers['Content-Security-Policy'] = '; '.join(csp_parts)
+
+    # ── PostHog analytics snippet injection ──
+    # LF has no base template, so inject the analytics snippet into the
+    # <head> of every HTML response from this one place.
+    if (response.content_type and 'text/html' in response.content_type
+            and not response.direct_passthrough and Config.POSTHOG_KEY):
+        try:
+            html = response.get_data(as_text=True)
+            if '</head>' in html and 'posthog.init' not in html:
+                _ph_key  = Config.POSTHOG_KEY
+                _ph_host = Config.POSTHOG_HOST
+                _ph_assets = _ph_host.replace('.i.posthog.com', '-assets.i.posthog.com')
+                _ph_snippet = (
+                    '<script src="' + _ph_assets + '/static/array.js"></script>'
+                    '<script>window.posthog&&posthog.init("' + _ph_key + '",'
+                    '{api_host:"' + _ph_host + '",person_profiles:"identified_only"});</script>'
+                )
+                response.set_data(html.replace('</head>', _ph_snippet + '</head>', 1))
+        except Exception as _ph_err:
+            app.logger.warning('PostHog snippet injection skipped: %s', _ph_err)
 
     if request.is_secure:
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
@@ -355,29 +379,30 @@ def dashboard():
     return render_template('dashboard.html')
 
 
-# ── Polyglot Talk routes ───────────────────────────────
-# /talk          → create-new-call landing (requires host signin)
-# /talk/<id>     → guest pre-join + active call room
+# ── Polyglot Talk routes — DISABLED ────────────────────
+# Polyglot Talk has been extracted to its own separate app.
+# The /talk page routes and the /api/talk/* blueprint are disabled here
+# so LF stays clean as the Face-to-Face translation product, with no
+# half-built video-call feature exposed. The Talk source files
+# (app/routes/talk.py, templates/talk/, static/talk/) remain on disk
+# untouched — they are the basis for the standalone Polyglot Talk app.
 #
-# The /api/talk/* JSON endpoints live in app/routes/talk.py.
-# These page routes just serve HTML; all the work happens in JS.
-
-@app.route('/talk')
-def talk_new():
-    """Landing page where a host creates a new call."""
-    return render_template('talk/new.html')
-
-
-@app.route('/talk/<room_id>')
-def talk_room(room_id):
-    """Active call room — guests join here, host lands here after creating."""
-    from app.services import livekit_service
-    invite_token = request.args.get('t', '')
-    return render_template('talk/room.html',
-                           room_id=room_id,
-                           invite_token=invite_token,
-                           prefilled_token=None,
-                           livekit_url=livekit_service.LIVEKIT_URL)
+# @app.route('/talk')
+# def talk_new():
+#     """Landing page where a host creates a new call."""
+#     return render_template('talk/new.html')
+#
+#
+# @app.route('/talk/<room_id>')
+# def talk_room(room_id):
+#     """Active call room — guests join here, host lands here after creating."""
+#     from app.services import livekit_service
+#     invite_token = request.args.get('t', '')
+#     return render_template('talk/room.html',
+#                            room_id=room_id,
+#                            invite_token=invite_token,
+#                            prefilled_token=None,
+#                            livekit_url=livekit_service.LIVEKIT_URL)
 
 
 @app.route('/watch')

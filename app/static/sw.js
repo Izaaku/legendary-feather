@@ -59,8 +59,15 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Only handle same-origin GET requests
+  // Only handle same-origin GET requests.
   if (req.method !== 'GET') return;
+
+  // Same-origin guard: never intercept cross-origin requests (Google Fonts,
+  // CDNs, third-party APIs). Intercepting them made the SW call fetch()
+  // — which the page CSP blocks — and then respondWith(undefined),
+  // causing "TypeError: Failed to convert value to 'Response'". Let the
+  // browser handle cross-origin resources natively.
+  if (url.origin !== self.location.origin) return;
 
   // Skip never-cache paths (API, websocket, auth, third-party APIs)
   const fullUrl = req.url.toLowerCase();
@@ -107,7 +114,10 @@ self.addEventListener('fetch', (event) => {
         }
         return res;
       })
-      .catch(() => caches.match(req))
+      // Never resolve to undefined — respondWith() requires a Response.
+      .catch(() => caches.match(req).then(
+        (cached) => cached || new Response('', { status: 504, statusText: 'Offline' })
+      ))
   );
 });
 

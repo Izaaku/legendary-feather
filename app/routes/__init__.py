@@ -5,4 +5,4 @@ from .payments import payments_bp
 from .admin import admin_bp
 from .support import support_bp
 from .marketing import marketing_bp
-from .talk import talk_bp
+# from .talk import talk_bp  — disabled: Polyglot Talk moved to its own app

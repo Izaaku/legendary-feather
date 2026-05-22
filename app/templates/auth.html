@@ -712,6 +712,9 @@ signupForm.addEventListener('submit', async function(e){
     const data = await apiCall('signup', { name, email, password, plan: selectedPlan });
     setSession(data);
 
+    // PostHog funnel event — fires once on a real signup.
+    if (window.posthog) posthog.capture('signed_up', { plan: selectedPlan });
+
     // Plans that require an immediate Stripe payment go through /checkout
     // before landing in the app. Free + PAYG skip checkout (PAYG charges
     // happen later, per-pack). Travel Pass is paid up-front.
