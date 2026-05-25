@@ -772,6 +772,7 @@ footer {
         .hf-knob::before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:var(--text-muted);border-radius:50%;transition:transform .18s,background .18s;}
         .hf-switch input:checked + .hf-knob{background:var(--gold-dim);border-color:var(--gold);}
         .hf-switch input:checked + .hf-knob::before{transform:translateX(20px);background:var(--gold);}
+        .person-indicator.hf-armed{color:var(--gold);}
         .person-indicator.hf-live{color:var(--gold);animation:hfPulse 1.4s ease-in-out infinite;}
         @keyframes hfPulse{0%,100%{opacity:1;}50%{opacity:.5;}}
         .talk-btn.hf-off{opacity:.35;pointer-events:none;filter:grayscale(1);}
@@ -1626,7 +1627,7 @@ talkBtn.addEventListener('touchend', stopF2FTalk);
 talkBtn.addEventListener('touchcancel', stopF2FTalk);
 
 function startF2FTalk(){
-    if(hfActive) return;
+    if(hfArmed){ hfTapButton(); return; }
     if(f2fTalking) return;
     f2fTalking = true;
     talkBtn.classList.add('talking');
@@ -1765,16 +1766,17 @@ function resetF2FButton(){
 
 // ══════════════════════════════════════════════════════
 // HANDS-FREE CONTINUOUS CONVERSATION (Feature 2)
-// One toggle: the mic stays open, utterances are auto-segmented
-// by silence (VAD) and sent through the same transcribe/translate
-// pipeline. Pauses itself while a translation is spoken aloud so
-// it does not transcribe its own output (turn-taking).
+// The toggle ENABLES hands-free mode. The gold mic button then
+// works as tap-to-start / tap-to-stop for a continuous session:
+// the mic stays open, utterances are auto-segmented by silence
+// (VAD) and sent through the same transcribe/translate pipeline.
+// Pauses itself while a translation is spoken aloud (turn-taking).
 // ══════════════════════════════════════════════════════
-let hfActive=false, hfMuted=false;
+let hfArmed=false, hfActive=false, hfMuted=false;
 let hfStream=null, hfRecorder=null, hfChunks=[];
 let hfAudioCtx=null, hfAnalyser=null, hfData=null, hfRaf=0;
 let hfHadSpeech=false, hfFirstVoiceAt=0, hfLastVoiceAt=0, hfSegStartAt=0;
-let hfPendingSend=false;
+let hfPendingSend=false, hfLastTap=0;
 let hfQueue=[], hfBusy=false;
 // Tunables — adjust for noisy vs quiet environments
 const HF_VAD_THRESHOLD=0.015;  // RMS volume that counts as speech
@@ -1784,18 +1786,47 @@ const HF_MAX_IDLE_MS=7000;     // recycle the recorder after this much dead air
 
 (function(){
   var t=document.getElementById('hfToggle');
-  if(t) t.addEventListener('change',function(){ if(this.checked) hfStart(); else hfStop(); });
+  if(t) t.addEventListener('change',function(){ if(this.checked) hfArm(); else hfDisarm(); });
 })();
 
-function hfSetStatus(txt,live){
+function hfSetStatus(txt,mode){
   if(!f2fStatusLabel) return;
   f2fStatusLabel.textContent=txt;
-  f2fStatusLabel.classList.toggle('hf-live',!!live);
+  f2fStatusLabel.classList.toggle('hf-live',mode==='live');
+  f2fStatusLabel.classList.toggle('hf-armed',mode==='armed');
 }
 
-function hfStart(){
-  if(hfActive) return;
+// Toggle ON — enter hands-free mode. The mic is not opened yet:
+// the user taps the gold button to begin a session.
+function hfArm(){
+  if(hfArmed) return;
   if(f2fTalking){ try{stopF2FTalk();}catch(e){} }
+  hfArmed=true;
+  talkBtn.classList.remove('talking');
+  talkBtn.textContent='🎤';
+  hfSetStatus('Tap the mic button to start','armed');
+}
+
+// Toggle OFF — leave hands-free mode entirely.
+function hfDisarm(){
+  if(hfActive) hfEndSession();
+  hfArmed=false;
+  talkBtn.classList.remove('talking');
+  talkBtn.textContent='🎤';
+  hfSetStatus('Press and hold to speak','');
+  var t=document.getElementById('hfToggle'); if(t) t.checked=false;
+}
+
+// Gold mic button tapped while armed → start or stop a session.
+function hfTapButton(){
+  var now=Date.now();
+  if(now-hfLastTap<450) return;   // de-dupe touchstart + synthesized mousedown
+  hfLastTap=now;
+  if(hfActive) hfEndSession(); else hfBeginSession();
+}
+
+function hfBeginSession(){
+  if(hfActive) return;
   navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
     hfActive=true; hfStream=stream;
     try{
@@ -1806,19 +1837,20 @@ function hfStart(){
       hfData=new Uint8Array(hfAnalyser.fftSize);
       src.connect(hfAnalyser);
     }catch(e){ console.warn('[HF] analyser failed',e); }
-    talkBtn.classList.add('hf-off');
     hfQueue=[]; hfBusy=false; hfMuted=false;
+    talkBtn.classList.add('talking');
+    talkBtn.textContent='🔊';
     hfStartSegment();
-    hfSetStatus('● Active — just talk',true);
+    hfSetStatus('● Active — tap the mic button to stop','live');
     hfRaf=requestAnimationFrame(hfVadTick);
   }).catch(function(e){
     hfActive=false;
     showStatus('Microphone denied: '+((e&&e.message)||e),'error');
-    var t=document.getElementById('hfToggle'); if(t) t.checked=false;
+    hfSetStatus('Tap the mic button to start','armed');
   });
 }
 
-function hfStop(){
+function hfEndSession(){
   hfActive=false; hfMuted=false;
   if(hfRaf){ cancelAnimationFrame(hfRaf); hfRaf=0; }
   try{ if(hfRecorder && hfRecorder.state!=='inactive') hfRecorder.stop(); }catch(e){}
@@ -1829,9 +1861,9 @@ function hfStop(){
   hfAudioCtx=null; hfAnalyser=null; hfData=null;
   hfChunks=[]; hfQueue=[]; hfBusy=false;
   hfHadSpeech=false; hfPendingSend=false;
-  if(talkBtn) talkBtn.classList.remove('hf-off');
-  hfSetStatus('Press and hold to speak',false);
-  var t=document.getElementById('hfToggle'); if(t) t.checked=false;
+  if(talkBtn){ talkBtn.classList.remove('talking'); talkBtn.textContent='🎤'; }
+  if(hfArmed) hfSetStatus('Tap the mic button to start','armed');
+  else hfSetStatus('Press and hold to speak','');
 }
 
 function hfStartSegment(){
@@ -1911,13 +1943,13 @@ function hfMute(){
   if(!hfActive || hfMuted) return;
   hfMuted=true;
   try{ if(hfRecorder && hfRecorder.state==='recording'){ hfPendingSend=false; hfRecorder.stop(); } }catch(e){}
-  hfSetStatus('● Speaking translation…',true);
+  hfSetStatus('● Speaking translation… — tap to stop','live');
 }
 
 function hfUnmute(){
   if(!hfActive || !hfMuted) return;
   hfMuted=false;
-  hfSetStatus('● Active — just talk',true);
+  hfSetStatus('● Active — tap the mic button to stop','live');
   if(!hfRecorder || hfRecorder.state==='inactive') hfStartSegment();
 }
 
