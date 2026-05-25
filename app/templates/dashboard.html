@@ -1257,7 +1257,7 @@ function showPlan(planKey) {
   html += `<div class="card">
     <div class="card-header">
       <div class="card-title">Recent <em>Activity</em></div>
-      ${plan.history.length > 0 ? '<a class="card-action" href="#" onclick="event.preventDefault(); switchView(\'history\');">View All</a>' : ''}
+      ${plan.history.length > 0 ? '<a class="card-action" href="#" onclick="event.preventDefault(); showHistoryView();">View All</a>' : ''}
     </div>`;
   if (plan.history.length === 0) {
     html += `<div style="padding:24px 8px;text-align:center;color:var(--text-muted);">
@@ -1279,7 +1279,7 @@ function showPlan(planKey) {
   html += `<div class="card">
     <div class="card-header">
       <div class="card-title">Top <em>Languages</em></div>
-      <a class="card-action" href="#">100+ available</a>
+      <span class="card-action" style="cursor:default;opacity:0.65;">100+ available</span>
     </div>`;
 
   if (plan.topLangs.length === 0) {
@@ -1320,8 +1320,8 @@ function showPlan(planKey) {
 
   // (Voice profile rendering removed for V1 — feature deferred to V2.)
 
-  // ── MEETINGS (Business only) ──
-  if (planKey === 'business') {
+  // ── MEETINGS / TEAM — B2B, hidden for the V1 travelers launch ──
+  if (false) {
     html += `<div class="grid-2 animate-in delay-4">`;
 
     // Meeting Log

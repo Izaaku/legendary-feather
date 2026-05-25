@@ -914,8 +914,8 @@ footer {
                     <select id="qpTheirLang" style="width:100%;"></select>
                 </div>
             </div>
-            <div class="qp-cats" id="qpCats"></div>
-            <div class="qp-phrases" id="qpPhrases"></div>
+            <div class="qp-cats" id="qpCats" data-no-i18n="1"></div>
+            <div class="qp-phrases" id="qpPhrases" data-no-i18n="1"></div>
             <div class="qp-add-row">
                 <input type="text" id="qpCustomInput" placeholder="Add your own phrase..." maxlength="120">
                 <button class="btn-icon" id="qpAddBtn" title="Add phrase">+</button>
@@ -924,7 +924,7 @@ footer {
         </div>
 
         <!-- Quick Phrases — fullscreen display overlay -->
-        <div class="qp-overlay" id="qpOverlay">
+        <div class="qp-overlay" id="qpOverlay" data-no-i18n="1">
             <div class="qp-overlay-inner">
                 <div class="qp-overlay-big" id="qpOverlayBig"></div>
                 <div class="qp-overlay-sub" id="qpOverlaySub"></div>
@@ -1969,6 +1969,7 @@ function processF2FUtterance(text, confidence){
     const bubble = document.createElement('div');
     bubble.className = 'chat-bubble person-a';
     bubble.id = bubbleId;
+    bubble.dataset.noI18n = '1';  // conversation content — never UI-translate
     bubble.innerHTML = `
         <div class="cb-label">Detecting language...</div>
         <div class="cb-original">${text}</div>
@@ -3383,6 +3384,142 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
   else init();
+})();
+</script>
+<script>
+/* ═══ /app interface i18n — ported from the dashboard's client-side translator.
+   Translates the UI to the account language via /api/translate-batch, caches
+   the result in localStorage (so it's instant — and works offline — after the
+   first online load). Content areas (F2F chat, Quick Phrases, language pickers)
+   are marked data-no-i18n and never touched. ═══ */
+(function(){
+  if (window._LF_I18N) return;  // guard against double-load
+  const _LF_I18N = { lang: null, cache: {} };
+  window._LF_I18N = _LF_I18N;
+
+  function _lfGetUserLang(){
+    try {
+      const sess = JSON.parse(sessionStorage.getItem('lf_session') || '{}');
+      if (sess.preferred_source_lang) return sess.preferred_source_lang.toLowerCase().slice(0,2);
+    } catch (e) {}
+    return 'en';
+  }
+  function _lfLoadCache(lang){
+    if (lang === 'en') { _LF_I18N.cache = {}; return; }
+    try { _LF_I18N.cache = JSON.parse(localStorage.getItem('lf_i18n_' + lang) || '{}'); }
+    catch (e) { _LF_I18N.cache = {}; }
+  }
+  function _lfSaveCache(lang){
+    if (lang === 'en') return;
+    try { localStorage.setItem('lf_i18n_' + lang, JSON.stringify(_LF_I18N.cache)); } catch (e) {}
+  }
+  async function _lfTranslateBatch(texts, lang){
+    const todo = [...new Set(texts)].filter(t => t && t.trim() && !_LF_I18N.cache[t] && !/^[\d\s\W]+$/.test(t));
+    if (!todo.length) return;
+    const token = sessionStorage.getItem('lf_token');
+    const CHUNK = 100;
+    for (let i = 0; i < todo.length; i += CHUNK) {
+      const slice = todo.slice(i, i + CHUNK);
+      try {
+        const r = await fetch('/api/translate-batch', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texts: slice, source_lang: 'en', target_lang: lang })
+        });
+        if (!r.ok) { console.warn('[i18n] batch failed:', r.status); continue; }
+        const data = await r.json();
+        if (data && Array.isArray(data.translations)) {
+          slice.forEach((src, idx) => {
+            const tr = data.translations[idx];
+            if (tr && tr !== src) _LF_I18N.cache[src] = tr;
+          });
+        }
+      } catch (e) { console.warn('[i18n] batch error:', e); }
+    }
+    _lfSaveCache(lang);
+  }
+  async function lf_translateNode(root){
+    const lang = _lfGetUserLang();
+    if (!lang || lang === 'en') return;
+    if (lang !== _LF_I18N.lang) { _LF_I18N.lang = lang; _lfLoadCache(lang); }
+    if (!root) root = document.body;
+    const SKIP_TAGS = new Set(['SCRIPT','STYLE','CODE','PRE','TEXTAREA','INPUT','SELECT','OPTION']);
+    const isInsideSkipped = (n) => {
+      let p = n.parentElement;
+      while (p) {
+        if (p.dataset && p.dataset.noI18n === '1') return true;
+        p = p.parentElement;
+      }
+      return false;
+    };
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(n){
+        if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        if (n.parentElement && SKIP_TAGS.has(n.parentElement.tagName)) return NodeFilter.FILTER_REJECT;
+        if (isInsideSkipped(n)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    const textNodes = [];
+    let n;
+    while ((n = walker.nextNode())) textNodes.push(n);
+    const placeholderEls = Array.from(root.querySelectorAll('[placeholder]'));
+    const titleEls = Array.from(root.querySelectorAll('[title]'));
+    const allStrings = [
+      ...textNodes.map(t => t.nodeValue.trim()),
+      ...placeholderEls.map(e => e.getAttribute('placeholder') || ''),
+      ...titleEls.map(e => e.getAttribute('title') || ''),
+    ];
+    await _lfTranslateBatch(allStrings, lang);
+    for (const tn of textNodes) {
+      const orig = tn.nodeValue.trim();
+      const tr = _LF_I18N.cache[orig];
+      if (tr && tr !== orig) {
+        const next = tn.nodeValue.replace(orig, tr);
+        if (next !== tn.nodeValue) tn.nodeValue = next;
+      }
+    }
+    for (const el of placeholderEls) {
+      const orig = el.getAttribute('placeholder');
+      if (orig && _LF_I18N.cache[orig]) el.setAttribute('placeholder', _LF_I18N.cache[orig]);
+    }
+    for (const el of titleEls) {
+      const orig = el.getAttribute('title');
+      if (orig && _LF_I18N.cache[orig]) el.setAttribute('title', _LF_I18N.cache[orig]);
+    }
+  }
+  window.lf_translateNode = lf_translateNode;
+
+  // Re-translate on DOM changes (debounced, re-entrancy-guarded — same pattern
+  // as the dashboard, which prevents the translate pass from looping on itself).
+  let _translating = false, _pending = false, _timer = 0;
+  async function _runRetranslate(){
+    if (_translating) { _pending = true; return; }
+    _translating = true;
+    try { await lf_translateNode(document.body); }
+    finally {
+      _translating = false;
+      if (_pending) { _pending = false; setTimeout(_runRetranslate, 200); }
+    }
+  }
+
+  function _start(){
+    if (_lfGetUserLang() === 'en') return;  // English is the source — nothing to do
+    lf_translateNode(document.body);
+    const obs = new MutationObserver(function(){
+      if (_lfGetUserLang() !== 'en' && !_translating) {
+        clearTimeout(_timer);
+        _timer = setTimeout(_runRetranslate, 600);
+      }
+    });
+    obs.observe(document.body, { childList: true, subtree: true, characterData: false });
+  }
+  // Give the app a moment to render its initial UI, then translate.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(_start, 400));
+  } else {
+    setTimeout(_start, 400);
+  }
 })();
 </script>
 </body>
