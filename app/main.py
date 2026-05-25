@@ -830,6 +830,7 @@ def handle_transcribe(data):
         # a second Whisper API call (which doubled F2F latency from ~5s to
         # ~10-15s). The downside (occasional wrong direction) is fixed by
         # the next utterance — much better UX than 30s wait.
+        out_of_pair = False
         try:
             normalized_pair = [str(l).lower()[:2] for l in (language_pair or []) if l]
             detected = (result.get('detected_language') or '').lower()[:2]
@@ -838,10 +839,10 @@ def handle_transcribe(data):
                     and len(normalized_pair) == 2
                     and detected
                     and detected not in normalized_pair):
-                print(f'[Whisper] Detected {detected!r} not in pair {normalized_pair} — clamping to first lang (no re-run)')
-                result['detected_language'] = normalized_pair[0]
+                print(f'[Whisper] Detected {detected!r} not in pair {normalized_pair} — rejecting (likely noise/hallucination)')
+                out_of_pair = True
         except Exception as clamp_err:
-            print(f'[Whisper] Pair clamp failed (non-fatal): {clamp_err}')
+            print(f'[Whisper] Pair check failed (non-fatal): {clamp_err}')
 
         # ── Filter Whisper hallucinations on short / silent audio ──
         # OpenAI Whisper consistently hallucinates these phrases when given
@@ -849,28 +850,41 @@ def handle_transcribe(data):
         # the "pop" when MediaRecorder starts/stops, etc.). Returning empty
         # text tells the frontend to show "No speech detected" rather than
         # treating the hallucination as a real utterance.
-        WHISPER_HALLUCINATIONS = {
-            'you', 'You', 'YOU',
-            'thank you', 'Thank you', 'Thank you.',
-            'thanks for watching', 'Thanks for watching', 'Thanks for watching!',
-            'thanks for watching.', 'Thanks for watching.',
-            'bye', 'Bye', 'Bye!', 'Bye.',
-            'goodbye', 'Goodbye', 'Goodbye.',
-            '.', '...', '!', '?',
-            'okay', 'Okay', 'Okay.',
-            'uh', 'um', 'mm', 'mhm',
-            'ありがとうございました',  # Japanese "thank you" — common Whisper hallucination
-            'Gracias por ver el video',  # Spanish hallucination
-            'Gracias por ver',
-            'Subtítulos por la comunidad de Amara.org',
-            'Subtitles by the Amara.org community',
+        import re as _re
+        HALLUCINATIONS = {
+            'you', 'thank you', 'thank you.', 'thanks for watching',
+            'thanks for watching!', 'thank you for watching',
+            'thank you for watching!', 'bye', 'goodbye', 'okay', 'ok',
+            'uh', 'um', 'mm', 'mhm', 'hmm',
+            'ありがとうございました', 'ご視聴ありがとうございました',
+            '시청 해주셔서 감사합니다', '시청해주셔서 감사합니다',
+            'gracias por ver el video', 'gracias por ver',
+            'gracias por su atención', 'subtítulos por la comunidad de amara.org',
+            'subtitles by the amara.org community',
+            'untertitel der amara.org-community',
         }
         text = (result.get('text') or '').strip()
-        # Reject if exact match to a known hallucination, OR if very short
-        # (≤3 chars) — short results from short audio are almost always
-        # garbage from Whisper.
-        if text in WHISPER_HALLUCINATIONS or len(text) <= 3:
-            print(f'[Whisper] Filtered hallucination/short text: {text!r}')
+        norm = _re.sub(r'[\s.!?,。！？]+$', '', text.lower()).strip()
+        letters = sum(1 for ch in text if ch.isalpha())
+        reason = ''
+        if out_of_pair:
+            reason = 'language outside the selected pair'
+        elif not text or len(text) <= 3:
+            reason = 'empty / too short'
+        elif norm in HALLUCINATIONS:
+            reason = 'known hallucination phrase'
+        elif _re.search(r'(.)\1{9,}', text):
+            reason = 'repeated-character junk'
+        elif letters < 2:
+            reason = 'symbol / emoji only'
+        elif float(result.get('no_speech_prob') or 0) > 0.6:
+            reason = 'no_speech_prob high (noise/music)'
+        elif float(result.get('avg_logprob') or 0) < -1.0:
+            reason = 'avg_logprob low (unreliable)'
+        elif float(result.get('compression_ratio') or 0) > 2.4:
+            reason = 'compression_ratio high (repetition)'
+        if reason:
+            print(f'[Whisper] Rejected ({reason}): {text!r}')
             text = ''
 
         emit('transcription', {

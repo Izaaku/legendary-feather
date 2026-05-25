@@ -75,16 +75,37 @@ class CloudWhisperService:
             detected_lang = getattr(response, 'language', language or 'en')
             duration = getattr(response, 'duration', 0)
 
-            # Extract segments if available
+            # Extract segments + Whisper's own per-segment quality signals
+            # (avg_logprob, no_speech_prob, compression_ratio). These let the
+            # caller reject music / noise / hallucinated output.
+            def _segfield(seg, name, default=0.0):
+                try:
+                    v = seg.get(name, default) if isinstance(seg, dict) else getattr(seg, name, default)
+                    return v if v is not None else default
+                except Exception:
+                    return default
+
             segment_list = []
             raw_segments = getattr(response, 'segments', None)
             if raw_segments:
                 for seg in raw_segments:
                     segment_list.append({
-                        'start': round(seg.get('start', seg.start) if isinstance(seg, dict) else seg.start, 2),
-                        'end': round(seg.get('end', seg.end) if isinstance(seg, dict) else seg.end, 2),
-                        'text': (seg.get('text', '') if isinstance(seg, dict) else seg.text).strip()
+                        'start': round(_segfield(seg, 'start'), 2),
+                        'end': round(_segfield(seg, 'end'), 2),
+                        'text': str(_segfield(seg, 'text', '')).strip(),
+                        'avg_logprob': _segfield(seg, 'avg_logprob', 0.0),
+                        'no_speech_prob': _segfield(seg, 'no_speech_prob', 0.0),
+                        'compression_ratio': _segfield(seg, 'compression_ratio', 0.0),
                     })
+
+            import math as _math
+            if segment_list:
+                avg_logprob = sum(s['avg_logprob'] for s in segment_list) / len(segment_list)
+                no_speech_prob = max(s['no_speech_prob'] for s in segment_list)
+                compression_ratio = max(s['compression_ratio'] for s in segment_list)
+                confidence = max(0.0, min(1.0, _math.exp(avg_logprob)))
+            else:
+                avg_logprob, no_speech_prob, compression_ratio, confidence = 0.0, 0.0, 0.0, 0.5
 
             print(f'[CloudWhisper] Transcribed in {elapsed:.1f}s | Lang: {detected_lang} | '
                   f'Duration: {duration:.1f}s | Text: "{text[:80]}..."')
@@ -97,7 +118,10 @@ class CloudWhisperService:
             return {
                 'text': text.strip(),
                 'detected_language': detected_lang,
-                'confidence': 0.95,  # OpenAI doesn't return confidence; use high default
+                'confidence': round(confidence, 3),
+                'no_speech_prob': round(no_speech_prob, 3),
+                'avg_logprob': round(avg_logprob, 3),
+                'compression_ratio': round(compression_ratio, 3),
                 'segments': segment_list
             }
 
@@ -129,5 +153,8 @@ class CloudWhisperService:
             'text': '',
             'detected_language': '',
             'confidence': 0.0,
+            'no_speech_prob': 1.0,
+            'avg_logprob': -10.0,
+            'compression_ratio': 0.0,
             'segments': []
         }

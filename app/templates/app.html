@@ -1705,7 +1705,7 @@ function sendF2FAudioToWhisper(blob){
             clearTimeout(resetTimer);
             if(data.text && data.text.trim()){
                 // Send the text for translation (async, updates bubble in background)
-                processF2FUtterance(data.text.trim());
+                processF2FUtterance(data.text.trim(), data.confidence);
                 // Reset the mic button immediately so the user can speak again
                 // while the translation arrives. The chat bubble updates on its own.
                 resetF2FButton();
@@ -1779,7 +1779,7 @@ let hfHadSpeech=false, hfFirstVoiceAt=0, hfLastVoiceAt=0, hfSegStartAt=0;
 let hfPendingSend=false, hfLastTap=0;
 let hfQueue=[], hfBusy=false;
 // Tunables — adjust for noisy vs quiet environments
-const HF_VAD_THRESHOLD=0.015;  // RMS volume that counts as speech
+const HF_VAD_THRESHOLD=0.020;  // RMS volume that counts as speech
 const HF_SILENCE_MS=1000;      // silence after speech that ends an utterance
 const HF_MIN_SPEECH_MS=350;    // ignore blips shorter than this
 const HF_MAX_IDLE_MS=7000;     // recycle the recorder after this much dead air
@@ -1930,7 +1930,7 @@ function hfDrain(){
     socket.once('transcription',function(data){
       clearTimeout(timer);
       if(data && data.text && data.text.trim()){
-        try{ processF2FUtterance(data.text.trim()); }catch(e){ console.warn('[HF] utterance error',e); }
+        try{ processF2FUtterance(data.text.trim(), data.confidence); }catch(e){ console.warn('[HF] utterance error',e); }
       }
       finish();
     });
@@ -1953,7 +1953,7 @@ function hfUnmute(){
   if(!hfRecorder || hfRecorder.state==='inactive') hfStartSegment();
 }
 
-function processF2FUtterance(text){
+function processF2FUtterance(text, confidence){
     const lang1 = document.getElementById('f2fLang1').value;
     const lang2 = document.getElementById('f2fLang2').value;
     const bubbleId = 'f2f_'+Date.now();
@@ -1976,6 +1976,16 @@ function processF2FUtterance(text){
     `;
     chat.appendChild(bubble);
     bubble.scrollIntoView({behavior:'smooth'});
+
+    // Precision honesta: flag low-confidence transcriptions so the user
+    // double-checks instead of trusting a shaky result.
+    if (typeof confidence === 'number' && confidence > 0 && confidence < 0.6) {
+        const cbWarn = document.createElement('div');
+        cbWarn.className = 'cb-uncertain';
+        cbWarn.textContent = '\u26A0 Low confidence \u2014 if this looks wrong, tap the mic and say it again';
+        cbWarn.style.cssText = 'font-size:11px;color:var(--gold);margin-top:4px;opacity:0.85;';
+        bubble.appendChild(cbWarn);
+    }
 
     // Send the user_id so the backend can gate by plan and track minutes.
     // Also send the selected voice profile (cloning) and the picked OpenAI
