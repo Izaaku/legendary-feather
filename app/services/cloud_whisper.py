@@ -13,6 +13,62 @@ import time
 from openai import OpenAI
 
 
+# OpenAI's Whisper API returns the detected language as a full English NAME
+# ('spanish', 'english', 'french', ...), NOT an ISO 639-1 code. Downstream
+# code (the F2F language-pair clamp) compares it against ISO codes
+# ('es', 'en', 'fr'). Truncating the name with [:2] only works by accident
+# ('english'->'en', 'french'->'fr') and silently breaks for 'spanish'->'sp',
+# 'german'->'ge', 'portuguese'->'po', etc. We map name -> code here.
+_WHISPER_LANG_TO_ISO = {
+    'english': 'en', 'chinese': 'zh', 'mandarin': 'zh', 'cantonese': 'yue',
+    'german': 'de', 'spanish': 'es', 'castilian': 'es', 'russian': 'ru',
+    'korean': 'ko', 'french': 'fr', 'japanese': 'ja', 'portuguese': 'pt',
+    'turkish': 'tr', 'polish': 'pl', 'catalan': 'ca', 'valencian': 'ca',
+    'dutch': 'nl', 'flemish': 'nl', 'arabic': 'ar', 'swedish': 'sv',
+    'italian': 'it', 'indonesian': 'id', 'hindi': 'hi', 'finnish': 'fi',
+    'vietnamese': 'vi', 'hebrew': 'he', 'ukrainian': 'uk', 'greek': 'el',
+    'malay': 'ms', 'czech': 'cs', 'romanian': 'ro', 'moldavian': 'ro',
+    'moldovan': 'ro', 'danish': 'da', 'hungarian': 'hu', 'tamil': 'ta',
+    'norwegian': 'no', 'thai': 'th', 'urdu': 'ur', 'croatian': 'hr',
+    'bulgarian': 'bg', 'lithuanian': 'lt', 'latin': 'la', 'maori': 'mi',
+    'malayalam': 'ml', 'welsh': 'cy', 'slovak': 'sk', 'telugu': 'te',
+    'persian': 'fa', 'latvian': 'lv', 'bengali': 'bn', 'serbian': 'sr',
+    'azerbaijani': 'az', 'slovenian': 'sl', 'kannada': 'kn', 'estonian': 'et',
+    'macedonian': 'mk', 'breton': 'br', 'basque': 'eu', 'icelandic': 'is',
+    'armenian': 'hy', 'nepali': 'ne', 'mongolian': 'mn', 'bosnian': 'bs',
+    'kazakh': 'kk', 'albanian': 'sq', 'swahili': 'sw', 'galician': 'gl',
+    'marathi': 'mr', 'punjabi': 'pa', 'panjabi': 'pa', 'sinhala': 'si',
+    'sinhalese': 'si', 'khmer': 'km', 'shona': 'sn', 'yoruba': 'yo',
+    'somali': 'so', 'afrikaans': 'af', 'occitan': 'oc', 'georgian': 'ka',
+    'belarusian': 'be', 'tajik': 'tg', 'sindhi': 'sd', 'gujarati': 'gu',
+    'amharic': 'am', 'yiddish': 'yi', 'lao': 'lo', 'uzbek': 'uz',
+    'faroese': 'fo', 'haitian creole': 'ht', 'haitian': 'ht', 'pashto': 'ps',
+    'pushto': 'ps', 'turkmen': 'tk', 'nynorsk': 'nn', 'maltese': 'mt',
+    'sanskrit': 'sa', 'luxembourgish': 'lb', 'letzeburgesch': 'lb',
+    'myanmar': 'my', 'burmese': 'my', 'tibetan': 'bo', 'tagalog': 'tl',
+    'malagasy': 'mg', 'assamese': 'as', 'tatar': 'tt', 'hawaiian': 'haw',
+    'lingala': 'ln', 'hausa': 'ha', 'bashkir': 'ba', 'javanese': 'jw',
+    'sundanese': 'su',
+}
+
+
+def _normalize_lang(lang):
+    """Normalize a Whisper language label to an ISO 639-1 code.
+
+    Accepts either a full English name ('spanish') or a code ('es') and
+    always returns a lowercase short code. Unknown long values fall back to
+    the legacy [:2] truncation so behavior never gets worse than before.
+    """
+    if not lang:
+        return ''
+    s = str(lang).strip().lower()
+    if s in _WHISPER_LANG_TO_ISO:
+        return _WHISPER_LANG_TO_ISO[s]
+    if len(s) <= 3:          # already an ISO code (en / es / yue ...)
+        return s
+    return s[:2]             # unknown long name — best-effort fallback
+
+
 class CloudWhisperService:
     """Cloud-based STT using OpenAI Whisper API."""
 
@@ -72,7 +128,7 @@ class CloudWhisperService:
 
             # Parse response
             text = response.text or ''
-            detected_lang = getattr(response, 'language', language or 'en')
+            detected_lang = _normalize_lang(getattr(response, 'language', language or 'en'))
             duration = getattr(response, 'duration', 0)
 
             # Extract segments + Whisper's own per-segment quality signals

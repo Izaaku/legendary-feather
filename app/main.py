@@ -839,7 +839,7 @@ def handle_transcribe(data):
                     and len(normalized_pair) == 2
                     and detected
                     and detected not in normalized_pair):
-                print(f'[Whisper] Detected {detected!r} not in pair {normalized_pair} — rejecting (likely noise/hallucination)')
+                print(f'[Whisper] Detected {detected!r} outside pair {normalized_pair} — keeping text; translation direction is resolved later by DeepL')
                 out_of_pair = True
         except Exception as clamp_err:
             print(f'[Whisper] Pair check failed (non-fatal): {clamp_err}')
@@ -867,9 +867,13 @@ def handle_transcribe(data):
         norm = _re.sub(r'[\s.!?,。！？]+$', '', text.lower()).strip()
         letters = sum(1 for ch in text if ch.isalpha())
         reason = ''
-        if out_of_pair:
-            reason = 'language outside the selected pair'
-        elif not text or len(text) <= 3:
+        # NOTE: out_of_pair is intentionally NOT a rejection reason.
+        # Whisper's language detection is unreliable on short clips
+        # (it routinely tags Spanish as Galician/Catalan, etc.), so
+        # dropping speech over a detection label silently loses real
+        # utterances. The audio-quality signals below (no_speech_prob /
+        # avg_logprob / compression_ratio) are the reliable guards.
+        if not text or len(text) <= 3:
             reason = 'empty / too short'
         elif norm in HALLUCINATIONS:
             reason = 'known hallucination phrase'
