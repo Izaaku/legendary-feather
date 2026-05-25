@@ -822,14 +822,28 @@ def handle_transcribe(data):
         audio_bytes = base64.b64decode(audio_b64)
         result = whisper.transcribe(audio_bytes, language=language_hint)
 
-        # ── Clamp detection to the F2F language pair ──────────────
-        # Whisper auto-detection occasionally picks a language outside the two
-        # the user is actively translating between. When detection is wrong
-        # AND we have a known language pair, we pick the FIRST language in
-        # the pair as the assumed language (cheap fallback) instead of doing
-        # a second Whisper API call (which doubled F2F latency from ~5s to
-        # ~10-15s). The downside (occasional wrong direction) is fixed by
-        # the next utterance — much better UX than 30s wait.
+        # -- Clamp detection to the F2F language pair --------------
+        # Face-to-Face is a conversation between two FIXED languages. Speech
+        # in any third language (a bystander, background audio, a stray test
+        # phrase) is not part of the conversation and is ignored -- no bubble,
+        # no translation.
+        #
+        # The one real risk is Whisper confusing two very SIMILAR languages
+        # on a short clip (e.g. tagging Spanish as Galician, Norwegian as
+        # Danish). _CONFUSABLE_GROUPS lists those families: if Whisper's
+        # guess lands on a "cousin" of a language that IS in the pair, we
+        # keep the text instead of dropping real speech.
+        _CONFUSABLE_GROUPS = [
+            {'es', 'gl', 'ca', 'oc', 'pt', 'an', 'ast'},  # Iberian Romance
+            {'da', 'no', 'nn', 'nb', 'sv', 'is', 'fo'},   # North Germanic
+            {'hr', 'sr', 'bs', 'sl', 'mk', 'me'},         # South Slavic
+            {'cs', 'sk', 'pl'},                           # West Slavic
+            {'ru', 'uk', 'be'},                           # East Slavic
+            {'nl', 'af'},                                 # Dutch / Afrikaans
+            {'ms', 'id'},                                 # Malay / Indonesian
+            {'hi', 'ur'},                                 # Hindustani
+            {'ro', 'mo'},                                 # Romanian / Moldovan
+        ]
         out_of_pair = False
         try:
             normalized_pair = [str(l).lower()[:2] for l in (language_pair or []) if l]
@@ -839,8 +853,20 @@ def handle_transcribe(data):
                     and len(normalized_pair) == 2
                     and detected
                     and detected not in normalized_pair):
-                print(f'[Whisper] Detected {detected!r} outside pair {normalized_pair} — keeping text; translation direction is resolved later by DeepL')
-                out_of_pair = True
+                # Cousin tolerance: is `detected` in the same family as a
+                # language that is actually in the selected pair?
+                is_cousin = False
+                for grp in _CONFUSABLE_GROUPS:
+                    if detected in grp and any(p in grp for p in normalized_pair):
+                        is_cousin = True
+                        break
+                if is_cousin:
+                    print(f'[Whisper] Detected {detected!r} not in pair {normalized_pair} '
+                          f'but is a close cousin -- keeping (likely mis-detection)')
+                else:
+                    print(f'[Whisper] Detected {detected!r} outside pair {normalized_pair} '
+                          f'-- ignoring (language not selected for this conversation)')
+                    out_of_pair = True
         except Exception as clamp_err:
             print(f'[Whisper] Pair check failed (non-fatal): {clamp_err}')
 
@@ -867,13 +893,9 @@ def handle_transcribe(data):
         norm = _re.sub(r'[\s.!?,。！？]+$', '', text.lower()).strip()
         letters = sum(1 for ch in text if ch.isalpha())
         reason = ''
-        # NOTE: out_of_pair is intentionally NOT a rejection reason.
-        # Whisper's language detection is unreliable on short clips
-        # (it routinely tags Spanish as Galician/Catalan, etc.), so
-        # dropping speech over a detection label silently loses real
-        # utterances. The audio-quality signals below (no_speech_prob /
-        # avg_logprob / compression_ratio) are the reliable guards.
-        if not text or len(text) <= 3:
+        if out_of_pair:
+            reason = 'language outside the selected pair'
+        elif not text or len(text) <= 3:
             reason = 'empty / too short'
         elif norm in HALLUCINATIONS:
             reason = 'known hallucination phrase'
