@@ -736,6 +736,45 @@ footer {
   .talk-btn { width: 100px; height: 100px; font-size: 1.5em; }
   .card { padding: 28px 22px; }
 }
+        /* ═══ QUICK PHRASES (Frases rápidas) ═══ */
+        .qp-cats{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 14px;}
+        .qp-cat{display:flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;background:var(--bg2);border:1px solid var(--border);color:var(--text-muted);font-size:13px;cursor:pointer;transition:background .15s,border-color .15s,color .15s;white-space:nowrap;}
+        .qp-cat:hover{color:var(--text);}
+        .qp-cat.active{background:var(--gold-dim);border-color:var(--gold);color:var(--gold);font-weight:600;}
+        .qp-phrases{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+        @media(max-width:520px){.qp-phrases{grid-template-columns:1fr;}}
+        .qp-phrase{position:relative;text-align:left;padding:14px 36px 14px 14px;border-radius:12px;background:var(--bg2);border:1px solid var(--border);color:var(--text);font-size:14px;line-height:1.4;cursor:pointer;transition:background .15s,border-color .15s,transform .1s;font-family:inherit;}
+        .qp-phrase:hover{border-color:var(--gold);background:var(--gold-dim);}
+        .qp-phrase:active{transform:scale(.98);}
+        .qp-phrase-star{position:absolute;top:9px;right:11px;font-size:15px;color:var(--gold);opacity:.55;}
+        .qp-phrase.is-fav .qp-phrase-star{opacity:1;}
+        .qp-empty{grid-column:1/-1;text-align:center;color:var(--text-muted);padding:26px 14px;font-size:13px;line-height:1.5;}
+        .qp-add-row{display:flex;gap:8px;margin-top:12px;}
+        .qp-add-row input{flex:1;background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:11px 13px;border-radius:10px;font-family:inherit;font-size:14px;}
+        .qp-add-row input:focus{outline:none;border-color:var(--gold);}
+        #qpAddBtn{width:46px;flex-shrink:0;font-size:22px;line-height:1;}
+        .qp-offline-note{margin-top:12px;font-size:12px;color:var(--text-muted);text-align:center;}
+        .qp-overlay{display:none;position:fixed;inset:0;z-index:9000;background:rgba(8,8,12,.97);padding:24px;align-items:center;justify-content:center;cursor:pointer;}
+        .qp-overlay.open{display:flex;}
+        .qp-overlay-inner{max-width:760px;width:100%;text-align:center;}
+        .qp-overlay-big{font-size:clamp(30px,7vw,62px);font-weight:700;color:#fff;line-height:1.25;word-break:break-word;}
+        .qp-overlay-sub{margin-top:18px;font-size:clamp(15px,3vw,20px);color:var(--gold);word-break:break-word;}
+        .qp-overlay-actions{margin-top:32px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+        .qp-ov-btn{padding:12px 24px;border-radius:999px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:15px;cursor:pointer;font-family:inherit;}
+        .qp-ov-btn:hover{border-color:var(--gold);color:var(--gold);}
+        .qp-overlay-hint{margin-top:26px;font-size:12px;color:var(--text-muted);}
+        /* ── Hands-free toggle (Feature 2) ── */
+        .hf-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:14px;}
+        .hf-label{font-size:13px;color:var(--text-muted);}
+        .hf-switch{position:relative;display:inline-block;width:46px;height:26px;cursor:pointer;flex-shrink:0;}
+        .hf-switch input{opacity:0;width:0;height:0;}
+        .hf-knob{position:absolute;inset:0;background:var(--bg2);border:1px solid var(--border);border-radius:999px;transition:background .18s,border-color .18s;}
+        .hf-knob::before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:var(--text-muted);border-radius:50%;transition:transform .18s,background .18s;}
+        .hf-switch input:checked + .hf-knob{background:var(--gold-dim);border-color:var(--gold);}
+        .hf-switch input:checked + .hf-knob::before{transform:translateX(20px);background:var(--gold);}
+        .person-indicator.hf-live{color:var(--gold);animation:hfPulse 1.4s ease-in-out infinite;}
+        @keyframes hfPulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+        .talk-btn.hf-off{opacity:.35;pointer-events:none;filter:grayscale(1);}
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://js.stripe.com/v3/"></script>
@@ -847,12 +886,52 @@ footer {
             </div>
 
             <div class="talk-area">
+                <div class="hf-row">
+                    <span class="hf-label">Hands-free conversation</span>
+                    <label class="hf-switch"><input type="checkbox" id="hfToggle"><span class="hf-knob"></span></label>
+                </div>
                 <div class="person-indicator" id="f2fStatusLabel">Press and hold to speak</div>
                 <button class="talk-btn" id="talkBtn">🎤</button>
                 <div class="talk-label">Hold to talk — language is detected automatically</div>
             </div>
             <div class="f2f-chat" id="f2fChat">
                 <div class="f2f-empty-placeholder" style="text-align:center;color:var(--text-muted);padding:30px;font-size:13px;">Conversation will appear here...</div>
+            </div>
+        </div>
+
+        <!-- ═══ QUICK PHRASES PANEL ═══ -->
+        <div class="card" id="quickPhrasesPanel">
+            <div class="card-title"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Quick Phrases</div>
+            <div class="f2f-langs">
+                <div>
+                    <div class="f2f-person-label">I speak</div>
+                    <select id="qpMyLang" style="width:100%;"></select>
+                </div>
+                <button class="f2f-swap" id="qpSwap" title="Swap languages">⇄</button>
+                <div>
+                    <div class="f2f-person-label" style="text-align:right;">They speak</div>
+                    <select id="qpTheirLang" style="width:100%;"></select>
+                </div>
+            </div>
+            <div class="qp-cats" id="qpCats"></div>
+            <div class="qp-phrases" id="qpPhrases"></div>
+            <div class="qp-add-row">
+                <input type="text" id="qpCustomInput" placeholder="Add your own phrase..." maxlength="120">
+                <button class="btn-icon" id="qpAddBtn" title="Add phrase">+</button>
+            </div>
+            <div class="qp-offline-note">Works offline — your phrases are saved on this device.</div>
+        </div>
+
+        <!-- Quick Phrases — fullscreen display overlay -->
+        <div class="qp-overlay" id="qpOverlay">
+            <div class="qp-overlay-inner">
+                <div class="qp-overlay-big" id="qpOverlayBig"></div>
+                <div class="qp-overlay-sub" id="qpOverlaySub"></div>
+                <div class="qp-overlay-actions">
+                    <button class="qp-ov-btn" id="qpSpeakBtn">Speak</button>
+                    <button class="qp-ov-btn" id="qpFavBtn">Favorite</button>
+                </div>
+                <div class="qp-overlay-hint">Tap anywhere to close</div>
             </div>
         </div>
 
@@ -1547,6 +1626,7 @@ talkBtn.addEventListener('touchend', stopF2FTalk);
 talkBtn.addEventListener('touchcancel', stopF2FTalk);
 
 function startF2FTalk(){
+    if(hfActive) return;
     if(f2fTalking) return;
     f2fTalking = true;
     talkBtn.classList.add('talking');
@@ -1683,6 +1763,164 @@ function resetF2FButton(){
     f2fStatusLabel.textContent = 'Press and hold to speak';
 }
 
+// ══════════════════════════════════════════════════════
+// HANDS-FREE CONTINUOUS CONVERSATION (Feature 2)
+// One toggle: the mic stays open, utterances are auto-segmented
+// by silence (VAD) and sent through the same transcribe/translate
+// pipeline. Pauses itself while a translation is spoken aloud so
+// it does not transcribe its own output (turn-taking).
+// ══════════════════════════════════════════════════════
+let hfActive=false, hfMuted=false;
+let hfStream=null, hfRecorder=null, hfChunks=[];
+let hfAudioCtx=null, hfAnalyser=null, hfData=null, hfRaf=0;
+let hfHadSpeech=false, hfFirstVoiceAt=0, hfLastVoiceAt=0, hfSegStartAt=0;
+let hfPendingSend=false;
+let hfQueue=[], hfBusy=false;
+// Tunables — adjust for noisy vs quiet environments
+const HF_VAD_THRESHOLD=0.015;  // RMS volume that counts as speech
+const HF_SILENCE_MS=1000;      // silence after speech that ends an utterance
+const HF_MIN_SPEECH_MS=350;    // ignore blips shorter than this
+const HF_MAX_IDLE_MS=7000;     // recycle the recorder after this much dead air
+
+(function(){
+  var t=document.getElementById('hfToggle');
+  if(t) t.addEventListener('change',function(){ if(this.checked) hfStart(); else hfStop(); });
+})();
+
+function hfSetStatus(txt,live){
+  if(!f2fStatusLabel) return;
+  f2fStatusLabel.textContent=txt;
+  f2fStatusLabel.classList.toggle('hf-live',!!live);
+}
+
+function hfStart(){
+  if(hfActive) return;
+  if(f2fTalking){ try{stopF2FTalk();}catch(e){} }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    hfActive=true; hfStream=stream;
+    try{
+      hfAudioCtx=new (window.AudioContext||window.webkitAudioContext)();
+      var src=hfAudioCtx.createMediaStreamSource(stream);
+      hfAnalyser=hfAudioCtx.createAnalyser();
+      hfAnalyser.fftSize=1024;
+      hfData=new Uint8Array(hfAnalyser.fftSize);
+      src.connect(hfAnalyser);
+    }catch(e){ console.warn('[HF] analyser failed',e); }
+    talkBtn.classList.add('hf-off');
+    hfQueue=[]; hfBusy=false; hfMuted=false;
+    hfStartSegment();
+    hfSetStatus('● Active — just talk',true);
+    hfRaf=requestAnimationFrame(hfVadTick);
+  }).catch(function(e){
+    hfActive=false;
+    showStatus('Microphone denied: '+((e&&e.message)||e),'error');
+    var t=document.getElementById('hfToggle'); if(t) t.checked=false;
+  });
+}
+
+function hfStop(){
+  hfActive=false; hfMuted=false;
+  if(hfRaf){ cancelAnimationFrame(hfRaf); hfRaf=0; }
+  try{ if(hfRecorder && hfRecorder.state!=='inactive') hfRecorder.stop(); }catch(e){}
+  hfRecorder=null;
+  try{ if(hfStream) hfStream.getTracks().forEach(function(tr){tr.stop();}); }catch(e){}
+  hfStream=null;
+  try{ if(hfAudioCtx) hfAudioCtx.close(); }catch(e){}
+  hfAudioCtx=null; hfAnalyser=null; hfData=null;
+  hfChunks=[]; hfQueue=[]; hfBusy=false;
+  hfHadSpeech=false; hfPendingSend=false;
+  if(talkBtn) talkBtn.classList.remove('hf-off');
+  hfSetStatus('Press and hold to speak',false);
+  var t=document.getElementById('hfToggle'); if(t) t.checked=false;
+}
+
+function hfStartSegment(){
+  if(!hfActive || !hfStream || hfMuted) return;
+  try{
+    hfChunks=[];
+    hfRecorder=new MediaRecorder(hfStream,{mimeType:'audio/webm;codecs=opus'});
+    hfRecorder.ondataavailable=function(e){ if(e.data.size>0) hfChunks.push(e.data); };
+    hfRecorder.onstop=function(){
+      var chunks=hfChunks; hfChunks=[];
+      var send=hfPendingSend; hfPendingSend=false;
+      if(send && chunks.length){
+        hfQueue.push(new Blob(chunks,{type:'audio/webm'}));
+        hfDrain();
+      }
+      if(hfActive && !hfMuted) hfStartSegment();
+    };
+    hfRecorder.start();
+    hfSegStartAt=Date.now();
+    hfHadSpeech=false; hfFirstVoiceAt=0; hfLastVoiceAt=0;
+  }catch(e){ console.warn('[HF] recorder error',e); }
+}
+
+function hfVadTick(){
+  if(!hfActive){ hfRaf=0; return; }
+  hfRaf=requestAnimationFrame(hfVadTick);
+  if(hfMuted || !hfAnalyser || !hfRecorder || hfRecorder.state!=='recording') return;
+  hfAnalyser.getByteTimeDomainData(hfData);
+  var sum=0;
+  for(var i=0;i<hfData.length;i++){ var v=(hfData[i]-128)/128; sum+=v*v; }
+  var rms=Math.sqrt(sum/hfData.length);
+  var now=Date.now();
+  if(rms>HF_VAD_THRESHOLD){
+    if(!hfHadSpeech){ hfHadSpeech=true; hfFirstVoiceAt=now; }
+    hfLastVoiceAt=now;
+  }
+  if(hfHadSpeech && (now-hfLastVoiceAt)>=HF_SILENCE_MS){
+    hfEndUtterance((hfLastVoiceAt-hfFirstVoiceAt)>=HF_MIN_SPEECH_MS);
+  }else if(!hfHadSpeech && (now-hfSegStartAt)>=HF_MAX_IDLE_MS){
+    hfEndUtterance(false);
+  }
+}
+
+function hfEndUtterance(send){
+  hfPendingSend=!!send;
+  try{ if(hfRecorder && hfRecorder.state==='recording') hfRecorder.stop(); }catch(e){}
+}
+
+function hfDrain(){
+  if(hfBusy || !hfQueue.length || !hfActive) return;
+  hfBusy=true;
+  var blob=hfQueue.shift();
+  var reader=new FileReader();
+  reader.onload=function(){
+    var done=false;
+    var finish=function(){ if(done) return; done=true; hfBusy=false; hfDrain(); };
+    var b64=((reader.result)||'').split(',')[1];
+    if(!b64){ finish(); return; }
+    var lang1=(document.getElementById('f2fLang1')||{}).value||'';
+    var lang2=(document.getElementById('f2fLang2')||{}).value||'';
+    var pair=[lang1,lang2].filter(Boolean);
+    var timer=setTimeout(finish,15000);
+    socket.emit('transcribe',{audio:b64,request_id:'hf_'+Date.now(),language_pair:(pair.length===2?pair:null)});
+    socket.once('transcription',function(data){
+      clearTimeout(timer);
+      if(data && data.text && data.text.trim()){
+        try{ processF2FUtterance(data.text.trim()); }catch(e){ console.warn('[HF] utterance error',e); }
+      }
+      finish();
+    });
+  };
+  reader.onerror=function(){ hfBusy=false; hfDrain(); };
+  reader.readAsDataURL(blob);
+}
+
+function hfMute(){
+  if(!hfActive || hfMuted) return;
+  hfMuted=true;
+  try{ if(hfRecorder && hfRecorder.state==='recording'){ hfPendingSend=false; hfRecorder.stop(); } }catch(e){}
+  hfSetStatus('● Speaking translation…',true);
+}
+
+function hfUnmute(){
+  if(!hfActive || !hfMuted) return;
+  hfMuted=false;
+  hfSetStatus('● Active — just talk',true);
+  if(!hfRecorder || hfRecorder.state==='inactive') hfStartSegment();
+}
+
 function processF2FUtterance(text){
     const lang1 = document.getElementById('f2fLang1').value;
     const lang2 = document.getElementById('f2fLang2').value;
@@ -1791,7 +2029,11 @@ function processF2FUtterance(text){
             if(audioUrl){
                 // Auto-play the translation immediately
                 const player = new Audio(audioUrl);
+                if(hfActive) hfMute();
+                player.addEventListener('ended', function(){ if(hfActive) hfUnmute(); });
+                player.addEventListener('error', function(){ if(hfActive) hfUnmute(); });
                 player.play().catch(err => {
+                    if(hfActive) hfUnmute();
                     // Autoplay blocked by browser — silent fail, replay button still works
                     console.warn('[F2F] Audio autoplay blocked:', err);
                 });
@@ -2909,6 +3151,196 @@ document.addEventListener('DOMContentLoaded',()=>{
     showGuidePhrase();
     syncCheckoutSessionIfPresent();
 });
+</script>
+<script>
+/* ═══ QUICK PHRASES (Frases rápidas) — offline travel phrasebook ═══ */
+(function(){
+  var QP={data:null,cat:'needs',my:'en',their:'es'};
+  var LS_FAV='lf_qp_favs',LS_CUSTOM='lf_qp_custom',LS_MY='lf_qp_my',LS_THEIR='lf_qp_their';
+  var BCP={en:'en-US',es:'es-ES',fr:'fr-FR',de:'de-DE',it:'it-IT',pt:'pt-BR',nl:'nl-NL',ru:'ru-RU',tr:'tr-TR',el:'el-GR',ar:'ar-SA',zh:'zh-CN',ja:'ja-JP',ko:'ko-KR',th:'th-TH',hi:'hi-IN'};
+  var curPhrase=null;
+
+  function $(id){return document.getElementById(id);}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function lsGet(k,def){try{var v=JSON.parse(localStorage.getItem(k));return v==null?def:v;}catch(e){return def;}}
+  function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+  function favs(){return lsGet(LS_FAV,[]);}
+  function customs(){return lsGet(LS_CUSTOM,[]);}
+
+  function speak(text,lang){
+    try{
+      if(!window.speechSynthesis)return;
+      window.speechSynthesis.cancel();
+      var u=new SpeechSynthesisUtterance(text);
+      u.lang=BCP[lang]||lang;u.rate=0.95;
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  }
+
+  function buildLangSelect(sel,val){
+    sel.innerHTML='';
+    QP.data.languages.forEach(function(l){
+      var o=document.createElement('option');
+      o.value=l.code;o.textContent=l.flag+'  '+l.label;
+      if(l.code===val)o.selected=true;
+      sel.appendChild(o);
+    });
+  }
+
+  function catLabel(c){
+    if(c.id==='__fav')return 'Favorites';
+    return c.name[QP.my]||c.name.en||c.id;
+  }
+  function renderCats(){
+    var box=$('qpCats');if(!box)return;box.innerHTML='';
+    var cats=QP.data.categories.slice();
+    cats.push({id:'__fav',icon:'⭐',name:{}});
+    cats.forEach(function(c){
+      var el=document.createElement('div');
+      el.className='qp-cat'+(c.id===QP.cat?' active':'');
+      el.innerHTML='<span>'+c.icon+'</span><span>'+esc(catLabel(c))+'</span>';
+      el.addEventListener('click',function(){QP.cat=c.id;renderCats();renderPhrases();});
+      box.appendChild(el);
+    });
+  }
+
+  function isFav(p){return p.custom?true:favs().indexOf(p.id)>=0;}
+  function phraseText(p,lang){
+    if(p.custom)return p.text[lang]||p.text[p.base]||'';
+    return p.text[lang]||p.text.en||'';
+  }
+
+  function renderPhrases(){
+    var box=$('qpPhrases');if(!box)return;box.innerHTML='';
+    var list=[];
+    if(QP.cat==='__fav'){
+      var fv=favs();
+      QP.data.phrases.forEach(function(p){if(fv.indexOf(p.id)>=0)list.push(p);});
+      customs().forEach(function(c){list.push(c);});
+      if(!list.length){box.innerHTML='<div class="qp-empty">No favorites yet. Tap a phrase, then Favorite — or add your own below.</div>';return;}
+    }else{
+      QP.data.phrases.forEach(function(p){if(p.category===QP.cat)list.push(p);});
+    }
+    list.forEach(function(p){
+      var el=document.createElement('button');
+      el.className='qp-phrase'+(isFav(p)?' is-fav':'');
+      el.innerHTML=esc(phraseText(p,QP.my))+'<span class="qp-phrase-star">'+(isFav(p)?'★':'☆')+'</span>';
+      el.addEventListener('click',function(){openOverlay(p);});
+      box.appendChild(el);
+    });
+  }
+
+  function toggleFav(p){
+    var arr=favs(),i=arr.indexOf(p.id);
+    if(i>=0)arr.splice(i,1);else arr.push(p.id);
+    lsSet(LS_FAV,arr);
+  }
+  function saveCustom(p){
+    var arr=customs();
+    for(var i=0;i<arr.length;i++){if(arr[i].id===p.id){arr[i]=p;break;}}
+    lsSet(LS_CUSTOM,arr);
+  }
+  function removeCustom(p){
+    lsSet(LS_CUSTOM,customs().filter(function(c){return c.id!==p.id;}));
+  }
+  function addCustom(){
+    var inp=$('qpCustomInput'),text=(inp.value||'').trim();
+    if(!text)return;
+    var item={id:'c'+Date.now(),custom:true,base:QP.my,category:'__fav',text:{}};
+    item.text[QP.my]=text;
+    var arr=customs();arr.push(item);lsSet(LS_CUSTOM,arr);
+    inp.value='';
+    QP.cat='__fav';renderCats();renderPhrases();
+  }
+
+  function translateCustom(p,target,cb){
+    var src=p.base,text=p.text[src]||'';
+    if(target===src){cb(text);return;}
+    var headers={'Content-Type':'application/json'};
+    try{if(typeof authHeaders==='function')headers=authHeaders();}catch(e){}
+    fetch('/api/translate-batch',{method:'POST',headers:headers,
+      body:JSON.stringify({texts:[text],source_lang:src,target_lang:target})})
+      .then(function(r){return r.json();})
+      .then(function(d){cb((d&&d.translations&&d.translations[0])||null);})
+      .catch(function(){cb(null);});
+  }
+
+  function setFavBtn(p){
+    var b=$('qpFavBtn');if(!b)return;
+    b.textContent=p.custom?'Remove':(isFav(p)?'★ Favorited':'☆ Favorite');
+  }
+
+  function openOverlay(p){
+    curPhrase=p;
+    var big=$('qpOverlayBig'),sub=$('qpOverlaySub');
+    sub.textContent=phraseText(p,QP.my);
+    setFavBtn(p);
+    $('qpOverlay').classList.add('open');
+    var tgt=p.text[QP.their];
+    if(tgt){
+      big.textContent=tgt;big.dir=(QP.their==='ar')?'rtl':'ltr';
+      speak(tgt,QP.their);
+    }else{
+      big.textContent='…';big.dir='ltr';
+      translateCustom(p,QP.their,function(res){
+        if(curPhrase!==p)return;
+        if(res){p.text[QP.their]=res;saveCustom(p);big.textContent=res;big.dir=(QP.their==='ar')?'rtl':'ltr';speak(res,QP.their);}
+        else{big.textContent=phraseText(p,QP.my);big.dir='ltr';}
+      });
+    }
+  }
+  function closeOverlay(){
+    $('qpOverlay').classList.remove('open');
+    try{if(window.speechSynthesis)window.speechSynthesis.cancel();}catch(e){}
+  }
+
+  function wire(){
+    $('qpMyLang').addEventListener('change',function(){QP.my=this.value;lsSet(LS_MY,QP.my);renderCats();renderPhrases();});
+    $('qpTheirLang').addEventListener('change',function(){QP.their=this.value;lsSet(LS_THEIR,QP.their);});
+    $('qpSwap').addEventListener('click',function(){
+      var t=QP.my;QP.my=QP.their;QP.their=t;
+      lsSet(LS_MY,QP.my);lsSet(LS_THEIR,QP.their);
+      buildLangSelect($('qpMyLang'),QP.my);buildLangSelect($('qpTheirLang'),QP.their);
+      renderCats();renderPhrases();
+    });
+    $('qpAddBtn').addEventListener('click',addCustom);
+    $('qpCustomInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();addCustom();}});
+    $('qpOverlay').addEventListener('click',closeOverlay);
+    $('qpSpeakBtn').addEventListener('click',function(e){
+      e.stopPropagation();
+      var t=$('qpOverlayBig').textContent;
+      if(t&&t!=='…')speak(t,QP.their);
+    });
+    $('qpFavBtn').addEventListener('click',function(e){
+      e.stopPropagation();
+      if(!curPhrase)return;
+      if(curPhrase.custom){removeCustom(curPhrase);closeOverlay();renderCats();renderPhrases();return;}
+      toggleFav(curPhrase);setFavBtn(curPhrase);renderPhrases();
+    });
+  }
+
+  function init(){
+    var panel=$('quickPhrasesPanel');if(!panel)return;
+    fetch('/static/data/quick_phrases.json').then(function(r){return r.json();}).then(function(d){
+      QP.data=d;
+      var codes=d.languages.map(function(l){return l.code;});
+      QP.my=lsGet(LS_MY,'en');QP.their=lsGet(LS_THEIR,'es');
+      if(codes.indexOf(QP.my)<0)QP.my=codes[0];
+      if(codes.indexOf(QP.their)<0)QP.their=(codes[1]||codes[0]);
+      if(QP.their===QP.my)QP.their=(codes[1]||codes[0]);
+      buildLangSelect($('qpMyLang'),QP.my);
+      buildLangSelect($('qpTheirLang'),QP.their);
+      renderCats();renderPhrases();wire();
+      if(location.hash==='#quick-phrases')panel.scrollIntoView({behavior:'smooth'});
+    }).catch(function(){
+      var pe=$('qpPhrases');
+      if(pe)pe.innerHTML='<div class="qp-empty">Could not load phrases. Check your connection and reload.</div>';
+    });
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);
+  else init();
+})();
 </script>
 </body>
 </html>

@@ -9,7 +9,7 @@
  *
  * Bump CACHE_VERSION whenever you change static assets to force update.
  */
-const CACHE_VERSION = 'lf-v1';
+const CACHE_VERSION = 'lf-v2';
 const STATIC_CACHE = 'lf-static-' + CACHE_VERSION;
 const RUNTIME_CACHE = 'lf-runtime-' + CACHE_VERSION;
 
@@ -22,6 +22,7 @@ const APP_SHELL = [
   '/static/images/golden-feather-web.png',
   '/static/images/golden-feather-transparent.png',
   '/static/manifest.json',
+  '/static/data/quick_phrases.json',
 ];
 
 // Paths that should NEVER be cached (always go to network)

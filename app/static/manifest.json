@@ -10,7 +10,12 @@
   "theme_color": "#D4A843",
   "lang": "en",
   "dir": "ltr",
-  "categories": ["productivity", "travel", "communication", "utilities"],
+  "categories": [
+    "productivity",
+    "travel",
+    "communication",
+    "utilities"
+  ],
   "icons": [
     {
       "src": "/static/images/golden-feather-nav.png",
@@ -37,14 +42,36 @@
       "short_name": "Translate",
       "description": "Open the translator app",
       "url": "/app",
-      "icons": [{ "src": "/static/images/golden-feather-nav.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/static/images/golden-feather-nav.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Pricing",
       "short_name": "Plans",
       "description": "See plans and pricing",
       "url": "/pricing",
-      "icons": [{ "src": "/static/images/golden-feather-nav.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/static/images/golden-feather-nav.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Quick Phrases",
+      "short_name": "Phrases",
+      "description": "Offline travel phrases",
+      "url": "/app#quick-phrases",
+      "icons": [
+        {
+          "src": "/static/images/golden-feather-nav.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

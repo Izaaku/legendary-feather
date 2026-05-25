@@ -1,0 +1,705 @@
+{
+ "version": 1,
+ "languages": [
+  {
+   "code": "en",
+   "label": "English",
+   "flag": "🇺🇸"
+  },
+  {
+   "code": "es",
+   "label": "Español",
+   "flag": "🇲🇽"
+  },
+  {
+   "code": "fr",
+   "label": "Français",
+   "flag": "🇫🇷"
+  },
+  {
+   "code": "de",
+   "label": "Deutsch",
+   "flag": "🇩🇪"
+  },
+  {
+   "code": "it",
+   "label": "Italiano",
+   "flag": "🇮🇹"
+  },
+  {
+   "code": "pt",
+   "label": "Português",
+   "flag": "🇧🇷"
+  },
+  {
+   "code": "nl",
+   "label": "Nederlands",
+   "flag": "🇳🇱"
+  },
+  {
+   "code": "ru",
+   "label": "Русский",
+   "flag": "🇷🇺"
+  },
+  {
+   "code": "tr",
+   "label": "Türkçe",
+   "flag": "🇹🇷"
+  },
+  {
+   "code": "el",
+   "label": "Ελληνικά",
+   "flag": "🇬🇷"
+  },
+  {
+   "code": "ar",
+   "label": "العربية",
+   "flag": "🇸🇦"
+  },
+  {
+   "code": "zh",
+   "label": "中文",
+   "flag": "🇨🇳"
+  },
+  {
+   "code": "ja",
+   "label": "日本語",
+   "flag": "🇯🇵"
+  },
+  {
+   "code": "ko",
+   "label": "한국어",
+   "flag": "🇰🇷"
+  },
+  {
+   "code": "th",
+   "label": "ไทย",
+   "flag": "🇹🇭"
+  },
+  {
+   "code": "hi",
+   "label": "हिन्दी",
+   "flag": "🇮🇳"
+  }
+ ],
+ "categories": [
+  {
+   "id": "needs",
+   "icon": "🍽️",
+   "name": {
+    "en": "Needs",
+    "es": "Necesidades",
+    "fr": "Besoins",
+    "de": "Bedürfnisse",
+    "it": "Bisogni",
+    "pt": "Necessidades",
+    "nl": "Behoeften",
+    "ru": "Нужды",
+    "tr": "İhtiyaçlar",
+    "el": "Ανάγκες",
+    "ar": "احتياجات",
+    "zh": "需求",
+    "ja": "必要なこと",
+    "ko": "필요",
+    "th": "ความต้องการ",
+    "hi": "ज़रूरतें"
+   }
+  },
+  {
+   "id": "directions",
+   "icon": "🧭",
+   "name": {
+    "en": "Directions",
+    "es": "Direcciones",
+    "fr": "Directions",
+    "de": "Wegbeschreibung",
+    "it": "Indicazioni",
+    "pt": "Direções",
+    "nl": "Routes",
+    "ru": "Как пройти",
+    "tr": "Yön tarifi",
+    "el": "Κατευθύνσεις",
+    "ar": "الاتجاهات",
+    "zh": "方向",
+    "ja": "道案内",
+    "ko": "길 안내",
+    "th": "เส้นทาง",
+    "hi": "रास्ता"
+   }
+  },
+  {
+   "id": "problems",
+   "icon": "🧳",
+   "name": {
+    "en": "Travel problems",
+    "es": "Problemas de viaje",
+    "fr": "Problèmes de voyage",
+    "de": "Reiseprobleme",
+    "it": "Problemi di viaggio",
+    "pt": "Problemas de viagem",
+    "nl": "Reisproblemen",
+    "ru": "Проблемы в пути",
+    "tr": "Seyahat sorunları",
+    "el": "Προβλήματα ταξιδιού",
+    "ar": "مشاكل السفر",
+    "zh": "旅行问题",
+    "ja": "旅行のトラブル",
+    "ko": "여행 문제",
+    "th": "ปัญหาการเดินทาง",
+    "hi": "यात्रा समस्याएँ"
+   }
+  },
+  {
+   "id": "emergency",
+   "icon": "🆘",
+   "name": {
+    "en": "Emergency",
+    "es": "Emergencia",
+    "fr": "Urgence",
+    "de": "Notfall",
+    "it": "Emergenza",
+    "pt": "Emergência",
+    "nl": "Noodgeval",
+    "ru": "Экстренная помощь",
+    "tr": "Acil durum",
+    "el": "Έκτακτη ανάγκη",
+    "ar": "طوارئ",
+    "zh": "紧急情况",
+    "ja": "緊急",
+    "ko": "긴급",
+    "th": "เหตุฉุกเฉิน",
+    "hi": "आपातकाल"
+   }
+  }
+ ],
+ "phrases": [
+  {
+   "id": "hungry",
+   "category": "needs",
+   "text": {
+    "en": "I'm hungry",
+    "es": "Tengo hambre",
+    "fr": "J'ai faim",
+    "de": "Ich habe Hunger",
+    "it": "Ho fame",
+    "pt": "Estou com fome",
+    "nl": "Ik heb honger",
+    "ru": "Я голоден",
+    "tr": "Acıktım",
+    "el": "Πεινώ",
+    "ar": "أنا جائع",
+    "zh": "我饿了",
+    "ja": "お腹がすきました",
+    "ko": "배고파요",
+    "th": "ฉันหิว",
+    "hi": "मुझे भूख लगी है"
+   }
+  },
+  {
+   "id": "thirsty",
+   "category": "needs",
+   "text": {
+    "en": "I'm thirsty",
+    "es": "Tengo sed",
+    "fr": "J'ai soif",
+    "de": "Ich habe Durst",
+    "it": "Ho sete",
+    "pt": "Estou com sede",
+    "nl": "Ik heb dorst",
+    "ru": "Я хочу пить",
+    "tr": "Susadım",
+    "el": "Διψώ",
+    "ar": "أنا عطشان",
+    "zh": "我渴了",
+    "ja": "喉が渇きました",
+    "ko": "목말라요",
+    "th": "ฉันหิวน้ำ",
+    "hi": "मुझे प्यास लगी है"
+   }
+  },
+  {
+   "id": "cold",
+   "category": "needs",
+   "text": {
+    "en": "I'm cold",
+    "es": "Tengo frío",
+    "fr": "J'ai froid",
+    "de": "Mir ist kalt",
+    "it": "Ho freddo",
+    "pt": "Estou com frio",
+    "nl": "Ik heb het koud",
+    "ru": "Мне холодно",
+    "tr": "Üşüyorum",
+    "el": "Κρυώνω",
+    "ar": "أشعر بالبرد",
+    "zh": "我冷",
+    "ja": "寒いです",
+    "ko": "추워요",
+    "th": "ฉันหนาว",
+    "hi": "मुझे ठंड लग रही है"
+   }
+  },
+  {
+   "id": "tired",
+   "category": "needs",
+   "text": {
+    "en": "I'm tired",
+    "es": "Estoy cansado",
+    "fr": "Je suis fatigué",
+    "de": "Ich bin müde",
+    "it": "Sono stanco",
+    "pt": "Estou cansado",
+    "nl": "Ik ben moe",
+    "ru": "Я устал",
+    "tr": "Yorgunum",
+    "el": "Είμαι κουρασμένος",
+    "ar": "أنا متعب",
+    "zh": "我累了",
+    "ja": "疲れました",
+    "ko": "피곤해요",
+    "th": "ฉันเหนื่อย",
+    "hi": "मैं थका हुआ हूँ"
+   }
+  },
+  {
+   "id": "bathroom",
+   "category": "needs",
+   "text": {
+    "en": "Where is the bathroom?",
+    "es": "¿Dónde está el baño?",
+    "fr": "Où sont les toilettes ?",
+    "de": "Wo ist die Toilette?",
+    "it": "Dov'è il bagno?",
+    "pt": "Onde fica o banheiro?",
+    "nl": "Waar is het toilet?",
+    "ru": "Где туалет?",
+    "tr": "Tuvalet nerede?",
+    "el": "Πού είναι η τουαλέτα;",
+    "ar": "أين الحمام؟",
+    "zh": "洗手间在哪里？",
+    "ja": "トイレはどこですか？",
+    "ko": "화장실이 어디예요?",
+    "th": "ห้องน้ำอยู่ที่ไหน",
+    "hi": "शौचालय कहाँ है?"
+   }
+  },
+  {
+   "id": "water",
+   "category": "needs",
+   "text": {
+    "en": "I need water",
+    "es": "Necesito agua",
+    "fr": "J'ai besoin d'eau",
+    "de": "Ich brauche Wasser",
+    "it": "Ho bisogno di acqua",
+    "pt": "Preciso de água",
+    "nl": "Ik heb water nodig",
+    "ru": "Мне нужна вода",
+    "tr": "Suya ihtiyacım var",
+    "el": "Χρειάζομαι νερό",
+    "ar": "أحتاج إلى ماء",
+    "zh": "我需要水",
+    "ja": "水が必要です",
+    "ko": "물이 필요해요",
+    "th": "ฉันต้องการน้ำ",
+    "hi": "मुझे पानी चाहिए"
+   }
+  },
+  {
+   "id": "sleep",
+   "category": "directions",
+   "text": {
+    "en": "I need a place to sleep",
+    "es": "Necesito un lugar donde dormir",
+    "fr": "J'ai besoin d'un endroit où dormir",
+    "de": "Ich brauche einen Schlafplatz",
+    "it": "Ho bisogno di un posto dove dormire",
+    "pt": "Preciso de um lugar para dormir",
+    "nl": "Ik heb een slaapplaats nodig",
+    "ru": "Мне нужно место для ночлега",
+    "tr": "Kalacak bir yere ihtiyacım var",
+    "el": "Χρειάζομαι ένα μέρος για να κοιμηθώ",
+    "ar": "أحتاج إلى مكان للنوم",
+    "zh": "我需要一个睡觉的地方",
+    "ja": "泊まる場所が必要です",
+    "ko": "잘 곳이 필요해요",
+    "th": "ฉันต้องการที่พัก",
+    "hi": "मुझे सोने के लिए जगह चाहिए"
+   }
+  },
+  {
+   "id": "lost",
+   "category": "directions",
+   "text": {
+    "en": "I'm lost",
+    "es": "Estoy perdido",
+    "fr": "Je suis perdu",
+    "de": "Ich habe mich verlaufen",
+    "it": "Mi sono perso",
+    "pt": "Estou perdido",
+    "nl": "Ik ben verdwaald",
+    "ru": "Я заблудился",
+    "tr": "Kayboldum",
+    "el": "Έχω χαθεί",
+    "ar": "أنا تائه",
+    "zh": "我迷路了",
+    "ja": "道に迷いました",
+    "ko": "길을 잃었어요",
+    "th": "ฉันหลงทาง",
+    "hi": "मैं रास्ता भटक गया हूँ"
+   }
+  },
+  {
+   "id": "address",
+   "category": "directions",
+   "text": {
+    "en": "How do I get to this address?",
+    "es": "¿Cómo llego a esta dirección?",
+    "fr": "Comment puis-je aller à cette adresse ?",
+    "de": "Wie komme ich zu dieser Adresse?",
+    "it": "Come arrivo a questo indirizzo?",
+    "pt": "Como chego a este endereço?",
+    "nl": "Hoe kom ik bij dit adres?",
+    "ru": "Как добраться до этого адреса?",
+    "tr": "Bu adrese nasıl giderim?",
+    "el": "Πώς πάω σε αυτή τη διεύθυνση;",
+    "ar": "كيف أصل إلى هذا العنوان؟",
+    "zh": "我怎么去这个地址？",
+    "ja": "この住所にはどう行けばいいですか？",
+    "ko": "이 주소로 어떻게 가나요?",
+    "th": "ฉันจะไปที่อยู่นี้ได้อย่างไร",
+    "hi": "मैं इस पते पर कैसे पहुँचूँ?"
+   }
+  },
+  {
+   "id": "far",
+   "category": "directions",
+   "text": {
+    "en": "Is it far?",
+    "es": "¿Está lejos?",
+    "fr": "Est-ce loin ?",
+    "de": "Ist es weit?",
+    "it": "È lontano?",
+    "pt": "É longe?",
+    "nl": "Is het ver?",
+    "ru": "Это далеко?",
+    "tr": "Uzak mı?",
+    "el": "Είναι μακριά;",
+    "ar": "هل هو بعيد؟",
+    "zh": "远吗？",
+    "ja": "遠いですか？",
+    "ko": "멀어요?",
+    "th": "ไกลไหม",
+    "hi": "क्या यह दूर है?"
+   }
+  },
+  {
+   "id": "map",
+   "category": "directions",
+   "text": {
+    "en": "Can you show me on the map?",
+    "es": "¿Me lo puede mostrar en el mapa?",
+    "fr": "Pouvez-vous me montrer sur la carte ?",
+    "de": "Können Sie es mir auf der Karte zeigen?",
+    "it": "Può mostrarmelo sulla mappa?",
+    "pt": "Pode me mostrar no mapa?",
+    "nl": "Kunt u het me op de kaart laten zien?",
+    "ru": "Можете показать на карте?",
+    "tr": "Haritada gösterebilir misiniz?",
+    "el": "Μπορείτε να μου το δείξετε στον χάρτη;",
+    "ar": "هل يمكنك أن تريني على الخريطة؟",
+    "zh": "你能在地图上指给我看吗？",
+    "ja": "地図で見せてもらえますか？",
+    "ko": "지도에서 보여 주시겠어요?",
+    "th": "ช่วยชี้บนแผนที่ให้หน่อยได้ไหม",
+    "hi": "क्या आप मुझे नक्शे पर दिखा सकते हैं?"
+   }
+  },
+  {
+   "id": "hotel",
+   "category": "directions",
+   "text": {
+    "en": "Where can I find a hotel?",
+    "es": "¿Dónde puedo encontrar un hotel?",
+    "fr": "Où puis-je trouver un hôtel ?",
+    "de": "Wo finde ich ein Hotel?",
+    "it": "Dove posso trovare un hotel?",
+    "pt": "Onde posso encontrar um hotel?",
+    "nl": "Waar kan ik een hotel vinden?",
+    "ru": "Где я могу найти отель?",
+    "tr": "Nerede otel bulabilirim?",
+    "el": "Πού μπορώ να βρω ξενοδοχείο;",
+    "ar": "أين يمكنني أن أجد فندقًا؟",
+    "zh": "我在哪里可以找到酒店？",
+    "ja": "ホテルはどこで見つけられますか？",
+    "ko": "호텔을 어디서 찾을 수 있어요?",
+    "th": "ฉันจะหาโรงแรมได้ที่ไหน",
+    "hi": "मुझे होटल कहाँ मिल सकता है?"
+   }
+  },
+  {
+   "id": "flat_tire",
+   "category": "problems",
+   "text": {
+    "en": "I have a flat tire",
+    "es": "Se me ponchó una llanta",
+    "fr": "J'ai un pneu crevé",
+    "de": "Ich habe einen platten Reifen",
+    "it": "Ho una gomma a terra",
+    "pt": "Tenho um pneu furado",
+    "nl": "Ik heb een lekke band",
+    "ru": "У меня спустило колесо",
+    "tr": "Lastiğim patladı",
+    "el": "Έπαθα λάστιχο",
+    "ar": "عندي إطار مثقوب",
+    "zh": "我的轮胎爆了",
+    "ja": "タイヤがパンクしました",
+    "ko": "타이어가 펭크 났어요",
+    "th": "ยางรถของฉันแบน",
+    "hi": "मेरे टायर में पंक्चर हो गया है"
+   }
+  },
+  {
+   "id": "passport",
+   "category": "problems",
+   "text": {
+    "en": "I lost my passport",
+    "es": "Perdí mi pasaporte",
+    "fr": "J'ai perdu mon passeport",
+    "de": "Ich habe meinen Pass verloren",
+    "it": "Ho perso il passaporto",
+    "pt": "Perdi o meu passaporte",
+    "nl": "Ik ben mijn paspoort verloren",
+    "ru": "Я потерял паспорт",
+    "tr": "Pasaportumu kaybettim",
+    "el": "Έχασα το διαβατήριό μου",
+    "ar": "لقد فقدت جواز سفري",
+    "zh": "我丢了护照",
+    "ja": "パスポートをなくしました",
+    "ko": "여권을 잃어버렸어요",
+    "th": "ฉันทำหนังสือเดินทางหาย",
+    "hi": "मेरा पासपोर्ट खो गया है"
+   }
+  },
+  {
+   "id": "taxi",
+   "category": "problems",
+   "text": {
+    "en": "I need a taxi",
+    "es": "Necesito un taxi",
+    "fr": "J'ai besoin d'un taxi",
+    "de": "Ich brauche ein Taxi",
+    "it": "Ho bisogno di un taxi",
+    "pt": "Preciso de um táxi",
+    "nl": "Ik heb een taxi nodig",
+    "ru": "Мне нужно такси",
+    "tr": "Taksiye ihtiyacım var",
+    "el": "Χρειάζομαι ταξί",
+    "ar": "أحتاج إلى سيارة أجرة",
+    "zh": "我需要出租车",
+    "ja": "タクシーが必要です",
+    "ko": "택시가 필요해요",
+    "th": "ฉันต้องการแท็กซี่",
+    "hi": "मुझे टैक्सी चाहिए"
+   }
+  },
+  {
+   "id": "missed",
+   "category": "problems",
+   "text": {
+    "en": "I missed my flight",
+    "es": "Perdí mi vuelo",
+    "fr": "J'ai raté mon vol",
+    "de": "Ich habe meinen Flug verpasst",
+    "it": "Ho perso il volo",
+    "pt": "Perdi o meu voo",
+    "nl": "Ik heb mijn vlucht gemist",
+    "ru": "Я опоздал на рейс",
+    "tr": "Uçağımı kaçırdım",
+    "el": "Έχασα την πτήση μου",
+    "ar": "فاتتني رحلتي",
+    "zh": "我错过了航班",
+    "ja": "飛行機に乗り遅れました",
+    "ko": "비행기를 놓쳤어요",
+    "th": "ฉันตกเครื่องบิน",
+    "hi": "मेरी फ्लाइट छूट गई"
+   }
+  },
+  {
+   "id": "luggage",
+   "category": "problems",
+   "text": {
+    "en": "My luggage is missing",
+    "es": "Mi equipaje no llegó",
+    "fr": "Mes bagages ont été perdus",
+    "de": "Mein Gepäck ist verloren gegangen",
+    "it": "Il mio bagaglio è andato perso",
+    "pt": "A minha bagagem desapareceu",
+    "nl": "Mijn bagage is zoek",
+    "ru": "Мой багаж потерялся",
+    "tr": "Bagajım kayıp",
+    "el": "Οι αποσκευές μου χάθηκαν",
+    "ar": "أمتعتي مفقودة",
+    "zh": "我的行李丢了",
+    "ja": "荷物が見つかりません",
+    "ko": "제 짐이 없어졌어요",
+    "th": "กระเป๋าเดินทางของฉันหาย",
+    "hi": "मेरा सामान गुम हो गया है"
+   }
+  },
+  {
+   "id": "money",
+   "category": "problems",
+   "text": {
+    "en": "Where can I exchange money?",
+    "es": "¿Dónde puedo cambiar dinero?",
+    "fr": "Où puis-je changer de l'argent ?",
+    "de": "Wo kann ich Geld wechseln?",
+    "it": "Dove posso cambiare i soldi?",
+    "pt": "Onde posso trocar dinheiro?",
+    "nl": "Waar kan ik geld wisselen?",
+    "ru": "Где я могу обменять деньги?",
+    "tr": "Nerede para bozdurabilirim?",
+    "el": "Πού μπορώ να αλλάξω χρήματα;",
+    "ar": "أين يمكنني تبديل المال؟",
+    "zh": "我在哪里可以兑换货币？",
+    "ja": "どこで両替できますか？",
+    "ko": "어디서 환전할 수 있어요?",
+    "th": "ฉันจะแลกเงินได้ที่ไหน",
+    "hi": "मैं पैसे कहाँ बदल सकता हूँ?"
+   }
+  },
+  {
+   "id": "doctor",
+   "category": "emergency",
+   "text": {
+    "en": "I need a doctor",
+    "es": "Necesito un doctor",
+    "fr": "J'ai besoin d'un médecin",
+    "de": "Ich brauche einen Arzt",
+    "it": "Ho bisogno di un medico",
+    "pt": "Preciso de um médico",
+    "nl": "Ik heb een dokter nodig",
+    "ru": "Мне нужен врач",
+    "tr": "Doktora ihtiyacım var",
+    "el": "Χρειάζομαι γιατρό",
+    "ar": "أحتاج إلى طبيب",
+    "zh": "我需要医生",
+    "ja": "医者が必要です",
+    "ko": "의사가 필요해요",
+    "th": "ฉันต้องการหมอ",
+    "hi": "मुझे डॉक्टर की ज़रूरत है"
+   }
+  },
+  {
+   "id": "police",
+   "category": "emergency",
+   "text": {
+    "en": "Call the police",
+    "es": "Llamen a la policía",
+    "fr": "Appelez la police",
+    "de": "Rufen Sie die Polizei",
+    "it": "Chiamate la polizia",
+    "pt": "Chamem a polícia",
+    "nl": "Bel de politie",
+    "ru": "Вызовите полицию",
+    "tr": "Polisi arayın",
+    "el": "Καλέστε την αστυνομία",
+    "ar": "اتصلوا بالشرطة",
+    "zh": "请叫警察",
+    "ja": "警察を呼んでください",
+    "ko": "경찰을 불러 주세요",
+    "th": "ช่วยเรียกตำรวจ",
+    "hi": "पुलिस को बुलाओ"
+   }
+  },
+  {
+   "id": "robbed",
+   "category": "emergency",
+   "text": {
+    "en": "I was robbed",
+    "es": "Me robaron",
+    "fr": "On m'a volé",
+    "de": "Ich wurde bestohlen",
+    "it": "Sono stato derubato",
+    "pt": "Fui roubado",
+    "nl": "Ik ben bestolen",
+    "ru": "Меня ограбили",
+    "tr": "Soyuldum",
+    "el": "Με λήστεψαν",
+    "ar": "لقد سُرقت",
+    "zh": "我被抢劫了",
+    "ja": "強盗に遭いました",
+    "ko": "강도를 당했어요",
+    "th": "ฉันถูกขโมยของ",
+    "hi": "मुझे लूट लिया गया"
+   }
+  },
+  {
+   "id": "allergic",
+   "category": "emergency",
+   "text": {
+    "en": "I'm allergic to penicillin",
+    "es": "Soy alérgico a la penicilina",
+    "fr": "Je suis allergique à la pénicilline",
+    "de": "Ich bin allergisch gegen Penicillin",
+    "it": "Sono allergico alla penicillina",
+    "pt": "Sou alérgico à penicilina",
+    "nl": "Ik ben allergisch voor penicilline",
+    "ru": "У меня аллергия на пенициллин",
+    "tr": "Penisiline alerjim var",
+    "el": "Είμαι αλλεργικός στην πενικιλλίνη",
+    "ar": "عندي حساسية من البنسلين",
+    "zh": "我对青霉素过敏",
+    "ja": "ペニシリンにアレルギーがあります",
+    "ko": "페니실린 알레르기가 있어요",
+    "th": "ฉันแพ้ยาเพนิซิลลิน",
+    "hi": "मुझे पेनिसिलिन से एलर्जी है"
+   }
+  },
+  {
+   "id": "accident",
+   "category": "emergency",
+   "text": {
+    "en": "There has been an accident",
+    "es": "Hubo un accidente",
+    "fr": "Il y a eu un accident",
+    "de": "Es gab einen Unfall",
+    "it": "C'è stato un incidente",
+    "pt": "Houve um acidente",
+    "nl": "Er is een ongeluk gebeurd",
+    "ru": "Произошёл несчастный случай",
+    "tr": "Bir kaza oldu",
+    "el": "Έγινε ένα ατύχημα",
+    "ar": "لقد وقع حادث",
+    "zh": "发生了事故",
+    "ja": "事故がありました",
+    "ko": "사고가 났어요",
+    "th": "เกิดอุบัติเหตุ",
+    "hi": "एक दुर्घटना हुई है"
+   }
+  },
+  {
+   "id": "help",
+   "category": "emergency",
+   "text": {
+    "en": "Please help me",
+    "es": "Ayúdenme, por favor",
+    "fr": "Aidez-moi, s'il vous plaît",
+    "de": "Bitte helfen Sie mir",
+    "it": "Aiutatemi, per favore",
+    "pt": "Por favor, ajudem-me",
+    "nl": "Help me alstublieft",
+    "ru": "Помогите мне, пожалуйста",
+    "tr": "Lütfen bana yardım edin",
+    "el": "Παρακαλώ βοηθήστε με",
+    "ar": "من فضلكم ساعدوني",
+    "zh": "请帮帮我",
+    "ja": "助けてください",
+    "ko": "도와주세요",
+    "th": "ช่วยฉันด้วย",
+    "hi": "कृपया मेरी मदद करें"
+   }
+  }
+ ]
+}
