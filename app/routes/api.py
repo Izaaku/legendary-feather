@@ -761,14 +761,23 @@ def list_conversations():
     """Return the current user's conversation history with decrypted
     transcript text. Only the user's own rows; newest first; capped at 50."""
     from app.utils.crypto import decrypt
+    from sqlalchemy import or_
     db = db_session()
     try:
         rows = (db.query(Conversation)
-                  .filter_by(user_id=g.current_user['user_id'])
+                  .filter(Conversation.user_id == g.current_user['user_id'])
+                  .filter(or_(Conversation.transcript_original != '',
+                              Conversation.transcript_translated != ''))
                   .order_by(Conversation.created_at.desc())
                   .limit(50).all())
         out = []
         for c in rows:
+            t_orig = decrypt(c.transcript_original or '')
+            t_tran = decrypt(c.transcript_translated or '')
+            # Only surface conversations that actually have saved text —
+            # empty rows (history opted out, or pre-opt-in) are skipped.
+            if not (t_orig.strip() or t_tran.strip()):
+                continue
             out.append({
                 'conversation_id': c.conversation_id,
                 'source_lang': c.source_lang,
@@ -777,8 +786,8 @@ def list_conversations():
                 'duration_minutes': round(c.duration_minutes or 0, 1),
                 'started_at': c.started_at.isoformat() if c.started_at else None,
                 'status': c.status,
-                'transcript_original': decrypt(c.transcript_original or ''),
-                'transcript_translated': decrypt(c.transcript_translated or ''),
+                'transcript_original': t_orig,
+                'transcript_translated': t_tran,
             })
         return jsonify({'conversations': out})
     except Exception as e:

@@ -1603,7 +1603,7 @@ function showHistoryView() {
     if (!el) return;
     const clearBtn = document.getElementById('histClearBtn');
     if (!items || items.length === 0) {
-      el.innerHTML = '<div style="padding:16px 0;color:var(--text-muted);">No translation sessions recorded yet. Start a translation to see your history here.</div>';
+      el.innerHTML = '<div style="padding:16px 0;color:var(--text-muted);">No saved conversations yet. Turn on history saving in Settings to keep your conversations here.</div>';
       if (clearBtn) clearBtn.style.display = 'none';
       return;
     }
