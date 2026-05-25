@@ -529,6 +529,21 @@ def handle_f2f_translate(data):
     voice_id = data.get('voice_id') or None  # Optional — one of OpenAI's 6 voices
     session_id = data.get('session_id') or None  # Optional — F2F session tracking
 
+    # Security: prefer the user id from the signed token over the
+    # client-supplied user_id (which a client could spoof). token_verified
+    # gates whether conversation history may be saved.
+    token_verified = False
+    _tok = data.get('token') or ''
+    if _tok:
+        try:
+            from app.utils.auth import decode_token
+            _p = decode_token(_tok)
+            if _p and _p.get('user_id'):
+                user_id = _p.get('user_id')
+                token_verified = True
+        except Exception:
+            pass
+
     if not text.strip():
         emit('error', {'message': 'No text provided'})
         return
@@ -696,6 +711,18 @@ def handle_f2f_translate(data):
                         user.minutes_used = int((user.seconds_used or 0) // 60)
 
                     now = _dt.now(_tz.utc)
+                    # History: store transcript text only if the user opted
+                    # in AND their identity was verified via the token.
+                    # Encrypted at rest. Otherwise stored empty (langs +
+                    # duration are still kept for usage stats).
+                    _save_hist = token_verified and bool(getattr(user, 'save_history', False))
+                    if _save_hist:
+                        from app.utils.crypto import encrypt as _enc_hist
+                        _hist_orig = _enc_hist((text or '')[:2000])
+                        _hist_tran = _enc_hist((translated or '')[:2000])
+                    else:
+                        _hist_orig = ''
+                        _hist_tran = ''
                     conv = Conversation(
                         conversation_id=str(_uuid.uuid4()),
                         user_id=user_id,
@@ -704,8 +731,8 @@ def handle_f2f_translate(data):
                         target_lang=target,
                         duration_seconds=int(seconds_used),
                         duration_minutes=round(seconds_used / 60.0, 2),
-                        transcript_original=(text or '')[:2000],
-                        transcript_translated=(translated or '')[:2000],
+                        transcript_original=_hist_orig,
+                        transcript_translated=_hist_tran,
                         status='completed',
                         started_at=now,
                         ended_at=now,

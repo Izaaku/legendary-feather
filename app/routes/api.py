@@ -155,8 +155,13 @@ def transcribe_audio():
             try:
                 conv = db.query(Conversation).filter_by(conversation_id=conversation_id).first()
                 if conv:
-                    conv.transcript_original = (conv.transcript_original or '') + result['text'] + '\n'
-                    db.commit()
+                    # History: append transcript only if the user opted in;
+                    # stored encrypted (decrypt -> append -> re-encrypt).
+                    _u = db.query(User).filter_by(user_id=g.current_user['user_id']).first()
+                    if _u and getattr(_u, 'save_history', False):
+                        from app.utils.crypto import encrypt as _enc, decrypt as _dec
+                        conv.transcript_original = _enc(_dec(conv.transcript_original or '') + result['text'] + '\n')
+                        db.commit()
             finally:
                 db.close()
 
@@ -226,8 +231,13 @@ def translate_text():
             try:
                 conv = db.query(Conversation).filter_by(conversation_id=conversation_id).first()
                 if conv:
-                    conv.transcript_translated = (conv.transcript_translated or '') + translated + '\n'
-                    db.commit()
+                    # History: append transcript only if the user opted in;
+                    # stored encrypted (decrypt -> append -> re-encrypt).
+                    _u = db.query(User).filter_by(user_id=g.current_user['user_id']).first()
+                    if _u and getattr(_u, 'save_history', False):
+                        from app.utils.crypto import encrypt as _enc, decrypt as _dec
+                        conv.transcript_translated = _enc(_dec(conv.transcript_translated or '') + translated + '\n')
+                        db.commit()
             finally:
                 db.close()
 
@@ -739,6 +749,77 @@ def dashboard_stats():
             'languages_used_count': languages_used_count,
             'recent': recent_list,
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+@api_bp.route('/conversations', methods=['GET'])
+@token_required
+def list_conversations():
+    """Return the current user's conversation history with decrypted
+    transcript text. Only the user's own rows; newest first; capped at 50."""
+    from app.utils.crypto import decrypt
+    db = db_session()
+    try:
+        rows = (db.query(Conversation)
+                  .filter_by(user_id=g.current_user['user_id'])
+                  .order_by(Conversation.created_at.desc())
+                  .limit(50).all())
+        out = []
+        for c in rows:
+            out.append({
+                'conversation_id': c.conversation_id,
+                'source_lang': c.source_lang,
+                'target_lang': c.target_lang,
+                'mode': c.mode,
+                'duration_minutes': round(c.duration_minutes or 0, 1),
+                'started_at': c.started_at.isoformat() if c.started_at else None,
+                'status': c.status,
+                'transcript_original': decrypt(c.transcript_original or ''),
+                'transcript_translated': decrypt(c.transcript_translated or ''),
+            })
+        return jsonify({'conversations': out})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+@api_bp.route('/conversations/<conversation_id>', methods=['DELETE'])
+@token_required
+def delete_conversation(conversation_id):
+    """Delete one conversation. Ownership is enforced in the query — a user
+    can only ever delete their own rows."""
+    db = db_session()
+    try:
+        conv = db.query(Conversation).filter_by(
+            conversation_id=conversation_id,
+            user_id=g.current_user['user_id'],
+        ).first()
+        if not conv:
+            return jsonify({'error': 'Not found'}), 404
+        db.delete(conv)
+        db.commit()
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        db.close()
+
+
+@api_bp.route('/conversations', methods=['DELETE'])
+@token_required
+def delete_all_conversations():
+    """Delete ALL of the current user's conversation history."""
+    db = db_session()
+    try:
+        n = db.query(Conversation).filter_by(
+            user_id=g.current_user['user_id']
+        ).delete()
+        db.commit()
+        return jsonify({'ok': True, 'deleted': n})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:

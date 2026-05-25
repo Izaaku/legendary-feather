@@ -1583,24 +1583,31 @@ function userHasVoiceCloning() {
 //  Voice cloning is deferred to V2 — see Config.VOICE_CLONING_ENABLED.)
 
 function showHistoryView() {
-  // Render shell first, then fill with real data from /api/dashboard/stats
   document.getElementById('main-content').innerHTML = `
     <div class="welcome-header animate-in">
       <div><div class="welcome-name">Translation History</div>
-      <div class="welcome-date">Your recent sessions</div></div>
+      <div class="welcome-date">Your saved conversations</div></div>
     </div>
     <div class="card animate-in delay-1">
-      <div class="card-header"><div class="card-title">Recent Sessions</div></div>
+      <div class="card-header">
+        <div class="card-title">Recent Sessions</div>
+        <button class="quick-btn" id="histClearBtn" style="border-color:var(--red);color:var(--red);font-size:12px;display:none;" onclick="clearAllHistory()">Delete all history</button>
+      </div>
       <div id="historyList" style="color:var(--text-sub);font-size:13px;">Loading…</div>
     </div>`;
 
-  const renderList = (items) => {
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  window._lfRenderHistory = (items) => {
     const el = document.getElementById('historyList');
     if (!el) return;
+    const clearBtn = document.getElementById('histClearBtn');
     if (!items || items.length === 0) {
       el.innerHTML = '<div style="padding:16px 0;color:var(--text-muted);">No translation sessions recorded yet. Start a translation to see your history here.</div>';
+      if (clearBtn) clearBtn.style.display = 'none';
       return;
     }
+    if (clearBtn) clearBtn.style.display = '';
     el.innerHTML = items.map(r => {
       const src = _lfGetLangName(r.source_lang);
       const tgt = _lfGetLangName(r.target_lang);
@@ -1608,10 +1615,16 @@ function showHistoryView() {
       const when = _lfFormatRelTime(r.started_at);
       const mode = r.mode === 'face_to_face' ? 'Face-to-Face' : (r.mode || 'Conversation');
       const dot = r.status === 'completed' ? 'green' : (r.status === 'active' ? '' : 'blue');
-      return `<div class="activity-item">
+      const hasText = (r.transcript_original && r.transcript_original.trim()) || (r.transcript_translated && r.transcript_translated.trim());
+      const textBlock = hasText ? ('<div data-no-i18n="1" style="margin-top:8px;padding:8px 10px;background:var(--bg);border-radius:8px;font-size:12px;line-height:1.5;white-space:pre-wrap;flex-basis:100%;">' +
+          '<div style="color:var(--text-muted);">' + esc(r.transcript_original) + '</div>' +
+          '<div style="color:var(--text);margin-top:2px;">' + esc(r.transcript_translated) + '</div></div>') : '';
+      return `<div class="activity-item" style="flex-wrap:wrap;">
         <div class="activity-dot ${dot}"></div>
-        <div class="activity-text"><strong>${src} → ${tgt}</strong> &middot; ${mode}</div>
+        <div class="activity-text" style="flex:1;min-width:120px;"><strong>${src} → ${tgt}</strong> &middot; ${mode}</div>
         <div class="activity-time">${when} &middot; ${dur}</div>
+        <button class="quick-btn" style="font-size:11px;padding:3px 9px;" onclick="deleteHistoryItem('${esc(r.conversation_id)}')">Delete</button>
+        ${textBlock}
       </div>`;
     }).join('');
   };
@@ -1622,18 +1635,29 @@ function showHistoryView() {
     }
   };
 
-  if (dashboardStats && dashboardStats.recent) {
-    renderList(dashboardStats.recent);
-    finishRender();
-  } else {
-    // Fetch on demand if we don't have it yet
-    const token = sessionStorage.getItem('lf_token');
-    fetch('/api/dashboard/stats', { headers: { 'Authorization': 'Bearer ' + token } })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) { dashboardStats = d; renderList(d.recent || []); } else { renderList([]); } })
-      .catch(() => renderList([]))
-      .finally(finishRender);
-  }
+  const token = sessionStorage.getItem('lf_token');
+  fetch('/api/conversations', { headers: { 'Authorization': 'Bearer ' + token } })
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { window._lfRenderHistory((d && d.conversations) || []); })
+    .catch(() => window._lfRenderHistory([]))
+    .finally(finishRender);
+}
+
+function deleteHistoryItem(id) {
+  const token = sessionStorage.getItem('lf_token');
+  fetch('/api/conversations/' + encodeURIComponent(id), {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + token }
+  }).then(r => { if (r.ok) showHistoryView(); }).catch(() => {});
+}
+
+function clearAllHistory() {
+  if (!confirm('Delete your entire conversation history? This cannot be undone.')) return;
+  const token = sessionStorage.getItem('lf_token');
+  fetch('/api/conversations', {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + token }
+  }).then(r => { if (r.ok) showHistoryView(); }).catch(() => {});
 }
 
 function showSettingsView() {
@@ -1664,6 +1688,15 @@ function showSettingsView() {
       <div id="langMsg" style="font-size:12px;margin-top:10px;"></div>
     </div>
     <div class="card animate-in delay-3">
+      <div class="card-header"><div class="card-title">Conversation History</div></div>
+      <p style="font-size:13px;color:var(--text-sub);margin:0 0 12px 0;">When ON, the words of your face-to-face conversations are saved to your history — encrypted, private to you, and deletable any time. When OFF (the default), only the languages and duration are recorded, never the words.</p>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text);">
+        <input type="checkbox" id="saveHistoryToggle" onchange="toggleSaveHistory()" style="width:18px;height:18px;cursor:pointer;">
+        <span>Save my conversation history</span>
+      </label>
+      <div id="histMsg" style="font-size:12px;margin-top:10px;"></div>
+    </div>
+    <div class="card animate-in delay-3">
       <div class="card-header"><div class="card-title">Change Password</div></div>
       <div style="display:flex;flex-direction:column;gap:12px;max-width:400px;">
         <input type="password" id="currentPw" placeholder="Current password" style="padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:Outfit;">
@@ -1681,6 +1714,8 @@ function showSettingsView() {
   setTimeout(() => {
     const sel = document.getElementById('settingsLangSelect');
     if (sel) sel.value = _lfGetUserLang() || 'en';
+    const hist = document.getElementById('saveHistoryToggle');
+    if (hist) hist.checked = !!(currentSession && currentSession.save_history);
   }, 50);
 
   // Force i18n pass on the Settings view so headers translate immediately
@@ -1718,6 +1753,30 @@ async function changeDisplayLanguage() {
     setTimeout(() => window.location.reload(), 800);
   } catch (e) {
     if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Could not save: ' + e.message; }
+  }
+}
+
+
+async function toggleSaveHistory() {
+  const cb = document.getElementById('saveHistoryToggle');
+  const msg = document.getElementById('histMsg');
+  const on = !!(cb && cb.checked);
+  try {
+    const r = await fetch('/api/auth/me', {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + sessionStorage.getItem('lf_token'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ save_history: on })
+    });
+    if (!r.ok) throw new Error('Server returned ' + r.status);
+    try {
+      const sess = JSON.parse(sessionStorage.getItem('lf_session') || '{}');
+      sess.save_history = on;
+      sessionStorage.setItem('lf_session', JSON.stringify(sess));
+    } catch (e) {}
+    if (msg) { msg.style.color = 'var(--green)'; msg.textContent = on ? '✓ History saving is ON.' : '✓ History saving is OFF.'; }
+  } catch (e) {
+    if (msg) { msg.style.color = 'var(--red)'; msg.textContent = 'Could not save: ' + e.message; }
+    if (cb) cb.checked = !on;
   }
 }
 
@@ -2117,4 +2176,34 @@ function filterFAQ(query) {
   function drawStars(t){
     ctx.clearRect(0,0,canvas.width,canvas.height);
     stars.forEach(s=>{
-      s.x += s.vx + Math.sin(t * s.wobbleSpeed +
+      s.x += s.vx + Math.sin(t * s.wobbleSpeed + s.phase) * s.wobbleAmp * 0.08;
+      s.y += s.vy;
+      if(s.y < -10){ s.y = canvas.height + 10; s.x = Math.random() * canvas.width; }
+      if(s.x < -10) s.x = canvas.width + 10;
+      else if(s.x > canvas.width + 10) s.x = -10;
+      const tw = Math.sin(t * s.speed * 0.01 + s.phase) * 0.5 + 0.5;
+      const alpha = Math.max(0, Math.min(1, s.o * (0.35 + tw * 0.65)));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'hsla(' + s.h + ',' + s.s + '%,' + s.l + '%,' + alpha + ')';
+      ctx.shadowColor = 'hsla(' + s.h + ',' + s.s + '%,' + s.l + '%,' + alpha + ')';
+      ctx.shadowBlur = s.glowSize;
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+  }
+
+  function loop(t){
+    drawStars(t || 0);
+    requestAnimationFrame(loop);
+  }
+
+  resizeCanvas();
+  createStars();
+  window.addEventListener('resize', function(){ resizeCanvas(); createStars(); });
+  requestAnimationFrame(loop);
+})();
+</script>
+
+</body>
+</html>

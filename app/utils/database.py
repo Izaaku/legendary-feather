@@ -60,6 +60,11 @@ def init_db():
          "ALTER TABLE users ADD COLUMN seconds_used INTEGER NOT NULL DEFAULT 0"
             if is_sqlite else
          "ALTER TABLE users ADD COLUMN IF NOT EXISTS seconds_used INTEGER NOT NULL DEFAULT 0"),
+        # 005: opt-in encrypted conversation history.
+        ("users.save_history",
+         "ALTER TABLE users ADD COLUMN save_history BOOLEAN NOT NULL DEFAULT 0"
+            if is_sqlite else
+         "ALTER TABLE users ADD COLUMN IF NOT EXISTS save_history BOOLEAN NOT NULL DEFAULT FALSE"),
     ]
     with engine.connect() as conn:
         for label, ddl in migrations:

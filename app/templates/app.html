@@ -1987,6 +1987,7 @@ function processF2FUtterance(text){
     socket.emit('translate_f2f', {
         text, lang1, lang2,
         user_id: getUserId(),
+        token: getToken(),
         voice_profile_id: voiceProfileId || null,
         voice_id: ttsVoiceId || null,
         session_id: getF2FSessionId(),

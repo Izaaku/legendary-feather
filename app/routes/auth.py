@@ -260,6 +260,9 @@ def update_profile():
                 if v:
                     setattr(user, field, v)
                     changed = True
+        if 'save_history' in data:
+            user.save_history = bool(data['save_history'])
+            changed = True
         if changed:
             db.commit()
         return jsonify({'user': user.to_dict()})

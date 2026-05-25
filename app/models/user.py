@@ -24,6 +24,7 @@ class User(Base):
     is_owner = Column(Boolean, default=False)
     preferred_source_lang = Column(String, default='en')
     preferred_target_lang = Column(String, default='es')
+    save_history = Column(Boolean, default=False)  # opt-in: store transcript text
 
     def to_dict(self):
         is_unlimited = self.is_owner or self.plan == 'owner'
@@ -49,4 +50,5 @@ class User(Base):
             'is_owner': self.is_owner,
             'preferred_source_lang': self.preferred_source_lang,
             'preferred_target_lang': self.preferred_target_lang,
+            'save_history': bool(self.save_history),
         }
