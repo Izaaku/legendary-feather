@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="dark">
     <title>Legendary Feather — Real-Time AI Translation</title>
 
     <!-- PWA -->
@@ -780,6 +781,15 @@ footer {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <!-- OCR handled server-side via OpenAI Vision API -->
+    <style>
+      /* Mobile: hide the long greeting "Ready to be legendary, X?" so it
+         doesn't overlap with the brand/logo. The Dashboard button on the
+         right is enough navigation cue. */
+      @media (max-width: 720px) {
+        #welcomeText { display: none !important; }
+        #appTopLogo span { font-size: 14px !important; letter-spacing: 0.5px !important; }
+      }
+    </style>
 </head>
 <body>
     <canvas id="starCanvas"></canvas>
@@ -787,7 +797,7 @@ footer {
     <!-- Top-left logo (links to dashboard when logged in, landing when not) -->
     <a id="appTopLogo" href="/" style="position:fixed;top:16px;left:16px;z-index:1000;display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-sub);font-family:'Cormorant Garamond',serif;font-size:16px;letter-spacing:1px;text-transform:uppercase;font-weight:400;transition:color 0.3s;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--text-sub)'">
       <img src="/static/images/golden-feather-nav.png" alt="" style="width:18px;height:auto;filter:drop-shadow(0 0 6px rgba(212,168,67,0.4));">
-      <span>Legendary Feather</span>
+      <span data-no-i18n="1">Legendary Feather</span>
     </a>
 
     <!-- User nav (top-right) -->
