@@ -1,6 +1,6 @@
 {
   "name": "Legendary Feather",
-  "short_name": "Feather",
+  "short_name": "Legendary",
   "description": "Real-time AI translation. Speak freely. Translate instantly.",
   "start_url": "/app",
   "scope": "/",
