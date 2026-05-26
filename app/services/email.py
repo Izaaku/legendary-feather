@@ -280,3 +280,36 @@ def send_support_reply_notification(to: str, customer_name: str,
       <p style="font-size:12px;color:#a0a0b0;">Reply to this email and we will get back to you in your account inbox.</p>
     """
     return send_email(to, 'New reply from Legendary Feather support', _wrap_layout(body))
+
+
+def send_new_support_notification(to: str, customer_name: str,
+                                  customer_email: str, subject: str,
+                                  snippet: str, dashboard_url: str) -> bool:
+    """Ping the founder when a customer opens a ticket or sends a new
+    message. Plain heads-up email — the founder still replies inside
+    the support panel of the dashboard."""
+    safe_name = (customer_name or 'Unknown').strip()[:80] or 'Unknown'
+    safe_email = (customer_email or '').strip()[:120]
+    safe_subj = (subject or 'Support request').strip()[:120] or 'Support request'
+    raw_snip = (snippet or '').strip().replace('\n', ' ')
+    safe_snippet = raw_snip[:400]
+    if len(raw_snip) > 400:
+        safe_snippet += '...'
+    body = f"""
+      <h1 style="font-family:Georgia,serif;font-size:22px;font-weight:400;
+                 color:#fff;margin:0 0 16px;">New support message</h1>
+      <p style="margin:0 0 6px;"><strong style="color:#d4a843;">From:</strong>
+        {safe_name} &lt;{safe_email}&gt;</p>
+      <p style="margin:0 0 14px;"><strong style="color:#d4a843;">Subject:</strong>
+        {safe_subj}</p>
+      <blockquote style="margin:18px 0;padding:14px 18px;background:rgba(212,168,67,0.08);
+                         border-left:3px solid #d4a843;color:#e0e0e8;font-size:14px;
+                         line-height:1.6;border-radius:6px;">
+        {safe_snippet or '(no message body)'}
+      </blockquote>
+      <p style="text-align:center;margin:24px 0;">
+        {_btn(dashboard_url, 'Open in support panel')}
+      </p>
+    """
+    short_subj = safe_subj[:60]
+    return send_email(to, f'[LF Support] {safe_name}: {short_subj}', _wrap_layout(body))

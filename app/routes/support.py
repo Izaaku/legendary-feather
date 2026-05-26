@@ -31,6 +31,25 @@ def create_conversation():
     if not conv:
         return jsonify({'error': 'Failed to create conversation'}), 500
 
+    # Ping the founder so they don't have to refresh the support panel.
+    # FOUNDER_EMAIL is set in Railway; if unset, this is a silent no-op.
+    try:
+        import os as _os
+        founder = (_os.getenv('FOUNDER_EMAIL') or '').strip()
+        if founder:
+            from app.services.email import send_new_support_notification
+            app_url = _os.getenv('APP_URL', 'https://legendaryfeather.com').rstrip('/')
+            send_new_support_notification(
+                to=founder,
+                customer_name=data.get('user_name') or user.get('email') or 'Customer',
+                customer_email=user.get('email') or '',
+                subject=data.get('subject') or 'Support request',
+                snippet=data.get('first_message') or data.get('message') or '(ticket opened — no initial message)',
+                dashboard_url=f'{app_url}/dashboard#support',
+            )
+    except Exception as _ne:
+        print(f'[Support] Founder ping (new ticket) skipped (non-fatal): {_ne}')
+
     return jsonify(conv), 201
 
 
@@ -124,6 +143,29 @@ def send_message(conv_id):
                     _db.close()
         except Exception as _se:
             print(f'[Support] Reply notification skipped (non-fatal): {_se}')
+
+    # Customer -> founder: ping the founder's email so they know a
+    # customer is waiting. Silent no-op if FOUNDER_EMAIL is not set.
+    if sender_type == 'customer':
+        try:
+            import os as _os
+            founder = (_os.getenv('FOUNDER_EMAIL') or '').strip()
+            if founder:
+                from app.services.email import send_new_support_notification
+                app_url = _os.getenv('APP_URL', 'https://legendaryfeather.com').rstrip('/')
+                convs = supabase.select('chat_conversations',
+                                        filters={'id': conv_id}, limit=1) or []
+                conv_row = convs[0] if convs else {}
+                send_new_support_notification(
+                    to=founder,
+                    customer_name=conv_row.get('user_name') or user.get('email') or 'Customer',
+                    customer_email=conv_row.get('user_email') or user.get('email') or '',
+                    subject=conv_row.get('subject') or 'Support request',
+                    snippet=message_text,
+                    dashboard_url=f'{app_url}/dashboard#support',
+                )
+        except Exception as _fe:
+            print(f'[Support] Founder ping (follow-up) skipped (non-fatal): {_fe}')
 
     return jsonify(msg), 201
 
