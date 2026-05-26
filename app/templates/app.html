@@ -1641,6 +1641,57 @@ function startF2FTalk(){
     }
 }
 
+// ──────────────────────────────────────────────────────────
+// Sticky language for F2F precision on short utterances
+//
+// Whisper cannot reliably detect language from a single word, so
+// it guesses — and the guess is often wrong ("bisturí" rendered
+// as "besturilli" with English phonetics; "zapatos" tagged as
+// English). To fix this WITHOUT making the user tap a per-
+// language button:
+//   1. After a LONG utterance (>=3 words) with a confident
+//      detection, lock the language to whatever Whisper said.
+//   2. On the next SHORT utterance (<= ~1.5s of audio), pass
+//      the locked language as a hint so Whisper doesn't guess.
+//   3. When the OTHER person speaks a full sentence in the
+//      other language, Whisper's own confident detection
+//      flips the lock.
+//   4. If the lock is stale (> ~10s), fall back to defaulting
+//      to lang1 for short utterances rather than a blind guess.
+// ──────────────────────────────────────────────────────────
+let f2fLock = { lang: null, ts: 0 };
+const F2F_LOCK_MAX_AGE_MS = 10000;
+const F2F_SHORT_AUDIO_MS = 1500;
+
+function f2fStickyHint(recDurationMs){
+  // Only hint Whisper on short utterances; let it auto-detect on
+  // sentences (which it does reliably and which update the lock).
+  if (recDurationMs > F2F_SHORT_AUDIO_MS) return null;
+  const lang1 = ((document.getElementById('f2fLang1')||{}).value || '').toLowerCase().slice(0,2);
+  const lang2 = ((document.getElementById('f2fLang2')||{}).value || '').toLowerCase().slice(0,2);
+  const pair = [lang1, lang2].filter(Boolean);
+  const fresh = (Date.now() - f2fLock.ts) < F2F_LOCK_MAX_AGE_MS;
+  if (fresh && f2fLock.lang && pair.indexOf(f2fLock.lang) !== -1) {
+    return f2fLock.lang;
+  }
+  // No fresh lock — default to lang1. Worse than a real lock,
+  // but better than letting Whisper guess on one word.
+  return lang1 || null;
+}
+
+function f2fUpdateLock(text, detectedLanguage, confidence){
+  if (!detectedLanguage || !text) return;
+  const wc = String(text).trim().split(/\s+/).filter(Boolean).length;
+  const conf = (typeof confidence === 'number') ? confidence : 0;
+  if (wc < 3 || conf < 0.5) return;
+  const det = String(detectedLanguage).toLowerCase().slice(0,2);
+  const lang1 = ((document.getElementById('f2fLang1')||{}).value || '').toLowerCase().slice(0,2);
+  const lang2 = ((document.getElementById('f2fLang2')||{}).value || '').toLowerCase().slice(0,2);
+  if (det !== lang1 && det !== lang2) return;
+  f2fLock = { lang: det, ts: Date.now() };
+  try { console.log('[F2F-Lock] Locked to', det, '(words='+wc+', conf='+conf.toFixed(2)+')'); } catch(e){}
+}
+
 let f2fRecordStartTime = 0;
 function startF2FWhisper(){
     f2fAudioChunks = [];
@@ -1688,10 +1739,12 @@ function sendF2FAudioToWhisper(blob){
         const lang1 = (document.getElementById('f2fLang1')||{}).value || '';
         const lang2 = (document.getElementById('f2fLang2')||{}).value || '';
         const pair = [lang1, lang2].filter(Boolean);
+        const recDur = Date.now() - f2fRecordStartTime;
         socket.emit('transcribe', {
             audio: b64,
             request_id: reqId,
             language_pair: pair.length === 2 ? pair : null,
+            language: f2fStickyHint(recDur),
         });
 
         // Safety timeout — if the server doesn't respond in 15s, reset the
@@ -1704,6 +1757,7 @@ function sendF2FAudioToWhisper(blob){
         socket.once('transcription', (data)=>{
             clearTimeout(resetTimer);
             if(data.text && data.text.trim()){
+                f2fUpdateLock(data.text, data.detected_language, data.confidence);
                 // Send the text for translation (async, updates bubble in background)
                 processF2FUtterance(data.text.trim(), data.confidence);
                 // Reset the mic button immediately so the user can speak again
@@ -1876,7 +1930,7 @@ function hfStartSegment(){
       var chunks=hfChunks; hfChunks=[];
       var send=hfPendingSend; hfPendingSend=false;
       if(send && chunks.length){
-        hfQueue.push(new Blob(chunks,{type:'audio/webm'}));
+        hfQueue.push({blob:new Blob(chunks,{type:'audio/webm'}), dur:Date.now()-hfSegStartAt});
         hfDrain();
       }
       if(hfActive && !hfMuted) hfStartSegment();
@@ -1915,7 +1969,9 @@ function hfEndUtterance(send){
 function hfDrain(){
   if(hfBusy || !hfQueue.length || !hfActive) return;
   hfBusy=true;
-  var blob=hfQueue.shift();
+  var item=hfQueue.shift();
+  var blob=(item && item.blob) ? item.blob : item;
+  var dur=(item && typeof item.dur==='number') ? item.dur : 0;
   var reader=new FileReader();
   reader.onload=function(){
     var done=false;
@@ -1926,10 +1982,16 @@ function hfDrain(){
     var lang2=(document.getElementById('f2fLang2')||{}).value||'';
     var pair=[lang1,lang2].filter(Boolean);
     var timer=setTimeout(finish,15000);
-    socket.emit('transcribe',{audio:b64,request_id:'hf_'+Date.now(),language_pair:(pair.length===2?pair:null)});
+    socket.emit('transcribe',{
+      audio:b64,
+      request_id:'hf_'+Date.now(),
+      language_pair:(pair.length===2?pair:null),
+      language:f2fStickyHint(dur),
+    });
     socket.once('transcription',function(data){
       clearTimeout(timer);
       if(data && data.text && data.text.trim()){
+        f2fUpdateLock(data.text, data.detected_language, data.confidence);
         try{ processF2FUtterance(data.text.trim(), data.confidence); }catch(e){ console.warn('[HF] utterance error',e); }
       }
       finish();

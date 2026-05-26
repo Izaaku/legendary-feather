@@ -848,11 +848,13 @@ def handle_transcribe(data):
         try:
             normalized_pair = [str(l).lower()[:2] for l in (language_pair or []) if l]
             detected = (result.get('detected_language') or '').lower()[:2]
+            _wc = len((result.get('text') or '').strip().split())
             if (not language_hint
                     and normalized_pair
                     and len(normalized_pair) == 2
                     and detected
-                    and detected not in normalized_pair):
+                    and detected not in normalized_pair
+                    and _wc > 2):
                 # Cousin tolerance: is `detected` in the same family as a
                 # language that is actually in the selected pair?
                 is_cousin = False
@@ -876,38 +878,52 @@ def handle_transcribe(data):
         # the "pop" when MediaRecorder starts/stops, etc.). Returning empty
         # text tells the frontend to show "No speech detected" rather than
         # treating the hallucination as a real utterance.
+        # Split into two: training-data artifacts always rejected;
+        # short common words only rejected when the audio signal
+        # itself indicates the clip was silent (otherwise "thank
+        # you", "ok", "gracias" said genuinely would be lost).
         import re as _re
-        HALLUCINATIONS = {
-            'you', 'thank you', 'thank you.', 'thanks for watching',
-            'thanks for watching!', 'thank you for watching',
-            'thank you for watching!', 'bye', 'goodbye', 'okay', 'ok',
-            'uh', 'um', 'mm', 'mhm', 'hmm',
-            'ありがとうございました', 'ご視聴ありがとうございました',
-            '시청 해주셔서 감사합니다', '시청해주셔서 감사합니다',
-            'gracias por ver el video', 'gracias por ver',
-            'gracias por su atención', 'subtítulos por la comunidad de amara.org',
+        HALLUCINATION_ALWAYS = {
+            'thanks for watching', 'thanks for watching!',
+            'thank you for watching', 'thank you for watching!',
+            'please subscribe', 'like and subscribe',
+            'subtítulos por la comunidad de amara.org',
             'subtitles by the amara.org community',
             'untertitel der amara.org-community',
+            'ご視聴ありがとうございました',
+            '시청 해주셔서 감사합니다', '시청해주셔서 감사합니다',
+            'gracias por ver el video', 'gracias por ver este video',
+        }
+        HALLUCINATION_IF_SILENT = {
+            'you', 'thank you', 'thank you.', 'thanks',
+            'bye', 'goodbye', 'okay', 'ok',
+            'uh', 'um', 'mm', 'mhm', 'hmm',
+            'ありがとうございました',
+            'gracias', 'gracias por ver', 'gracias por su atención',
         }
         text = (result.get('text') or '').strip()
         norm = _re.sub(r'[\s.!?,。！？]+$', '', text.lower()).strip()
         letters = sum(1 for ch in text if ch.isalpha())
+        no_speech = float(result.get('no_speech_prob') or 0)
+        avg_lp = float(result.get('avg_logprob') or 0)
+        comp_ratio = float(result.get('compression_ratio') or 0)
+        silent_ish = no_speech > 0.5
         reason = ''
         if out_of_pair:
             reason = 'language outside the selected pair'
-        elif not text or len(text) <= 3:
-            reason = 'empty / too short'
-        elif norm in HALLUCINATIONS:
-            reason = 'known hallucination phrase'
+        elif not text or letters < 1:
+            reason = 'empty / no letters'
+        elif norm in HALLUCINATION_ALWAYS:
+            reason = 'training-data artifact phrase'
+        elif norm in HALLUCINATION_IF_SILENT and silent_ish:
+            reason = 'hallucinated filler on silent audio'
         elif _re.search(r'(.)\1{9,}', text):
             reason = 'repeated-character junk'
-        elif letters < 2:
-            reason = 'symbol / emoji only'
-        elif float(result.get('no_speech_prob') or 0) > 0.6:
+        elif no_speech > 0.6:
             reason = 'no_speech_prob high (noise/music)'
-        elif float(result.get('avg_logprob') or 0) < -1.0:
+        elif avg_lp < -1.0:
             reason = 'avg_logprob low (unreliable)'
-        elif float(result.get('compression_ratio') or 0) > 2.4:
+        elif comp_ratio > 2.4:
             reason = 'compression_ratio high (repetition)'
         if reason:
             print(f'[Whisper] Rejected ({reason}): {text!r}')
