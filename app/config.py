@@ -235,11 +235,20 @@ PRICING = {
         'per_seat': False,
         'visible': True,
         'credit_packs': [
-            {'eur': 10, 'usd': 11, 'minutes': 40},
-            {'eur': 25, 'usd': 27, 'minutes': 110},
-            {'eur': 50, 'usd': 55, 'minutes': 230},
+            # Each pack has its own Stripe Price ID. If you also added
+            # USD as an additional currency on the same Stripe Product,
+            # the Price ID below handles BOTH EUR and USD automatically
+            # (Stripe selects by customer locale). If you created
+            # separate USD Price IDs, set STRIPE_PRICE_PAYG_<N>_USD_LIVE
+            # and the checkout will pick the right one.
+            {'eur': 10, 'usd': 11, 'minutes': 40,
+             'stripe_price_id': stripe_price('payg_40')},
+            {'eur': 25, 'usd': 27, 'minutes': 110,
+             'stripe_price_id': stripe_price('payg_110')},
+            {'eur': 50, 'usd': 55, 'minutes': 230,
+             'stripe_price_id': stripe_price('payg_230')},
         ],
-        'stripe_price_id': stripe_price('payg'),
+        'stripe_price_id': stripe_price('payg'),  # legacy fallback
         'features': [
             '€0.25 / $0.27 per minute',
             'Buy credits in packs (€10 = 40 min)',
