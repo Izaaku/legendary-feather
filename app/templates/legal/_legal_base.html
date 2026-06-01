@@ -38,12 +38,19 @@
     z-index: 10;
   }
   .topbar a.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
     font-family: 'Cormorant Garamond', Georgia, serif;
     font-size: 22px;
     font-weight: 600;
     color: var(--gold);
     text-decoration: none;
     letter-spacing: 0.5px;
+  }
+  .topbar a.brand .brand-icon {
+    height: 30px; width: auto;
+    filter: drop-shadow(0 0 8px rgba(212,168,67,0.35));
   }
   .topbar nav a {
     color: var(--text-sub);
@@ -123,7 +130,7 @@
 </head>
 <body>
 <header class="topbar">
-  <a href="/" class="brand">Legendary Feather</a>
+  <a href="/" class="brand"><img src="/static/images/golden-feather-nav.png" alt="" class="brand-icon"><span>Legendary Feather</span></a>
   <nav>
     <a href="/pricing">Pricing</a>
     <a href="/auth">Sign in</a>
@@ -135,7 +142,7 @@
   {% block content %}{% endblock %}
 </main>
 <footer>
-  &copy; {{ year }} Legendary Feather — Legendary Feather. All rights reserved.
+  &copy; {{ year }} Legendary Feather. All rights reserved.
   <br>
   <a href="/privacy">Privacy</a> &middot;
   <a href="/terms">Terms</a> &middot;

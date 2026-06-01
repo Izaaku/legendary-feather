@@ -69,10 +69,10 @@ a:hover { color: var(--gold-ll); }
   letter-spacing: 0.5px;
 }
 .logo-mark {
-  width: 28px; height: 28px;
-  background: radial-gradient(circle, var(--gold-l), var(--gold) 70%);
-  border-radius: 50%;
-  box-shadow: 0 0 18px var(--gold-glow);
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(212,168,67,0.5));
 }
 .nav-links { display: flex; gap: 28px; align-items: center; }
 .nav-links a { color: var(--text-sub); font-size: 14px; font-weight: 500; }
@@ -345,7 +345,7 @@ details[open] .faq-q::after { transform: rotate(45deg); }
 <!-- Header -->
 <nav class="nav">
   <a href="/" class="logo">
-    <div class="logo-mark"></div>
+    <img src="/static/images/golden-feather-nav.png" alt="" class="logo-mark">
     Legendary Feather
   </a>
   <div class="nav-links">

@@ -87,10 +87,10 @@ nav {
 }
 .nav-logo { display: flex; align-items: center; gap: 12px; }
 .nav-logo-mark {
-  width: 28px; height: 28px;
-  background: radial-gradient(circle, var(--gold-l), var(--gold) 70%);
-  border-radius: 50%;
-  box-shadow: 0 0 14px var(--gold-glow);
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(212,168,67,0.5));
 }
 .nav-logo-text {
   font-family: 'Cormorant Garamond', serif;
@@ -529,7 +529,7 @@ footer a:hover { color: var(--gold); }
 <!-- Nav -->
 <nav>
   <a href="/" class="nav-logo">
-    <span class="nav-logo-mark"></span>
+    <img src="/static/images/golden-feather-nav.png" alt="" class="nav-logo-mark">
     <span class="nav-logo-text">Legendary Feather</span>
   </a>
   <ul class="nav-links">
