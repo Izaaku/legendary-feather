@@ -958,14 +958,14 @@ footer {
                 <select id="txtTargetLang"></select>
             </div>
             <div class="source-input-row">
-                <textarea id="txtSource" placeholder="Enter text, use mic, or upload an image..."></textarea>
+                <textarea id="txtSource" data-no-i18n="1" placeholder="Enter text, use mic, or upload an image..."></textarea>
                 <div class="source-icons">
                     <button class="btn-icon" id="txtMicBtn" title="Dictate with microphone">🎤</button>
                     <button class="btn-icon" id="txtCamBtn" title="Scan image / Take photo">📷</button>
                 </div>
             </div>
             <button class="btn-primary" id="txtTranslateBtn" style="width:100%;margin-bottom:12px;">Translate</button>
-            <textarea id="txtResult" placeholder="Translation will appear here..." readonly></textarea>
+            <textarea id="txtResult" data-no-i18n="1" placeholder="Translation will appear here..." readonly></textarea>
             <input type="file" id="ocrFileInput" accept="image/*" capture="environment" style="display:none;">
         </div>
 
@@ -2269,6 +2269,17 @@ document.getElementById('ocrFileInput').addEventListener('change',async(e)=>{
         if(resp.ok && data.text && data.text.trim()){
             txtSource.value = data.text.trim();
             console.log('[OCR] Extracted:', data.text.trim());
+            // Mobile UX: prevent iOS/Chrome from auto-scrolling to the
+            // textarea on programmatic value change, then deliberately
+            // scroll the user to the extracted text so they see it.
+            try {
+              if (document.activeElement && document.activeElement.blur) {
+                document.activeElement.blur();
+              }
+              setTimeout(() => {
+                txtSource.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 50);
+            } catch (e) {}
             showStatus('Text extracted from image','success');
         } else {
             showStatus(data.error || 'No text found in image','error');
