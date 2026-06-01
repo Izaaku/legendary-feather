@@ -241,7 +241,7 @@
         </div>
       </div>
     </div>
-    <p style="font-size:12px;color:var(--text-muted);margin-top:18px;">All prices in USD. Includes Polyglot Desk-managed API access — no separate accounts with Ollama, Deepgram, or Cartesia required.</p>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:18px;">All prices in USD. All AI providers managed for you — no separate accounts needed. Pricing is target post-launch; founding-member pilots may be invited at a discount.</p>
   </div>
 </section>
 
@@ -266,13 +266,13 @@
             <td><strong>Price per agent</strong></td>
             <td class="cross">$80-150/mo + $20K setup</td>
             <td class="cross">+30-50% salary premium</td>
-            <td class="checkmark">From $35/agent/mo (metered)</td>
+            <td class="checkmark">Target: $35/agent/mo (metered, post-launch)</td>
           </tr>
           <tr>
             <td><strong>Time to live</strong></td>
             <td class="cross">2-3 months</td>
             <td class="cross">3-12 weeks per hire</td>
-            <td class="checkmark">Same week</td>
+            <td class="checkmark">Setup in hours, not weeks</td>
           </tr>
           <tr>
             <td><strong>Languages supported</strong></td>
@@ -284,13 +284,13 @@
             <td><strong>Self-hosted option</strong></td>
             <td class="cross">No (cloud only)</td>
             <td>—</td>
-            <td class="checkmark">Yes (for finance / health)</td>
+            <td>On roadmap (for finance / health)</td>
           </tr>
           <tr>
             <td><strong>Pilot trial</strong></td>
             <td class="cross">Annual contract required</td>
             <td>—</td>
-            <td class="checkmark">14 days, no contract</td>
+            <td class="checkmark">Pilot trials post-launch, no annual contract</td>
           </tr>
           <tr>
             <td><strong>Built for</strong></td>
@@ -308,8 +308,8 @@
 <section id="demo">
   <div class="container">
     <div class="cta-block">
-      <h2>Find out if you'd <em>actually save</em> contracts.</h2>
-      <p>30-minute demo with a working agent setup. We'll show you a live translation against your specific use case (the language pair, the call platform you use). No deck, no sales pressure.</p>
+      <h2>Be first when <em>Teams</em> launches.</h2>
+      <p>We're building the Teams tier of Legendary Feather — a managed real-time interpreter for boutique BPOs and multilingual support teams. Drop your details and we'll email you the moment it's ready for pilots, with priority access and founding-member pricing.</p>
 
       <form class="demo" id="demoForm">
         <input type="text" name="name" placeholder="Your name" required maxlength="80">
@@ -317,7 +317,7 @@
         <input type="text" name="company" placeholder="Company / agency" required maxlength="100">
         <input type="text" name="num_agents" placeholder="Approx. number of agents (e.g. 12)" maxlength="20">
         <textarea name="use_case" placeholder="What languages would you need to support? Which contact-center platform do you use? (Optional)" rows="3" maxlength="600"></textarea>
-        <button type="submit">Request demo →</button>
+        <button type="submit">Notify me when it's ready →</button>
         <div class="form-msg" id="demoMsg"></div>
       </form>
     </div>
@@ -373,7 +373,7 @@ document.getElementById('demoForm').addEventListener('submit', async (e) => {
     msg.textContent = 'Network error. Email hello@legendaryfeather.com directly.';
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Request demo →';
+    btn.textContent = 'Notify me when it\'s ready →';
   }
 });
 </script>
