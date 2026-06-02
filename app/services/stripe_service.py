@@ -2,10 +2,11 @@
 import stripe
 import os
 from datetime import datetime, timezone
-from app.config import PRICING
+from app.config import PRICING, Config
 
 
-stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+# Respect STRIPE_MODE toggle (test/live) via Config (#158).
+stripe.api_key = Config.STRIPE_SECRET_KEY
 
 
 class StripeService:
@@ -129,7 +130,8 @@ class StripeService:
 
     def construct_webhook_event(self, payload, sig_header):
         """Construct and verify a webhook event."""
-        webhook_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
+        # Respect STRIPE_MODE toggle via Config (#158).
+        webhook_secret = Config.STRIPE_WEBHOOK_SECRET
         try:
             event = self.stripe.Webhook.construct_event(
                 payload, sig_header, webhook_secret

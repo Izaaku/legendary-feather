@@ -223,8 +223,10 @@ def admin_get_conversations():
     # Failures are silent so support never breaks if Stripe is unreachable.
     last4_by_user = {}
     try:
-        import os, stripe
-        stripe_key = os.getenv('STRIPE_SECRET_KEY') or os.getenv('STRIPE_SECRET_KEY_LIVE') or os.getenv('STRIPE_SECRET_KEY_TEST')
+        import stripe
+        # Respect STRIPE_MODE via Config (#158) — do NOT read env vars directly.
+        from app.config import Config
+        stripe_key = Config.STRIPE_SECRET_KEY
         if stripe_key:
             stripe.api_key = stripe_key
             for uid, u in users_by_id.items():

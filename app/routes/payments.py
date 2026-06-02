@@ -6,7 +6,7 @@ from app.utils.database import db_session
 from app.utils.auth import token_required
 from app.models.user import User
 from app.models.subscription import Subscription
-from app.config import PRICING
+from app.config import PRICING, Config
 from datetime import datetime, timezone
 
 payments_bp = Blueprint('payments', __name__, url_prefix='/api')
@@ -135,9 +135,8 @@ def sync_checkout_session():
     immediately reflect their new plan".
     """
     import stripe as stripe_lib
-    stripe_lib.api_key = os.getenv('STRIPE_SECRET_KEY') or os.getenv(
-        f'STRIPE_SECRET_KEY_{(os.getenv("STRIPE_MODE", "") or "test").upper()}'
-    )
+    # Respect STRIPE_MODE via Config (#158) — do NOT read env vars directly.
+    stripe_lib.api_key = Config.STRIPE_SECRET_KEY
 
     data = request.get_json() or {}
     session_id = data.get('session_id', '').strip()
