@@ -321,8 +321,15 @@ def internal_error(e):
 
 @app.route('/')
 def index():
-    """Public landing page."""
-    return render_template('landing.html')
+    """Root — redirect to /auth.
+    Marketing/brand portal lives at legendaryfeather.com (Cloudflare Pages).
+    The app subdomain only serves authentication and the app itself.
+    If user is already authenticated, send them straight to /app.
+    """
+    from flask import redirect, session
+    if session.get('user_id'):
+        return redirect('/app')
+    return redirect('/auth?from=root')
 
 
 @app.route('/app')
