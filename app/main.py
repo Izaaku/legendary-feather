@@ -321,15 +321,12 @@ def internal_error(e):
 
 @app.route('/')
 def index():
-    """Root — redirect to /auth.
-    Marketing/brand portal lives at legendaryfeather.com (Cloudflare Pages).
-    The app subdomain only serves authentication and the app itself.
-    If user is already authenticated, send them straight to /app.
+    """Root — Traveler product explanation page.
+    Brand portal lives at legendaryfeather.com (Cloudflare Pages).
+    This page is the Traveler-specific deep-dive that legendaryfeather.com links to.
+    All CTAs on this page go to /auth?signup=1.
     """
-    from flask import redirect, session
-    if session.get('user_id'):
-        return redirect('/app')
-    return redirect('/auth?from=root')
+    return render_template('landing.html')
 
 
 @app.route('/app')
