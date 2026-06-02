@@ -1242,11 +1242,11 @@ function showPlan(planKey) {
   html += `<div class="card animate-in delay-2">
     <div class="card-header"><div class="card-title">Quick <em>Actions</em></div></div>
     <div class="quick-actions">
-      <button class="quick-btn primary">
+      <button class="quick-btn primary" data-action="start-translation">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/></svg>
         Start Translation
       </button>
-      <button class="quick-btn">
+      <button class="quick-btn" data-action="change-languages">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/></svg>
         Change Languages
       </button>`;
@@ -1803,11 +1803,16 @@ const mainContent = document.getElementById('main-content');
 const observer = new MutationObserver(() => {
   document.querySelectorAll('.quick-btn').forEach(btn => {
     btn.addEventListener('click', function() {
-      const text = this.textContent.trim();
-      if (text === 'Start Translation') window.location.href = '/app';
-      else if (text === 'Change Languages') showLanguagesView();
-      // (Manage Voices removed: voice cloning deferred to V2)
-      else if (text === 'Create Room') alert('Live Translation Rooms coming soon!');
+      const action = this.dataset.action || '';
+      if (action === 'start-translation') window.location.href = '/app';
+      else if (action === 'change-languages') showLanguagesView();
+      // Fallback: also match by English text (for legacy buttons without data-action)
+      else {
+        const text = this.textContent.trim();
+        if (text === 'Start Translation') window.location.href = '/app';
+        else if (text === 'Change Languages') showLanguagesView();
+        else if (text === 'Create Room') alert('Live Translation Rooms coming soon!');
+      }
     });
   });
 });
@@ -1815,10 +1820,15 @@ observer.observe(mainContent, { childList: true });
 // Initial wiring
 document.querySelectorAll('.quick-btn').forEach(btn => {
   btn.addEventListener('click', function() {
-    const text = this.textContent.trim();
-    if (text === 'Start Translation') window.location.href = '/app';
-    else if (text === 'Change Languages') showLanguagesView();
-    // (Manage Voices removed: voice cloning deferred to V2)
+    const action = this.dataset.action || '';
+    if (action === 'start-translation') window.location.href = '/app';
+    else if (action === 'change-languages') showLanguagesView();
+    // Fallback for legacy
+    else {
+      const text = this.textContent.trim();
+      if (text === 'Start Translation') window.location.href = '/app';
+      else if (text === 'Change Languages') showLanguagesView();
+    }
   });
 });
 
