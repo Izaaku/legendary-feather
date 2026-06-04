@@ -136,10 +136,10 @@ PRICING = {
     'free': {
         'category': 'traveler',
         'name': 'Free',
-        'tagline': 'Try before you buy',
-        'prices': {'eur': 0, 'usd': 0},
+        'tagline': 'Try before you fly',
+        'prices': {'eur': 0, 'usd': 0, 'mxn': 0},
         'billing': 'free',
-        'minutes_openai': 5,
+        'minutes_openai': 2,
         'minutes_elevenlabs': 0,
         'voice_cloning_profiles': 0,
         'languages': 100,
@@ -147,7 +147,7 @@ PRICING = {
         'visible': True,
         'stripe_price_id': None,  # multi-currency Price ID handles EUR/USD/MXN automatically
         'features': [
-            '5 minutes / month',
+            '2 minutes / month',
             '100+ languages',
             'Standard voice',
             'Mobile PWA',
