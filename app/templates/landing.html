@@ -2045,6 +2045,54 @@ footer {
   </div>
 </section>
 
+<!-- ─── OUR PRODUCTS — three cards (Traveler / Polyglot Desk / Polyglot Talk) ─── -->
+<!-- Uses existing CSS classes from the head <style> block: .products-grid,
+     .product-card, .product-card.live, .product-status, .status-live (green,
+     blinking dot), .status-soon (gray), .product-icon, .product-name,
+     .product-tagline, .product-cta, .cta-live (gold filled), .cta-soon (ghost).
+     i18n keys are pulled from the I18N_TRANSLATIONS dict; hardcoded fallback
+     text inside the tags is what shows if a key is missing. Whole card is
+     wrapped in <a> so anywhere-clicks land on the linked destination. -->
+<section class="section" id="products" style="padding:80px 24px 60px;">
+  <div class="reveal" style="text-align:center;max-width:900px;margin:0 auto 48px;">
+    <div class="section-label" data-i18n="products.label" style="color:var(--gold);text-transform:uppercase;letter-spacing:2px;font-size:12px;font-weight:600;margin-bottom:14px;">Nuestros productos</div>
+    <h2 class="section-title" data-i18n="products.title" style="font-size:46px;line-height:1.15;">Tres formas de romper barreras.</h2>
+  </div>
+
+  <div class="products-grid">
+
+    <!-- 1) Legendary Feather Traveler — live -->
+    <a href="https://app.legendaryfeather.com/auth?signup=1" class="product-card live" style="text-decoration:none;color:inherit;">
+      <div class="product-status status-live"><span data-i18n="products.status.live">Disponible ahora</span></div>
+      <div class="product-icon">🪶</div>
+      <div class="product-name">Legendary Feather Traveler</div>
+      <div class="product-tagline" data-i18n="products.traveler.tag">Traducción de voz por IA en tiempo real para viajeros, expatriados y hospitalidad. Modos cara a cara, foto y offline.</div>
+      <div class="product-cta cta-live" data-i18n="products.traveler.cta">Más información →</div>
+    </a>
+
+    <!-- 2) Polyglot Desk — NOW LIVE on Chrome Web Store (June 15, 2026) -->
+    <a href="https://chromewebstore.google.com/detail/polyglot-desk/iahcimnkfmlhndlgpnfngnfecklajlnb"
+       target="_blank" rel="noopener"
+       class="product-card live" style="text-decoration:none;color:inherit;">
+      <div class="product-status status-live"><span data-i18n="products.status.live">Disponible ahora</span></div>
+      <div class="product-icon">🖋️</div>
+      <div class="product-name">Polyglot Desk</div>
+      <div class="product-tagline" data-i18n="products.desk.tag">Extensión de Chrome que traduce mientras trabajas. Atención al cliente, ventas, pasa el cursor sobre cualquier texto en cualquier web.</div>
+      <div class="product-cta cta-live" data-i18n="products.desk.cta">Instalar extensión →</div>
+    </a>
+
+    <!-- 3) Polyglot Talk — coming soon, mailto to capture interest -->
+    <a href="mailto:hello@legendaryfeather.com?subject=Notify%20me%20about%20Polyglot%20Talk" class="product-card" style="text-decoration:none;color:inherit;">
+      <div class="product-status status-soon"><span data-i18n="products.status.soon">Próximamente</span></div>
+      <div class="product-icon">🎥</div>
+      <div class="product-name">Polyglot Talk</div>
+      <div class="product-tagline" data-i18n="products.talk.tag">Videollamadas y mensajes traducidos. Conecta con cualquier persona, en cualquier idioma, en cualquier conversación.</div>
+      <div class="product-cta cta-soon" data-i18n="products.notify">Avísame →</div>
+    </a>
+
+  </div>
+</section>
+
 <!-- PRICING -->
 
 <!-- FINAL CTA -->
