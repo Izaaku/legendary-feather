@@ -1,21 +1,21 @@
 # Cloudflare Worker (with static assets) config for legendaryfeather.com.
 # Tells `npx wrangler deploy` (the deploy command set in the Cloudflare
-# dashboard) to serve everything in ./public as static files at the root
+# dashboard) to serve everything in ./dist as static files at the root
 # of the site. No code runs — it's a static brand portal.
 #
 # When a new push lands on main:
 #   1. Cloudflare clones the repo
 #   2. Runs `npx wrangler deploy`
 #   3. wrangler reads this file
-#   4. Uploads ./public to Cloudflare's edge as static assets
+#   4. Uploads ./dist to Cloudflare's edge as static assets
 #
 # Updating the site = edit files in public/ + git push.
 
-name = "legendaryfeather"
+name = "legendary-feather"
 compatibility_date = "2024-12-01"
 
 [assets]
-directory = "./public"
+directory = "./dist"
 
 # Not-found handling: if a user hits a path that doesn't exist (e.g.
 # /something-old), serve the root index.html instead of 404. This keeps
